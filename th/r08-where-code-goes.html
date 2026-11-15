@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="th" data-lang="rails">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Controller, Model หรือ Service? · Rails Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600&display=swap" rel="stylesheet">
+<link rel="icon" href="../favicon.ico" sizes="32x32">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<link rel="manifest" href="../site.webmanifest">
+<meta name="theme-color" content="#000000">
+<link rel="stylesheet" href="../assets/site.css?v=8f1e007517">
+<script src="../assets/consent.js?v=9320b4a322"></script>
+</head>
+<body data-slug="r08-where-code-goes">
+<div class="win">
+  <div class="titlebar"><span class="dots"><i></i><i></i><i></i></span><span class="t">guest@websec: ~/websec/r08-where-code-goes/th — zsh — 100×40</span>
+    <a class="by" href="about.html" title="เกี่ยวกับผู้เขียน"><span class="w0">เขียนโดย </span>SaKKo</a>
+    <span class="lsw" role="group" aria-label="ภาษา"><a href="../r08-where-code-goes.html" data-setlang="en">EN</a><a href="r08-where-code-goes.html" aria-current="true" data-setlang="th">TH</a></span></div>
+  <nav class="top" aria-label="บทเรียน"><a href="index.html#rails" title="หน้าแรก">~/</a>
+<a class="trk" href="index.html#security">#1 ความปลอดภัย</a>
+<a class="trk on" href="r01-rails-api-app.html">#2 rails</a>
+<span class="grp">| พื้นฐาน:</span>
+<a href="r01-rails-api-app.html" title="แอป Rails แบบ API">r01·api-app</a>
+<a href="r02-rails-commands.html" title="คำสั่ง Rails">r02·commands</a>
+<a href="r03-migrations.html" title="Migration">r03·migrations</a>
+<span class="grp">| model:</span>
+<a href="r04-models.html" title="Model และ ApplicationRecord">r04·models</a>
+<a href="r05-model-callbacks.html" title="Model Callback">r05·model-hooks</a>
+<span class="grp">| controller:</span>
+<a href="r06-controllers.html" title="Controller และลำดับชั้นของ API">r06·controllers</a>
+<a href="r07-controller-callbacks.html" title="Controller Callback">r07·controller-hooks</a>
+<a href="r08-where-code-goes.html" aria-current="page" title="Controller, Model หรือ Service?">r08·services</a>
+<span class="grp">| api:</span>
+<a href="r09-rest-routes.html" title="Route แบบ RESTful และ Resourceful">r09·rest-routes</a>
+<a href="r10-testing.html" title="การทดสอบ API">r10·testing</a></nav>
+  <main>
+<div class="col">
+<p class="prompt">guest@websec ~ % <b>man r08-where-code-goes</b></p>
+<h1>Controller, Model หรือ Service?</h1>
+<p class="lede">comment ส่วนใหญ่ตอนรีวิวโค้ดในแอป Rails เป็นเรื่องว่าโค้ด<i>อยู่ที่ไหน</i> ไม่ใช่ว่ามันทำงานหรือเปล่า นี่คือวิธีที่เราตัดสินใจ</p>
+<div class="tablewrap"><table><thead><tr><th>ชั้น</th><th>รับผิดชอบ</th><th>ห้าม</th></tr></thead><tbody><tr><td><b>controller</b></td><td>HTTP: params, ใครเรียก, record ไหนที่แตะได้, status code, ใช้ JSON รูปแบบไหน</td><td>กฎทางธุรกิจ, SQL ที่ซับซ้อนกว่าการ find ธรรมดา, การเรียกระบบภายนอก</td></tr><tr><td><b>model</b></td><td>กฎของข้อมูล: validation, association, สถานะ, ค่าที่คำนวณได้, รูปแบบ JSON, พฤติกรรมระดับ record</td><td>อ่าน <code>params</code>, cookie หรือ request; เรียก service ภายนอกโดยตรง</td></tr><tr><td><b>service</b></td><td>โลกภายนอก (directory ขององค์กร, JWT, payment, S3) หรือ algorithm ที่ไม่มีสถานะ ซ่อนอยู่หลัง API เล็กๆ</td><td>เป็นเจ้าของตาราง; รู้เรื่อง HTTP request</td></tr><tr><td><b>job</b></td><td>side effect ที่ช้าหรือต้อง retry: webhook, email, sync</td><td>เป็นสิ่งที่ต้องเสร็จก่อน response จึงจะถูกต้อง</td></tr><tr><td><b>concern</b></td><td>พฤติกรรมที่หลาย model หรือ controller ใช้ร่วมกัน (<code>SoftDeletable</code>)</td><td>เป็นที่ทิ้งโค้ดของ model ตัวเดียว</td></tr></tbody></table></div><h2>หนึ่ง feature สามชั้น</h2><p>การ login ของ admin ตรวจรหัสผ่านกับ directory ขององค์กร, sync ข้อมูล user, ตรวจ 2FA และตั้ง cookie นี่คือ feature เดียวกันที่เขียนไม่ดี แล้วตามด้วยแบบที่เขียนจริง:</p><div class="tabs"><div role="tablist"><button role="tab">✗ ทั้งหมดใน controller</button><button role="tab">✓ แยกตามชั้น</button></div><div role="tabpanel"><div class="code" data-label="ruby · ✗ untestable, unsafe, duplicated"><pre>def create
+  client = SomeDirectoryGem::Client.new(host: ENV["DIRECTORY_HOST"], password: ENV["DIRECTORY_PASSWORD"])
+  entry = client.login(params[:username], params[:password])      <span class="c"># raw client, raw errors, no timeout</span>
+  return render json: { error: "bad login" }, status: 401 unless entry
+  user = User.find_or_initialize_by(username: entry["name"].downcase)
+  user.email = entry["mail"]
+  user.save                                                        <span class="c"># failure silently ignored</span>
+  if !user.is_admin then return render json: { error: "no" }, status: 401 end
+  totp = ROTP::TOTP.new(user.otp_secret)
+  return render json: { error: "bad otp" }, status: 401 unless totp.verify(params[:otp])
+  cookies.encrypted[:bearer] = JWT.encode({ ... }, Rails.application.credentials.user_jwt_secret)
+  render json: { success: true }
+end</pre></div></div><div role="tabpanel"><div class="code" data-label="ruby · ✓ each piece testable alone"><pre><span class="c"># controller: HTTP only</span>
+def create
+  user = User.authenticate_and_sync!(username, password)        <span class="c"># model</span>
+  raise AppAuthenticationError.new("user not admin") unless user.is_admin?
+  raise AppAuthenticationError.new("401: Invalid 2FA code") unless user.verify_otp(otp)
+  user.reset_authentication_token
+  update_cookies(:bearer, user.jwt("bearer"))                    # inherited helper
+  render json: { success: true }, status: :created
+end
+
+<span class="c"># model: what a User is and does</span>
+def self.authenticate_and_sync!(username, password)
+  entry = DirectoryService.authenticate!(username, password)    <span class="c"># service</span>
+  sync_from_directory!(entry)
+end
+
+def verify_otp(code) = !totp.verify(code.to_s.strip, drift_behind: 1).nil?
+
+<span class="c"># service: the only code that talks to the directory</span>
+class DirectoryService
+  def self.authenticate!(username, password)
+    entry = client.login(username, password)                     <span class="c"># host, timeouts, secrets: in here only</span>
+    raise AppError.new("401: Invalid credentials") unless entry
+    { username: entry["name"], email: entry["mail"], display_name: entry["display"] }   # plain hash out
+  rescue SomeDirectoryGem::Error =&gt; e
+    raise AppError.new("Directory unavailable")                 # our error, no internals leaked
+  end
+end</pre></div></div></div><h2>ทำไมต้องมี service?</h2><ul><li><b>ประตูเดียวสู่โลกภายนอก</b> การตั้งค่าการเชื่อมต่อ, timeout, credential และการแปลง error ของ directory อยู่ใน <code>DirectoryService</code> ที่เดียว ถ้า directory เปลี่ยน ก็แก้ไฟล์เดียว</li><li><b>error ในภาษาของเรา</b> error ด้านเครือข่ายจาก client gem หรือ <code>JWT::DecodeError</code> ถูกแปลงเป็น <code>AppError</code> ซึ่ง API รู้วิธี render อยู่แล้ว</li><li><b>ปลอมได้ง่ายใน test</b> <code>DirectoryService.stub :authenticate!, entry do … end</code>: test ของ model และ controller รันได้โดยไม่ต้องมี directory จริง</li><li><b>ใช้ซ้ำได้</b> method ของ service ตัวเดียวกันรันได้จาก controller, job, <code>bin/rails runner</code> หรือ console</li><li><b>model ยังคงเป็นเรื่องของข้อมูล</b> การโหลด model ไม่เคยเปิด socket</li></ul><h3>สไตล์ service ของเรา</h3><div class="code" data-label="ruby · app/services/token_service.rb"><pre>class TokenService
+  HMAC_SECRET = Rails.application.credentials.dig(:token_service_jwt_secret)   <span class="c"># config read once</span>
+
+  def self.encode(hmac_secret, payload, exp = 8.hours.from_now)                <span class="c"># class methods,</span>
+    raise AppError.new("HMAC secret is missing") if hmac_secret.blank?         # no instance state
+    data = payload.deep_dup
+    data[:exp] = exp.to_i
+    data[:iat] = Time.current.to_i
+    JWT.encode(data, hmac_secret, "HS256")
+  end
+
+  def self.decode(hmac_secret, token)
+    raise AppError.new("HMAC secret is missing") if hmac_secret.blank?
+    JWT.decode(token, hmac_secret, true, { algorithm: "HS256" }).first.with_indifferent_access   # pin the algorithm
+  rescue JWT::DecodeError =&gt; e
+    raise AppError.new("Invalid token: #{e.message}")                          # translate errors
+  end
+end
+
+<span class="c"># the model offers a friendly method that uses its own secret</span>
+class ClientApplication &lt; ApplicationRecord
+  def encode_payload(payload) = TokenService.encode(api_secret, payload)
+  def decode_payload(token)   = TokenService.decode(api_secret, token)
+end</pre></div><div class="rs">service คือ class ที่มี method แบบ <code>self.</code> และชื่อลงท้ายด้วย <code>…Service</code> หนึ่งตัวต่อหนึ่งระบบภายนอกหรือหนึ่ง algorithm ห้ามมี <code>UserService</code> ที่รวมทุกอย่างไว้ ตรรกะเกี่ยวกับข้อมูลของ user ให้เป็น method ของ <code>User</code></div><h3>job สำหรับ side effect</h3><div class="code" data-label="ruby · app/jobs/client_application_webhook_job.rb"><pre>class ClientApplicationWebhookJob &lt; ApplicationJob
+  queue_as :webhooks
+  retry_on StandardError, wait: :polynomially_longer, attempts: 5   <span class="c"># network fails; try again</span>
+
+  def perform(client_application_id, event_name, payload)           <span class="c"># pass ids, not objects</span>
+    client_app = ClientApplication.find_by(id: client_application_id)
+    return if client_app.nil? || client_app.webhook_url.blank?
+    token = JWT.encode({ iss: client_app.app_key, aud: client_app.webhook_url, exp: 10.minutes.from_now.to_i, event: event_name, data: payload },
+                       client_app.api_secret, "HS256")
+    Faraday.post(client_app.webhook_url) { |req| req.headers["Authorization"] = "Bearer #{token}"; req.body = { token:, event: event_name }.to_json }
+  end
+end</pre></div><p><code>after_commit</code> ของ model แค่เรียก <code>notify_webhook</code> ซึ่งเรียก <code>perform_later</code> API ตอบกลับได้ทันที ฝั่งรับที่ช้าหรือล่มจะไม่ทำให้ endpoint ของเราช้าหรือพัง</p><h2>ฝึก: ควรอยู่ที่ไหน?</h2><div class="demo"><header><b>จัดโค้ดให้ถูกที่</b><span>เลือกชั้นให้แต่ละข้อ</span></header><div class="body"><div class="sorter"><script type="application/json">{"buckets": [{"id": "controller", "label": "controller"}, {"id": "model", "label": "model"}, {"id": "service", "label": "service"}, {"id": "job", "label": "job"}], "items": [{"t": "อ่าน <code>X-App-Key<\/code> จาก header แล้วตั้งค่า <code>current_client_application<\/code>", "a": "controller", "why": "อ่านจาก request จึงเป็น controller (<code>before_action<\/code> ใน <code>Client::AppController<\/code>)"}, {"t": "ตรวจว่า permission ทุกตัวของ role มีอยู่ใน client application ของมัน", "a": "model", "why": "กฎของข้อมูล: validation ของ model (<code>validate_permissions_inclusion<\/code>)"}, {"t": "ตรวจ username และรหัสผ่านกับ directory ขององค์กร", "a": "service", "why": "ระบบภายนอก: <code>DirectoryService<\/code>"}, {"t": "POST event ที่เซ็นแล้วไปยัง webhook URL ของ client และ retry เมื่อล้มเหลว", "a": "job", "why": "ช้า อาจล้มเหลว และต้อง retry: จึงเป็น job"}, {"t": "กำหนดว่า admin เห็น field ไหนของ client application บ้าง", "a": "model", "why": "รูปแบบ JSON เป็นของ model: <code>as_admin_json<\/code>"}, {"t": "whitelist <code>name<\/code>, <code>webhook_url<\/code> และ <code>allowed_hosts<\/code> จาก body ของ request", "a": "controller", "why": "strong params เป็นเรื่องของ HTTP: <code>client_application_params<\/code>"}, {"t": "เซ็นและตรวจ JWT แบบ HS256", "a": "service", "why": "algorithm ที่ไม่มีสถานะและถูกใช้จากหลายที่: <code>TokenService<\/code>"}, {"t": "สร้าง <code>app_key<\/code> และ <code>api_secret<\/code> เมื่อสร้าง client application", "a": "model", "why": "ค่า default ของ record นี้: callback <code>before_validation<\/code> ใน model"}, {"t": "ตรวจว่า host ของ URL <code>return_to<\/code> อยู่ใน <code>allowed_hosts<\/code> ของแอปหรือไม่", "a": "model", "why": "เป็นคำถามเกี่ยวกับข้อมูลของแอปนี้เอง: <code>ClientApplication#safe_return_url<\/code> controller แค่เรียกใช้"}, {"t": "sync ชื่อแผนกทั้งหมดจาก directory ลงตาราง <code>departments<\/code> ทุกคืน", "a": "job", "why": "งานเบื้องหลังที่ตั้งเวลาไว้: job ที่เรียก directory service"}]}</script></div></div></div></div>
+
+<div class="col"><label class="readmark"><input type="checkbox" id="read-r08-where-code-goes"> ทำเครื่องหมายว่าอ่านบท r08 แล้ว</label><div class="pager"><a href="r07-controller-callbacks.html">◀ r07 Controller Callback</a><a href="r09-rest-routes.html">r09 Route แบบ RESTful และ Resourceful ▶</a></div></div>
+  </main>
+  <footer class="site">อ้างอิงจาก <a href="https://guides.rubyonrails.org/">Ruby on Rails Guides</a> (CC BY-SA 4.0) เฉพาะส่วนที่ใช้กับแอปแบบ API-only และแนวทางการเขียนโค้ดในโปรเจกต์ของเรา ตัวอย่างโค้ดดัดแปลงจากโค้ดจริงเพื่อใช้สอน</footer>
+</div>
+<script src="../assets/site.js?v=92ac7aa3f8"></script>
+<script>
+
+
+</script>
+<script src="../assets/widgets.js?v=b9f4e038ea"></script>
+</body>
+</html>

@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en" data-lang="rails">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Q2 Cyber Threat Awareness Survey · Web Security</title>
+
+<link rel="icon" href="favicon.ico" sizes="32x32">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="site.webmanifest">
+<meta name="theme-color" content="#000000">
+<link rel="stylesheet" href="assets/site.css?v=8f1e007517">
+<script src="assets/consent.js?v=9320b4a322"></script>
+</head>
+<body data-slug="q2-awareness-survey">
+<div class="win">
+  <div class="titlebar"><span class="dots"><i></i><i></i><i></i></span><span class="t">guest@websec: ~/websec/q2-awareness-survey — zsh — 100×40</span>
+    <a class="by" href="about.html" title="About the author"><span class="w0">by </span>SaKKo</a>
+    <span class="lsw" role="group" aria-label="Language"><a href="q2-awareness-survey.html" aria-current="true" data-setlang="en">EN</a><a href="th/q2-awareness-survey.html" data-setlang="th">TH</a></span>
+    <span class="langsw" role="group" aria-label="Code examples language"><span class="d">code:</span><button type="button" data-l="rails">rails</button><button type="button" data-l="node">node</button></span></div>
+  <nav class="top" aria-label="Sections"><a href="index.html" title="Web Security Field Guide">~/</a>
+<a class="trk on" href="index.html#security">#1 security</a>
+<a class="trk" href="r01-rails-api-app.html">#2 rails</a>
+<span class="grp">|</span>
+<a href="01-introduction.html" title="Introduction">01·introduction</a>
+<a href="02-sql-injection.html" title="SQL Injection">02·sql-injection</a>
+<a href="03-unsafe-query-generation.html" title="Unsafe Query Generation">03·query-shape</a>
+<a href="04-xss-and-other-injection.html" title="XSS and Other Injection">04·xss</a>
+<span class="grp">| accounts:</span>
+<a href="05-authentication.html" title="Authentication">05·auth</a>
+<a href="05b-mfa.html" title="Multi-Factor Authentication">05b·mfa</a>
+<a href="06-sessions.html" title="Sessions">06·sessions</a>
+<a href="07-csrf.html" title="Cross-Site Request Forgery">07·csrf</a>
+<a href="08-user-management.html" title="User Management">08·accounts</a>
+<a href="09-mass-assignment-and-authorization.html" title="Mass Assignment and Authorization">09·authz</a>
+<span class="grp">| browser:</span>
+<a href="10-redirection-and-files.html" title="Redirection and Files">10·files</a>
+<a href="11-http-security-headers.html" title="HTTP Security Headers">11·headers</a>
+<a href="12-transport-cookies-third-party.html" title="Transport, Cookies and Third-Party Scripts">12·cookies-tls</a>
+<span class="grp">| server:</span>
+<a href="13-ssrf.html" title="Server-Side Request Forgery">13·ssrf</a>
+<a href="14-deserialization-and-xxe.html" title="Deserialization and XXE">14·deserialize</a>
+<a href="15-environmental-security.html" title="Environmental Security">15·secrets</a>
+<a href="16-cryptography.html" title="Cryptography and Data Protection">16·crypto</a>
+<a href="17-dependencies-and-cves.html" title="Dependencies and CVEs">17·dependencies</a>
+<span class="grp">| ops:</span>
+<a href="18-intranet-and-admin.html" title="Intranet and Admin Security">18·admin</a>
+<a href="19-misconfiguration-and-errors.html" title="Misconfiguration and Error Handling">19·misconfig</a>
+<a href="20-insecure-design.html" title="Insecure Design and Business Logic">20·design</a>
+<a href="21-logging-and-incident-response.html" title="Logging, Alerting and Incident Response">21·logging</a>
+<a href="22-additional-resources.html" title="Additional Resources">22·resources</a>
+<span class="grp">| questionnaires:</span>
+<a href="q1-developer-survey.html" title="Developer Security Survey">Q1·developer</a>
+<a href="q2-awareness-survey.html" aria-current="page" title="Cyber Threat Awareness Survey">Q2·cyber</a></nav>
+  <main>
+<div class="col">
+<p class="prompt">guest@websec ~ % <b>./q2-awareness-survey.sh</b></p>
+<h1>Q2 · Cyber Threat Awareness Survey</h1>
+<p class="lede">For everyone, no tech knowledge needed. About 10 minutes: what would you do, and what are your habits? Tips at the end.</p>
+<div class="note">About 10 minutes. Nothing is saved or sent anywhere: this is a private self-assessment, and your answers disappear when you leave the page.</div>
+<h2>Part A · What would you do?</h2>
+<form id="sv-form" onsubmit="return false">
+<div id="sv-qs"></div>
+<h2>Part B · Everyday habits</h2><p>Be honest: this part isn't graded right or wrong, it shows where small changes help most.</p><div id="sv-habits"></div>
+<div class="sticky-sub"><button class="btn on" disabled="" id="sv-submit" type="button">submit answers</button><button class="btn" id="sv-next" type="button"></button><span class="d" id="sv-prog"></span><div id="sv-map" class="sv-map"></div></div>
+</form>
+<div id="sv-result" style="margin-top:18px"></div>
+</div>
+
+<div class="col"><div class="pager"><a href="q1-developer-survey.html">◀ Q1 Developer Security Survey</a><a href="index.html">back to ~/ ▶</a></div></div>
+  </main>
+  <footer class="site">Based on the <a href="https://guides.rubyonrails.org/security.html">Ruby on Rails Security Guide</a> (CC BY-SA 4.0), the <a href="https://cheatsheetseries.owasp.org/">OWASP Cheat Sheet Series</a>, the <a href="https://owasp.org/Top10/2025/">OWASP Top 10:2025</a> and <a href="https://infosec.mozilla.org/guidelines/web_security.html">Mozilla's Web Security Guidelines</a>. Written for our dev team; code samples are illustrative.</footer>
+</div>
+<script src="assets/site.js?v=92ac7aa3f8"></script>
+<script>
+
+const DATA = {"kind": "aware", "title": "Cyber Threat Awareness Survey", "t": {"likert": ["Always", "Often", "Sometimes", "Never"], "answered": "answered", "score": "Score", "knowledge": "Knowledge", "habits": "Safe habits", "lvl3": "Strong. You know the material well.", "lvl2": "Good foundation, with some gaps to close.", "lvl1": "Needs attention. Review the items below.", "copy": "copy my results", "retake": "retake", "copied": "copied", "copyFail": "copy failed"}, "secs": {}, "questions": [{"sec": "Email", "q": "You get an email from \"IT Support\" saying your mailbox is full and you must log in via a link within 1 hour. What do you do?", "opts": ["Click the link quickly so you don't lose email", "Don't click; check through the official IT portal or ask IT directly, and report the email", "Reply asking if it's real"], "a": 1, "why": "Urgency + a login link is the classic phishing pattern. Go to the site yourself, and report the email so others are protected.", "id": "k00"}, {"sec": "Email", "q": "Which sign most reliably shows an email might be fake?", "opts": ["It has the company logo", "The sender address or link domain is slightly off, e.g. paypa1-secure.com", "It's addressed to you by name"], "a": 1, "why": "Logos and names are easy to copy. Hover over links and check the real domain.", "id": "k01"}, {"sec": "Passwords", "q": "What's the safest password approach?", "opts": ["One strong password reused everywhere", "A password manager with a unique password for each site", "Writing passwords in a notes app"], "a": 1, "why": "When one site is breached, reused passwords unlock your other accounts. A manager makes unique passwords effortless.", "id": "k02"}, {"sec": "Passwords", "q": "Your phone shows a login approval request you didn't start. What do you do?", "opts": ["Approve it so it stops buzzing", "Deny it, then change your password and tell IT", "Ignore it"], "a": 1, "why": "Someone likely has your password and is hoping you'll tap Approve (\"MFA fatigue\").", "id": "k03"}, {"sec": "Phone", "q": "Your 'CEO' calls on WhatsApp, sounding exactly like them, asking you to urgently buy gift cards or pay a new supplier. What do you do?", "opts": ["Do it; the voice matched", "Hang up and verify through a known number or in person before doing anything", "Ask them a personal question"], "a": 1, "why": "Voices can be cloned with AI from a few seconds of audio. Always verify payment or gift-card requests through a separate, known channel.", "id": "k04"}, {"sec": "Phone", "q": "Someone calls saying they're from IT and need your MFA code to fix your account. What do you do?", "opts": ["Give it; they're from IT", "Never share MFA codes or passwords with anyone; hang up and call IT yourself", "Give only half the code"], "a": 1, "why": "Real IT staff never need your codes. Sharing them hands over your account.", "id": "k05"}, {"sec": "Devices", "q": "You find a USB stick labeled \"Salaries 2026\" in the parking lot. What do you do?", "opts": ["Plug it in to find the owner", "Hand it to IT/security without plugging it in", "Throw it in the trash"], "a": 1, "why": "Dropped USB drives are a known attack: plugging one in can install malware.", "id": "k06"}, {"sec": "Devices", "q": "Your laptop asks to install an update. When should you install it?", "opts": ["Never, updates break things", "As soon as practical; updates fix security holes attackers already know about", "Once a year"], "a": 1, "why": "Many attacks exploit holes that were already patched on up-to-date devices.", "id": "k07"}, {"sec": "Data", "q": "You want help from an AI chatbot to summarize a customer contract. What's the right approach?", "opts": ["Paste the whole contract into any free AI tool", "Use only company-approved AI tools and follow the data policy; remove personal or confidential details if unsure", "Email it to your personal account first"], "a": 1, "why": "Free tools may store or train on what you paste. Confidential or personal data must stay in approved systems.", "id": "k08"}, {"sec": "Data", "q": "A colleague asks you to send a spreadsheet with customer personal data to their personal Gmail so they can work from home. What do you do?", "opts": ["Send it; they're a colleague", "Decline and suggest approved company tools; check with your manager or security", "Send it password-protected"], "a": 1, "why": "Company data in personal accounts is outside our protection and may break privacy laws.", "id": "k09"}, {"sec": "Wi-Fi", "q": "You're working in a café. What's safest?", "opts": ["Use the open café Wi-Fi without precautions", "Use the company VPN or your phone's hotspot", "Ask the barista if the Wi-Fi is safe"], "a": 1, "why": "Open networks can be monitored or faked. A VPN or hotspot keeps your traffic protected.", "id": "k10"}, {"sec": "QR", "q": "A parking meter has a sticker with a QR code to 'pay online'. What's the risk?", "opts": ["None, QR codes are safe", "It may lead to a fake payment site that steals card details", "QR codes can only open real websites"], "a": 1, "why": "\"Quishing\" puts malicious QR codes over real ones. Check the web address after scanning, or use the official app.", "id": "k11"}, {"sec": "Reporting", "q": "You clicked a suspicious link and entered your password before realizing. What now?", "opts": ["Stay quiet; it's embarrassing", "Report it to IT/security immediately and change your password", "Wait to see if anything happens"], "a": 1, "why": "Speed matters most. Reporting quickly lets the team block the attacker before damage is done, and nobody gets blamed for reporting.", "id": "k12"}, {"sec": "Social", "q": "Why can sharing details like your job title, team and travel plans on social media be risky?", "opts": ["It can't be", "Attackers use it to craft convincing phishing and impersonation messages", "It slows down the internet"], "a": 1, "why": "Targeted scams (\"spear phishing\") use public details to sound legitimate.", "id": "k13"}], "habits": [{"id": "h00", "t": "I use a different password for every work account.", "rev": false}, {"id": "h01", "t": "I use a password manager.", "rev": false}, {"id": "h02", "t": "Multi-factor authentication (MFA) is turned on for my email and work accounts.", "rev": false}, {"id": "h03", "t": "I lock my screen when I step away from my computer.", "rev": false}, {"id": "h04", "t": "I install software updates on my laptop and phone within a few days.", "rev": false}, {"id": "h05", "t": "I check the sender and link address before clicking links in emails.", "rev": false}, {"id": "h06", "t": "I report suspicious emails or messages to IT/security.", "rev": false}, {"id": "h07", "t": "I share passwords or MFA codes with colleagues when it's convenient.", "rev": true}, {"id": "h08", "t": "I use personal email or personal cloud storage for work files.", "rev": true}, {"id": "h09", "t": "I connect to public Wi-Fi for work without a VPN.", "rev": true}], "tips": ["Use a password manager so every account gets its own password.", "Install the company password manager; it fills passwords for you.", "Turn on MFA (an authenticator app or passkey) for email first: it's the key to resetting everything else.", "Lock your screen every time you stand up (Win+L / Ctrl+Cmd+Q).", "Turn on automatic updates on your laptop and phone.", "Hover over links to see the real address before clicking.", "Use the 'Report phishing' button, or forward suspicious messages to IT.", "Never share passwords or MFA codes; ask IT for shared access instead.", "Keep work files in company tools only.", "Use the VPN or your phone's hotspot on public Wi-Fi."]};
+
+const KIND = DATA.kind, T = DATA.t;
+const U = document.documentElement.lang === "th"
+  ? { next: "ไปข้อที่ยังไม่ตอบ ↓", leave: "คำตอบยังไม่ถูกส่ง ถ้าออกจากหน้านี้คำตอบจะหายไป", jump: "ข้อ" }
+  : { next: "next unanswered ↓", leave: "Your answers aren't submitted yet and will be lost if you leave.", jump: "question" };
+const secName = s => (DATA.cats && DATA.cats[s]) || s;
+let submitted = false;
+const ids = () => DATA.questions.map(q => q.id).concat((DATA.habits || []).map(h => h.id));
+const label = id => { const q = DATA.questions.findIndex(x => x.id === id); return q >= 0 ? "Q" + (q + 1) : "H" + ((DATA.habits || []).findIndex(x => x.id === id) + 1); };
+function render() {
+  const out = [];
+  let lastSec = null;
+  DATA.questions.forEach((q, i) => {
+    if (q.sec !== lastSec) { lastSec = q.sec; const s = DATA.secs[q.sec]; out.push(`<h3 id="sec-${q.sec}">${s ? `<a href="${s[0]}.html">${q.sec} · ${esc(s[1])}</a>` : esc(secName(q.sec))}</h3>`); }
+    out.push(`<div class="qcard" id="c-${q.id}"><p class="qh"><span class="sec">Q${i + 1}</span>${q.q}</p>` + q.opts.map((o, j) => `<label class="opt"><input type="radio" name="${q.id}" value="${j}"> <span>${o}</span></label>`).join("") + `<div class="why">${q.why}</div></div>`);
+  });
+  $("#sv-qs").innerHTML = out.join("");
+  if (DATA.habits) {
+    $("#sv-habits").innerHTML = DATA.habits.map((h, i) => `<div class="qcard" id="c-${h.id}"><p class="qh"><span class="sec">H${i + 1}</span>${esc(h.t)}</p><div class="likert">${T.likert.map((l, j) => `<label><input type="radio" name="${h.id}" value="${3 - j}">${l}</label>`).join("")}</div><div class="why">${esc(DATA.tips[i])}</div></div>`).join("");
+  }
+  $$("#sv-form input[type=radio]").forEach(r => r.addEventListener("change", progress));
+  $("#sv-next").textContent = U.next;
+  progress();
+}
+function answers() { const a = {}; ids().forEach(id => { const r = $(`input[name="${id}"]:checked`); if (r) a[id] = +r.value; }); return a; }
+function progress() {
+  const a = answers(), all = ids(), n = Object.keys(a).length;
+  const cur = submitted ? null : all.find(id => !(id in a));
+  $("#sv-prog").textContent = `${n}/${all.length} ${T.answered}`;
+  $("#sv-submit").disabled = submitted || n < all.length;
+  $("#sv-next").hidden = !cur;
+  if (!submitted) {
+    all.forEach(id => { const c = $("#c-" + id); c.classList.toggle("done", id in a); c.classList.toggle("cur", id === cur); });
+    $("#sv-map").innerHTML = all.map(id => `<a href="#c-${id}" class="${id in a ? "done" : id === cur ? "cur" : ""}" title="${U.jump} ${label(id)}">${label(id)}</a>`).join("");
+  }
+}
+function jump(id) {
+  const c = $("#c-" + id); if (!c) return;
+  c.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "center" });
+  const i = $("input:not(:disabled)", c); if (i) i.focus({ preventScroll: true });
+}
+$("#sv-next").addEventListener("click", () => { const a = answers(); jump(ids().find(id => !(id in a))); });
+$("#sv-map").addEventListener("click", e => { const l = e.target.closest("a"); if (!l) return; e.preventDefault(); jump(l.getAttribute("href").slice(3)); });
+function grade(a) {
+  const by = {}; let c = 0;
+  DATA.questions.forEach(q => { by[q.sec] = by[q.sec] || [0, 0]; by[q.sec][1]++; if (a[q.id] === q.a) { by[q.sec][0]++; c++; } });
+  let habit = null;
+  if (DATA.habits) { let s = 0; DATA.habits.forEach(h => { const v = a[h.id] ?? 0; s += h.rev ? 3 - v : v; }); habit = Math.round(s / (DATA.habits.length * 3) * 100); }
+  return { correct: c, total: DATA.questions.length, by, habit };
+}
+function showGrades(a) {
+  const marks = {};
+  DATA.questions.forEach(q => {
+    const card = $("#c-" + q.id); card.classList.remove("cur", "done"); card.classList.add("graded");
+    $$("label.opt", card).forEach((l, j) => { if (j === q.a) l.classList.add("right"); else if (a[q.id] === j) l.classList.add("wrong"); });
+    marks[q.id] = a[q.id] === q.a ? "right" : "wrong";
+  });
+  (DATA.habits || []).forEach(h => {
+    const v = a[h.id] ?? 0, good = h.rev ? 3 - v : v, card = $("#c-" + h.id);
+    card.classList.remove("cur", "done");
+    if (good < 2) card.classList.add("graded");
+    marks[h.id] = good < 2 ? "wrong" : "right";
+  });
+  $$("#sv-form input").forEach(i => i.disabled = true);
+  $("#sv-map").innerHTML = ids().map(id => `<a href="#c-${id}" class="${marks[id]}" title="${U.jump} ${label(id)}">${label(id)}</a>`).join("");
+}
+function summaryHTML(g) {
+  const pct = Math.round(g.correct / g.total * 100);
+  let h = `<div class="tldr" style="margin-top:0"><b style="font-size:20px">${KIND === "dev" ? T.score : T.knowledge}: ${g.correct}/${g.total} (${pct}%)</b>`;
+  if (g.habit !== null) h += `<br><b style="font-size:20px">${T.habits}: ${g.habit}%</b>`;
+  const lvl = g.habit === null ? pct : Math.round((pct + g.habit) / 2);
+  h += `<br>${lvl >= 85 ? `<span class="g">${T.lvl3}</span>` : lvl >= 65 ? `<span class="y">${T.lvl2}</span>` : `<span class="r">${T.lvl1}</span>`}</div>`;
+  h += Object.entries(g.by).map(([s, [c, t]]) => { const nm = DATA.secs[s] ? DATA.secs[s][1] : secName(s); return `<div class="bar"><span>${DATA.secs[s] ? `<a href="${DATA.secs[s][0]}.html">${s} ${esc(nm)}</a>` : esc(nm)}</span><div class="track"><span style="width:${c / t * 100}%;background:${c === t ? "var(--fg)" : c / t >= .5 ? "var(--yellow)" : "var(--red)"}"></span></div><span>${c}/${t}</span></div>`; }).join("");
+  return h;
+}
+function resultText(g) {
+  return `${DATA.title}\n${KIND === "dev" ? T.score : T.knowledge}: ${g.correct}/${g.total}` + (g.habit !== null ? `\n${T.habits}: ${g.habit}%` : "") + "\n" + Object.entries(g.by).map(([s, [c, t]]) => `${DATA.secs[s] ? s + " " + DATA.secs[s][1] : secName(s)}: ${c}/${t}`).join("\n") + `\n${new Date().toISOString().slice(0, 10)}`;
+}
+$("#sv-submit").addEventListener("click", () => {
+  const a = answers(); if (Object.keys(a).length < ids().length) return;
+  submitted = true; progress();
+  const g = grade(a); showGrades(a);
+  $("#sv-result").innerHTML = summaryHTML(g) + `<div class="row" style="margin-top:10px"><button class="btn" id="sv-copy" type="button">${T.copy}</button><button class="btn" id="sv-retake" type="button">${T.retake}</button></div>`;
+  $("#sv-result").scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+  $("#sv-copy").onclick = async () => { try { await navigator.clipboard.writeText(resultText(g)); $("#sv-copy").textContent = T.copied; } catch (e) { $("#sv-copy").textContent = T.copyFail; } };
+  $("#sv-retake").onclick = () => { submitted = false; $("#sv-result").innerHTML = ""; render(); window.scrollTo(0, 0); };
+});
+// links inside the questionnaire open in a new tab, so answers are never lost
+document.querySelector("main").addEventListener("click", e => {
+  const a = e.target.closest("a[href]");
+  if (!a || a.closest(".pager") || a.closest("#sv-map") || a.getAttribute("href").startsWith("#")) return;
+  a.target = "_blank"; a.rel = "noopener";
+});
+window.addEventListener("beforeunload", e => {
+  if (!submitted && Object.keys(answers()).length) { e.preventDefault(); e.returnValue = U.leave; }
+});
+render();
+</script>
+</body>
+</html>

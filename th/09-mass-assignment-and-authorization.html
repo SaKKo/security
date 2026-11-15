@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="th" data-lang="rails">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>09 Mass Assignment and Authorization · Web Security</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600&display=swap" rel="stylesheet">
+<link rel="icon" href="../favicon.ico" sizes="32x32">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<link rel="manifest" href="../site.webmanifest">
+<meta name="theme-color" content="#000000">
+<link rel="stylesheet" href="../assets/site.css?v=8f1e007517">
+<script src="../assets/consent.js?v=9320b4a322"></script>
+</head>
+<body data-slug="09-mass-assignment-and-authorization">
+<div class="win">
+  <div class="titlebar"><span class="dots"><i></i><i></i><i></i></span><span class="t">guest@websec: ~/websec/09-mass-assignment-and-authorization/th — zsh — 100×40</span>
+    <a class="by" href="about.html" title="เกี่ยวกับผู้เขียน"><span class="w0">เขียนโดย </span>SaKKo</a>
+    <span class="lsw" role="group" aria-label="ภาษา"><a href="../09-mass-assignment-and-authorization.html" data-setlang="en">EN</a><a href="09-mass-assignment-and-authorization.html" aria-current="true" data-setlang="th">TH</a></span>
+    <span class="langsw" role="group" aria-label="Code examples language"><span class="d">โค้ด:</span><button type="button" data-l="rails">rails</button><button type="button" data-l="node">node</button></span></div>
+  <nav class="top" aria-label="Sections"><a href="index.html" title="คู่มือความปลอดภัยเว็บแอปพลิเคชัน">~/</a>
+<a class="trk on" href="index.html#security">#1 ความปลอดภัย</a>
+<a class="trk" href="r01-rails-api-app.html">#2 rails</a>
+<span class="grp">|</span>
+<a href="01-introduction.html" title="บทนำ">01·บทนำ</a>
+<a href="02-sql-injection.html" title="SQL Injection">02·sql</a>
+<a href="03-unsafe-query-generation.html" title="การสร้าง query ที่ไม่ปลอดภัย">03·query</a>
+<a href="04-xss-and-other-injection.html" title="XSS และ injection แบบอื่น">04·xss</a>
+<span class="grp">| บัญชี:</span>
+<a href="05-authentication.html" title="การยืนยันตัวตน">05·auth</a>
+<a href="05b-mfa.html" title="การยืนยันตัวตนหลายปัจจัย">05b·mfa</a>
+<a href="06-sessions.html" title="Session">06·session</a>
+<a href="07-csrf.html" title="Cross-Site Request Forgery">07·csrf</a>
+<a href="08-user-management.html" title="การจัดการผู้ใช้">08·ผู้ใช้</a>
+<a href="09-mass-assignment-and-authorization.html" aria-current="page" title="Mass Assignment และ Authorization">09·authz</a>
+<span class="grp">| เบราว์เซอร์:</span>
+<a href="10-redirection-and-files.html" title="Redirect และไฟล์">10·ไฟล์</a>
+<a href="11-http-security-headers.html" title="HTTP Security Header">11·header</a>
+<a href="12-transport-cookies-third-party.html" title="การรับส่งข้อมูล คุกกี้ และสคริปต์บุคคลที่สาม">12·คุกกี้</a>
+<span class="grp">| เซิร์ฟเวอร์:</span>
+<a href="13-ssrf.html" title="Server-Side Request Forgery">13·ssrf</a>
+<a href="14-deserialization-and-xxe.html" title="Deserialization และ XXE">14·deserialize</a>
+<a href="15-environmental-security.html" title="ความปลอดภัยของสภาพแวดล้อม">15·secret</a>
+<a href="16-cryptography.html" title="การเข้ารหัสและการปกป้องข้อมูล">16·crypto</a>
+<a href="17-dependencies-and-cves.html" title="Dependency และ CVE">17·dependency</a>
+<span class="grp">| ดูแลระบบ:</span>
+<a href="18-intranet-and-admin.html" title="ความปลอดภัยของ intranet และ admin">18·admin</a>
+<a href="19-misconfiguration-and-errors.html" title="การตั้งค่าผิดพลาดและการจัดการ error">19·config</a>
+<a href="20-insecure-design.html" title="การออกแบบที่ไม่ปลอดภัยและ business logic">20·design</a>
+<a href="21-logging-and-incident-response.html" title="Logging การแจ้งเตือน และการรับมือเหตุการณ์">21·logging</a>
+<a href="22-additional-resources.html" title="แหล่งข้อมูลเพิ่มเติม">22·แหล่งข้อมูล</a>
+<span class="grp">| แบบสอบถาม:</span>
+<a href="q1-developer-survey.html" title="แบบสำรวจความปลอดภัยสำหรับนักพัฒนา">Q1·dev</a>
+<a href="q2-awareness-survey.html" title="แบบสำรวจความตระหนักรู้ภัยไซเบอร์">Q2·ทุกคน</a></nav>
+  <main>
+<div class="col">
+<p class="prompt">guest@websec ~ % <b>man 09-mass-assignment-and-authorization</b></p>
+<h1>09 · Mass Assignment และ Authorization</h1>
+<p class="lede">Broken access control คือความเสี่ยงอันดับ 1 ของเว็บ ทุก request ต้องตอบสองคำถาม: ผู้ใช้นี้ตั้งค่าฟิลด์ไหนได้ และทำอะไรกับเรคคอร์ดไหนได้?</p>
+<div class="toc"><b>ในหน้านี้</b><ol><li><a href="#mass">Mass assignment</a></li><li><a href="#authz">Authorization: ระดับ object และระดับฟังก์ชัน</a></li><li><a href="#design">ออกแบบ authorization ให้แข็งแรง</a></li></ol></div>
+<h2 id="mass">9.1 Mass assignment</h2>
+<p>เขียน <code>User.update(params[:user])</code> แล้วคัดลอกทั้งฟอร์มลงโมเดลมันง่าย แต่ผู้โจมตีเป็นคนเขียนฟอร์มนั้น เขาแค่เพิ่ม <code>role: "admin"</code> เข้าไป</p>
+<p>เรื่องนี้เกิดกับ GitHub ในปี 2012 และเป็นเหตุผลที่ Rails มี strong parameters</p>
+<div class="anim" data-actors="Attacker|Rails controller|users table" data-title="Mass assignment"><script type="application/json">[{"f": 0, "t": 1, "l": "PATCH /profile {name: \"Eve\", role: \"admin\"}", "k": "a", "c": "ฟอร์มโปรไฟล์มีแค่ฟิลด์ชื่อ แต่ผู้โจมตีเพิ่ม <code>role<\/code> ลงใน request ด้วย dev tools หรือ curl"}, {"n": 1, "l": "current_user.update(params[:user].permit!)", "k": "a", "c": "controller คัดลอกทุก attribute ที่ส่งมาลงโมเดล"}, {"f": 1, "t": 2, "l": "UPDATE users SET name='Eve', role='admin'", "k": "a", "c": "<b>ยกระดับสิทธิ์<\/b> ผ่านฟอร์มธรรมดา"}, {"n": 1, "l": "params.expect(user: [:name])", "k": "k", "c": "เมื่อมี allowlist ชัดเจน เหลือแค่ <code>name<\/code> ส่วน <code>role<\/code> ถูกทิ้ง (และบันทึก log)"}, {"f": 1, "t": 2, "l": "UPDATE users SET name='Eve'", "c": "บทบาทยังคงเหมือนเดิม"}]</script></div>
+<div class="demo"><header><b>sim: request อัปเดตโปรไฟล์</b><span>แก้ JSON ที่เบราว์เซอร์ส่ง</span></header><div class="body">
+<div class="grid2"><div>
+<label for="ma-in">PATCH /profile body</label>
+<textarea id="ma-in" rows="5">{"user": {"name": "Eve", "role": "admin", "account_id": 1, "verified": true}}</textarea>
+<div class="row" style="margin-top:8px"><span>controller uses:</span>
+<label><input name="ma-mode" type="radio" value="all"/> params[:user].permit!</label>
+<label><input checked="" name="ma-mode" type="radio" value="permit"/> params.expect(user: [:name, :email])</label></div>
+</div><div><p class="cap">เรคคอร์ดผู้ใช้หลังบันทึก</p><div class="out" id="ma-out"></div></div></div>
+</div></div>
+<div class="rp yes">Strong params เปิดไว้แล้ว: ส่ง params ดิบจะ error คุณต้องระบุคีย์ที่อนุญาตด้วย <code>permit</code> หรือ <code>params.expect</code> <b>ช่องโหว่คือ <code>permit!</code></b> (อนุญาตทุกอย่าง) และรายการ permit ที่มี <code>:role</code> Brakeman จับได้ทั้งสองแบบ</div><div class="code">
+<pre data-lang="rails"><span class="c"># Rails 8: expect = require + permit, and rejects wrongly shaped params with 400</span>
+def profile_params
+  params.expect(user: [:name, :email])
+end
+
+<span class="c"># admin-only fields get their own permit list in the admin controller</span>
+def admin_user_params
+  params.expect(user: [:name, :email, :role])
+end
+
+<span class="bad">params.require(:user).permit!            # permits everything: never on user input</span></pre>
+<pre data-lang="node"><span class="c">// JS stacks have the same bug: Object.assign(user, req.body) or ORM.update(req.body)</span>
+const { name, email } = req.body;              <span class="ok">// pick fields explicitly</span>
+await User.update({ name, email }, { where: { id: req.user.id } });
+<span class="bad">await User.update(req.body, { where: { id: req.user.id } });   // mass assignment</span></pre>
+</div>
+<h2 id="authz">9.2 Authorization: ระดับ object และระดับฟังก์ชัน</h2>
+<p>Authentication = คุณคือใคร Authorization = คุณทำอะไรได้ มีสองแบบที่พัง:</p>
+<ul>
+<li><b>ผิดเรคคอร์ด</b> (BOLA/IDOR): ดูใบแจ้งหนี้ได้ แต่ไม่ใช่ <i>ใบนั้น</i></li>
+<li><b>ผิดการกระทำ</b> (BFLA): ผู้ใช้ทั่วไปเรียก <code>POST /admin/refunds</code> ได้ เพราะเราแค่ซ่อนปุ่ม</li>
+</ul>
+<p>ระวังด้วย: การแก้ <code>account_id</code> ใน request การข้ามขั้นตอน และ API endpoint ที่ไม่ได้ตรวจเหมือนหน้า HTML</p>
+<div class="demo"><header><b>sim: ใครทำอะไรได้?</b><span>เลือกบทบาทและการกระทำ</span></header><div class="body">
+<div class="row"><label for="az-role">เข้าสู่ระบบในฐานะ</label><select id="az-role" style="width:auto"><option value="viewer">viewer (Acme)</option><option selected="" value="member">member (Acme)</option><option value="manager">manager (Acme)</option><option value="admin">admin (Acme)</option><option value="other">member (Globex)</option></select>
+<label><input checked="" id="az-policy" type="checkbox"/> เซิร์ฟเวอร์ตรวจ policy ทุกการกระทำ</label></div>
+<div class="tablewrap" style="margin-top:10px"><table id="az-tbl"></table></div>
+</div></div>
+<div class="rp no">ไม่มีในตัว ให้ค้นผ่าน <code>Current.user</code> และใช้ <b>Pundit</b> หรือ <b>Action Policy</b> พร้อม <code>verify_authorized</code> เพื่อให้การลืมตรวจล้มเหลวแบบเห็นชัด</div><div class="code">
+<pre data-lang="rails">class ApplicationController &lt; ActionController::Base
+  include Pundit::Authorization
+  after_action :verify_authorized, except: :index     <span class="c"># forgot authorize? → error</span>
+  after_action :verify_policy_scoped, only: :index
+end
+
+class RefundsController &lt; ApplicationController
+  def create
+    order = policy_scope(Order).find(params[:order_id])  <span class="c"># object level (BOLA)</span>
+    authorize order, :refund?                            <span class="c"># function level (BFLA)</span>
+    order.refund!(amount: params.expect(:amount))
+  end
+end
+
+class OrderPolicy &lt; ApplicationPolicy
+  def refund? = user.manager? &amp;&amp; record.account_id == user.account_id
+  class Scope &lt; ApplicationPolicy::Scope
+    def resolve = scope.where(account_id: user.account_id)   <span class="c"># tenant isolation</span>
+  end
+end</pre>
+</div>
+<h2 id="design">9.3 ออกแบบ authorization ให้แข็งแรง</h2>
+<ul>
+<li><b>ปฏิเสธเป็นค่าเริ่มต้น</b> ไม่มีกฎ ก็ไม่ได้สิทธิ์</li>
+<li><b>ตรวจที่เซิร์ฟเวอร์ทุกครั้ง</b> การซ่อนปุ่มไม่ใช่ความปลอดภัย</li>
+<li><b>รวมกฎไว้ที่เดียว</b> (policy object) ไม่ใช่ <code>if admin?</code> กระจายทั่ว</li>
+<li><b>เอาบัญชีจาก session</b> ห้ามเอาจาก params</li>
+<li><b>ทดสอบ</b>: ล็อกอินเป็นแต่ละบทบาทแล้วเช็กว่าได้ 403/404</li>
+<li><b>ใช้ 404 แทน 403</b> เพื่อไม่ให้ไล่เดา ID ได้</li>
+</ul>
+</div>
+
+<div class="col"><label class="readmark"><input type="checkbox" id="read-09-mass-assignment-and-authorization"> ทำเครื่องหมายว่าอ่านหัวข้อ 09 แล้ว</label><div class="pager"><a href="08-user-management.html">◀ 08 การจัดการผู้ใช้</a><a href="10-redirection-and-files.html">10 Redirect และไฟล์ ▶</a></div></div>
+  </main>
+  <footer class="site">อ้างอิงจาก <a href="https://guides.rubyonrails.org/security.html">Ruby on Rails Security Guide</a> (CC BY-SA 4.0), <a href="https://cheatsheetseries.owasp.org/">OWASP Cheat Sheet Series</a>, <a href="https://owasp.org/Top10/2025/">OWASP Top 10:2025</a> และ <a href="https://infosec.mozilla.org/guidelines/web_security.html">Mozilla Web Security Guidelines</a> เขียนสำหรับทีมพัฒนาของเรา ตัวอย่างโค้ดเพื่อการอธิบาย ข้อความในผลการจำลองบางส่วนยังเป็นภาษาอังกฤษ</footer>
+</div>
+<script src="../assets/site.js?v=92ac7aa3f8"></script>
+<script>
+
+function ma() {
+  let body; try { body = JSON.parse($("#ma-in").value); } catch (e) { $("#ma-out").innerHTML = '<span class="y">invalid JSON</span>'; return; }
+  const u = body.user || {}, mode = $("input[name=ma-mode]:checked").value;
+  const rec = { id: 7, name: "Eve", email: "eve@acme.test", role: "member", account_id: 3, verified: false };
+  const allowed = mode === "all" ? Object.keys(u) : ["name", "email"];
+  const dropped = Object.keys(u).filter(k => !allowed.includes(k));
+  Object.keys(u).forEach(k => { if (allowed.includes(k) && k in rec) rec[k] = u[k]; });
+  const sens = ["role", "account_id", "verified"];
+  $("#ma-out").innerHTML = Object.entries(rec).map(([k, v]) => { const changed = k in u && allowed.includes(k); const bad = changed && sens.includes(k); return `${k}: ${bad ? '<span class="r">' + esc(JSON.stringify(v)) + "  ← attacker-set</span>" : changed ? '<span class="g">' + esc(JSON.stringify(v)) + "</span>" : esc(JSON.stringify(v))}`; }).join("\n") + (dropped.length ? `\n\n<span class="d">Unpermitted parameters: ${dropped.map(esc).join(", ")} (dropped, logged)</span>` : "");
+}
+$("#ma-in").addEventListener("input", ma); $$("input[name=ma-mode]").forEach(r => r.addEventListener("change", ma)); ma();
+const acts = [
+  ["GET /projects/41 (Acme project)", "object", { viewer: 1, member: 1, manager: 1, admin: 1, other: 0 }],
+  ["PATCH /projects/41", "object", { viewer: 0, member: 1, manager: 1, admin: 1, other: 0 }],
+  ["POST /refunds (order 900, Acme)", "function", { viewer: 0, member: 0, manager: 1, admin: 1, other: 0 }],
+  ["POST /admin/users (create admin)", "function", { viewer: 0, member: 0, manager: 0, admin: 1, other: 0 }],
+  ["GET /api/v1/invoices?account_id=3", "tenant", { viewer: 1, member: 1, manager: 1, admin: 1, other: 0 }],
+  ["POST /checkout/confirm (skipping /pay)", "workflow", { viewer: 0, member: 0, manager: 0, admin: 0, other: 0 }]];
+function az() {
+  const r = $("#az-role").value, pol = $("#az-policy").checked;
+  $("#az-tbl").innerHTML = "<tr><th>request</th><th>kind</th><th>should be</th><th>server answers</th></tr>" + acts.map(([a, kind, m]) => {
+    const should = !!m[r], got = pol ? should : true;
+    return `<tr><td><code>${esc(a)}</code></td><td>${kind}</td><td>${should ? "allowed" : "denied"}</td><td>${got === should ? (got ? '<span class="pill safe">200</span>' : '<span class="pill safe">404 / 403</span>') : '<span class="pill bad">200: broken access control</span>'}</td></tr>`;
+  }).join("");
+}
+$("#az-role").addEventListener("change", az); $("#az-policy").addEventListener("change", az); az();
+
+</script>
+</body>
+</html>

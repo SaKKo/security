@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en" data-lang="rails">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>13 Server-Side Request Forgery · Web Security</title>
+
+<link rel="icon" href="favicon.ico" sizes="32x32">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="site.webmanifest">
+<meta name="theme-color" content="#000000">
+<link rel="stylesheet" href="assets/site.css?v=8f1e007517">
+<script src="assets/consent.js?v=9320b4a322"></script>
+</head>
+<body data-slug="13-ssrf">
+<div class="win">
+  <div class="titlebar"><span class="dots"><i></i><i></i><i></i></span><span class="t">guest@websec: ~/websec/13-ssrf — zsh — 100×40</span>
+    <a class="by" href="about.html" title="About the author"><span class="w0">by </span>SaKKo</a>
+    <span class="lsw" role="group" aria-label="Language"><a href="13-ssrf.html" aria-current="true" data-setlang="en">EN</a><a href="th/13-ssrf.html" data-setlang="th">TH</a></span>
+    <span class="langsw" role="group" aria-label="Code examples language"><span class="d">code:</span><button type="button" data-l="rails">rails</button><button type="button" data-l="node">node</button></span></div>
+  <nav class="top" aria-label="Sections"><a href="index.html" title="Web Security Field Guide">~/</a>
+<a class="trk on" href="index.html#security">#1 security</a>
+<a class="trk" href="r01-rails-api-app.html">#2 rails</a>
+<span class="grp">|</span>
+<a href="01-introduction.html" title="Introduction">01·introduction</a>
+<a href="02-sql-injection.html" title="SQL Injection">02·sql-injection</a>
+<a href="03-unsafe-query-generation.html" title="Unsafe Query Generation">03·query-shape</a>
+<a href="04-xss-and-other-injection.html" title="XSS and Other Injection">04·xss</a>
+<span class="grp">| accounts:</span>
+<a href="05-authentication.html" title="Authentication">05·auth</a>
+<a href="05b-mfa.html" title="Multi-Factor Authentication">05b·mfa</a>
+<a href="06-sessions.html" title="Sessions">06·sessions</a>
+<a href="07-csrf.html" title="Cross-Site Request Forgery">07·csrf</a>
+<a href="08-user-management.html" title="User Management">08·accounts</a>
+<a href="09-mass-assignment-and-authorization.html" title="Mass Assignment and Authorization">09·authz</a>
+<span class="grp">| browser:</span>
+<a href="10-redirection-and-files.html" title="Redirection and Files">10·files</a>
+<a href="11-http-security-headers.html" title="HTTP Security Headers">11·headers</a>
+<a href="12-transport-cookies-third-party.html" title="Transport, Cookies and Third-Party Scripts">12·cookies-tls</a>
+<span class="grp">| server:</span>
+<a href="13-ssrf.html" aria-current="page" title="Server-Side Request Forgery">13·ssrf</a>
+<a href="14-deserialization-and-xxe.html" title="Deserialization and XXE">14·deserialize</a>
+<a href="15-environmental-security.html" title="Environmental Security">15·secrets</a>
+<a href="16-cryptography.html" title="Cryptography and Data Protection">16·crypto</a>
+<a href="17-dependencies-and-cves.html" title="Dependencies and CVEs">17·dependencies</a>
+<span class="grp">| ops:</span>
+<a href="18-intranet-and-admin.html" title="Intranet and Admin Security">18·admin</a>
+<a href="19-misconfiguration-and-errors.html" title="Misconfiguration and Error Handling">19·misconfig</a>
+<a href="20-insecure-design.html" title="Insecure Design and Business Logic">20·design</a>
+<a href="21-logging-and-incident-response.html" title="Logging, Alerting and Incident Response">21·logging</a>
+<a href="22-additional-resources.html" title="Additional Resources">22·resources</a>
+<span class="grp">| questionnaires:</span>
+<a href="q1-developer-survey.html" title="Developer Security Survey">Q1·developer</a>
+<a href="q2-awareness-survey.html" title="Cyber Threat Awareness Survey">Q2·cyber</a></nav>
+  <main>
+<div class="col">
+<p class="prompt">guest@websec ~ % <b>man 13-ssrf</b></p>
+<h1>13 · Server-Side Request Forgery</h1>
+<p class="lede">Any feature where our server fetches a user's URL (avatar from link, webhook, link preview, PDF render) can be turned against us. Attackers can't reach our internal network. Our server can, and SSRF makes it fetch for them.</p>
+
+<h2>What attackers aim for</h2>
+<ul>
+<li><b>Cloud metadata</b> (<code>169.254.169.254</code>) hands out the server's cloud credentials. This was behind the 2019 Capital One breach.</li>
+<li><b>Internal services</b> that trust anything on the private network.</li>
+<li><b>localhost</b> services on the same box.</li>
+
+</ul>
+<div class="anim" data-actors="Attacker|Our Rails app|169.254.169.254 (metadata)" data-title="SSRF to cloud credentials"><script type="application/json">[{"f": 0, "t": 1, "l": "POST /profile  avatar_url=http://169.254.169.254/latest/meta-data/iam/…", "k": "a", "c": "The \"set avatar from URL\" feature accepts any URL."}, {"n": 1, "l": "URI.open(params[:avatar_url])", "k": "a", "c": "The server fetches it, from inside our cloud network."}, {"f": 1, "t": 2, "l": "GET /latest/meta-data/iam/security-credentials/app-role", "k": "a", "c": "The metadata service only answers requests from the machine itself, and this request comes from the machine itself."}, {"f": 2, "t": 1, "l": "{AccessKeyId, SecretAccessKey, Token}", "k": "a", "c": "Temporary cloud credentials for the server's role."}, {"f": 1, "t": 0, "l": "\"invalid image\" error page showing the body", "k": "a", "c": "Our error message echoes the response. <b>The attacker now has cloud credentials.<\/b>"}, {"n": 1, "l": "fix: resolve → block private ranges → pin IP, no redirects; IMDSv2", "k": "k", "c": "Check the <i>resolved<\/i> IP, block internal ranges, no redirects, IMDSv2 on."}, {"f": 1, "t": 2, "l": "169.254.0.0/16 is link-local: refused", "k": "b", "c": "The fetch never happens."}]</script></div>
+<h2>Why simple blocklists fail</h2>
+<p>Blocking "localhost" in the string doesn't work. IPs can be written many ways, hostnames can point inside, and redirects can lead inside. Try it:</p>
+<div class="demo"><header><b>sim: URL fetch validator</b><span>uses your browser's real URL parser</span></header><div class="body">
+<label for="sf-in">URL the user submits</label><input id="sf-in" type="text" value="http://2130706433/admin"/>
+<div class="row" style="margin-top:8px"><span class="d">try:</span>
+<button class="btn" data-sf="https://images.example-cdn.test/cat.png" type="button">normal</button>
+<button class="btn" data-sf="http://127.0.0.1:6379/" type="button">127.0.0.1</button>
+<button class="btn" data-sf="http://2130706433/admin" type="button">decimal IP</button>
+<button class="btn" data-sf="http://0x7f.1/" type="button">hex short form</button>
+<button class="btn" data-sf="http://[::ffff:127.0.0.1]/" type="button">IPv6-mapped</button>
+<button class="btn" data-sf="http://169.254.169.254/latest/meta-data/" type="button">metadata</button>
+<button class="btn" data-sf="http://internal-admin.corp.test/" type="button">internal hostname</button>
+<button class="btn" data-sf="https://harmless.evil.test/redirect" type="button">redirect</button>
+<button class="btn" data-sf="https://rebind.evil.test/" type="button">DNS rebinding</button>
+<button class="btn" data-sf="file:///etc/passwd" type="button">file://</button>
+</div>
+<div class="tablewrap" style="margin-top:10px"><table><thead><tr><th>check</th><th>decision</th><th>what actually happens</th></tr></thead><tbody id="sf-out"></tbody></table></div>
+</div></div>
+<h2>Defenses</h2>
+<ol>
+<li><b>Avoid it</b> if you can: take uploads instead, or only fetch from known hosts.</li>
+<li>Otherwise: <b>resolve the hostname yourself</b>, block private IPs, then connect to that exact IP.</li>
+<li><b>Don't follow redirects</b> blindly.</li>
+<li>Short timeouts, and never echo the response back.</li>
+<li>On AWS, require <b>IMDSv2</b> so a plain GET can't read metadata.</li>
+</ol>
+<div class="rp no">Rails does nothing here. Watch for <code>URI.open(params[…])</code>, HTTP clients with user URLs, and <code>attach(io: URI.open(url))</code>. The <code>ssrf_filter</code> gem does the hard part.</div><div class="code">
+<pre data-lang="rails"><span class="c"># Gemfile: gem "ssrf_filter"</span>
+def import_avatar(url)
+  uri = URI.parse(url)
+  raise ArgumentError, "http(s) only" unless %w[http https].include?(uri.scheme)
+  response = SsrfFilter.get(uri, max_redirects: 0)   <span class="c"># resolves, blocks private IPs, pins IP</span>
+  raise "not an image" unless response["content-type"].to_s.start_with?("image/")
+  avatar.attach(io: StringIO.new(response.body), filename: "avatar")
+rescue SsrfFilter::Error, URI::InvalidURIError
+  errors.add(:avatar_url, "can't be fetched")         <span class="c"># generic message, no body echo</span>
+end
+
+<span class="bad">avatar.attach(io: URI.open(params[:avatar_url]), filename: "a")   # SSRF</span></pre>
+<pre data-lang="node"><span class="c">// Node: request-filtering-agent blocks private IPs after DNS resolution.</span>
+<span class="c">// It needs an agent-aware client (node-fetch, axios, got): Node's built-in fetch ignores `agent`.</span>
+import fetch from "node-fetch";
+import { useAgent } from "request-filtering-agent";
+const res = await fetch(url, { agent: useAgent(url), redirect: "manual" });
+<span class="bad">await fetch(req.body.url);    // SSRF</span></pre>
+</div>
+</div>
+
+<div class="col"><label class="readmark"><input type="checkbox" id="read-13-ssrf"> mark section 13 as read</label><div class="pager"><a href="12-transport-cookies-third-party.html">◀ 12 Transport, Cookies and Third-Party Scripts</a><a href="14-deserialization-and-xxe.html">14 Deserialization and XXE ▶</a></div></div>
+  </main>
+  <footer class="site">Based on the <a href="https://guides.rubyonrails.org/security.html">Ruby on Rails Security Guide</a> (CC BY-SA 4.0), the <a href="https://cheatsheetseries.owasp.org/">OWASP Cheat Sheet Series</a>, the <a href="https://owasp.org/Top10/2025/">OWASP Top 10:2025</a> and <a href="https://infosec.mozilla.org/guidelines/web_security.html">Mozilla's Web Security Guidelines</a>. Written for our dev team; code samples are illustrative.</footer>
+</div>
+<script src="assets/site.js?v=92ac7aa3f8"></script>
+<script>
+
+const dns = { "images.example-cdn.test": ["151.101.1.140"], "internal-admin.corp.test": ["10.0.3.7"], "harmless.evil.test": ["93.184.216.34"], "rebind.evil.test": ["93.184.216.34", "127.0.0.1"] };
+const redirects = { "harmless.evil.test": "http://169.254.169.254/latest/meta-data/iam/" };
+function ipv4Class(ip) {
+  const p = ip.split(".").map(Number); if (p.length !== 4 || p.some(isNaN)) return null;
+  if (p[0] === 127) return "loopback"; if (p[0] === 10 || (p[0] === 172 && p[1] >= 16 && p[1] < 32) || (p[0] === 192 && p[1] === 168)) return "private";
+  if (p[0] === 169 && p[1] === 254) return "link-local (cloud metadata)"; if (p[0] === 0) return "reserved"; return "public";
+}
+function classify(host) {
+  const h = host.replace(/^\[|\]$/g, "");
+  if (h === "::1") return "loopback";
+  const m = h.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/i) || h.match(/^::ffff:([0-9a-f]+):([0-9a-f]+)$/i);
+  if (m) { if (m.length === 2) return ipv4Class(m[1]); const a = parseInt(m[1], 16), b = parseInt(m[2], 16); return ipv4Class(`${a >> 8}.${a & 255}.${b >> 8}.${b & 255}`); }
+  return ipv4Class(h);
+}
+function sf() {
+  const raw = $("#sf-in").value; let u;
+  try { u = new URL(raw); } catch (e) { $("#sf-out").innerHTML = '<tr><td colspan="3"><span class="y">not a valid URL</span></td></tr>'; return; }
+  const host = u.hostname, naiveBlocked = /localhost|127\.0\.0\.1|169\.254\.169\.254/i.test(raw);
+  const ips = classify(host) ? [host] : (dns[host] || ["93.184.216.34"]);
+  const first = classify(ips[0]) || "public", last = ips[ips.length - 1], lastCls = classify(last) || "public";
+  const redirect = redirects[host];
+  const internal = c => c && c !== "public";
+  let reality;
+  if (u.protocol === "file:") reality = '<span class="r">reads a local file from the server</span>';
+  else if (redirect) reality = `<span class="r">302 → ${esc(redirect)} → server fetches cloud metadata</span>`;
+  else if (ips.length > 1) reality = `<span class="r">check sees ${ips[0]} (public); fetch re-resolves to ${last} (${lastCls})</span>`;
+  else reality = internal(first) ? `<span class="r">connects to ${esc(ips[0])} (${first})</span>` : `<span class="g">connects to ${esc(ips[0])} (public)</span>`;
+  const harmful = u.protocol === "file:" || redirect || internal(lastCls) || internal(first);
+  const rows = [
+    ["no check", true],
+    ["string blocklist (localhost, 127.0.0.1, 169.254.169.254)", !naiveBlocked],
+    ["resolve once + block private ranges (still follows redirects, re-resolves)", u.protocol.startsWith("http") && !internal(first)],
+    ["http(s) only + resolve + block ranges + pin IP + no redirects", u.protocol.startsWith("http") && !internal(first) && !internal(lastCls) && !redirect]];
+  $("#sf-out").innerHTML = `<tr><td colspan="3" class="w">parsed host: <code>${esc(host)}</code> → resolves to ${ips.map(i => `<code>${esc(i)}</code> (${classify(i) || "public"})`).join(", then ")}</td></tr>` +
+    rows.map(([n, allow], i) => { const strictBlocksRebind = i === 3; const bad = allow && harmful && !(strictBlocksRebind); return `<tr><td>${n}</td><td>${allow ? "fetch" : "refuse"}</td><td>${!allow ? '<span class="g">blocked</span>' : bad ? reality : (harmful ? '<span class="g">blocked (connects only to the vetted IP)</span>' : '<span class="g">fetches the image</span>')}</td></tr>`; }).join("");
+}
+$("#sf-in").addEventListener("input", sf); $$("[data-sf]").forEach(b => b.onclick = () => { $("#sf-in").value = b.dataset.sf; sf(); }); sf();
+
+</script>
+</body>
+</html>

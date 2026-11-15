@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en" data-lang="rails">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>10 Redirection and Files · Web Security</title>
+
+<link rel="icon" href="favicon.ico" sizes="32x32">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="site.webmanifest">
+<meta name="theme-color" content="#000000">
+<link rel="stylesheet" href="assets/site.css?v=8f1e007517">
+<script src="assets/consent.js?v=9320b4a322"></script>
+</head>
+<body data-slug="10-redirection-and-files">
+<div class="win">
+  <div class="titlebar"><span class="dots"><i></i><i></i><i></i></span><span class="t">guest@websec: ~/websec/10-redirection-and-files — zsh — 100×40</span>
+    <a class="by" href="about.html" title="About the author"><span class="w0">by </span>SaKKo</a>
+    <span class="lsw" role="group" aria-label="Language"><a href="10-redirection-and-files.html" aria-current="true" data-setlang="en">EN</a><a href="th/10-redirection-and-files.html" data-setlang="th">TH</a></span>
+    <span class="langsw" role="group" aria-label="Code examples language"><span class="d">code:</span><button type="button" data-l="rails">rails</button><button type="button" data-l="node">node</button></span></div>
+  <nav class="top" aria-label="Sections"><a href="index.html" title="Web Security Field Guide">~/</a>
+<a class="trk on" href="index.html#security">#1 security</a>
+<a class="trk" href="r01-rails-api-app.html">#2 rails</a>
+<span class="grp">|</span>
+<a href="01-introduction.html" title="Introduction">01·introduction</a>
+<a href="02-sql-injection.html" title="SQL Injection">02·sql-injection</a>
+<a href="03-unsafe-query-generation.html" title="Unsafe Query Generation">03·query-shape</a>
+<a href="04-xss-and-other-injection.html" title="XSS and Other Injection">04·xss</a>
+<span class="grp">| accounts:</span>
+<a href="05-authentication.html" title="Authentication">05·auth</a>
+<a href="05b-mfa.html" title="Multi-Factor Authentication">05b·mfa</a>
+<a href="06-sessions.html" title="Sessions">06·sessions</a>
+<a href="07-csrf.html" title="Cross-Site Request Forgery">07·csrf</a>
+<a href="08-user-management.html" title="User Management">08·accounts</a>
+<a href="09-mass-assignment-and-authorization.html" title="Mass Assignment and Authorization">09·authz</a>
+<span class="grp">| browser:</span>
+<a href="10-redirection-and-files.html" aria-current="page" title="Redirection and Files">10·files</a>
+<a href="11-http-security-headers.html" title="HTTP Security Headers">11·headers</a>
+<a href="12-transport-cookies-third-party.html" title="Transport, Cookies and Third-Party Scripts">12·cookies-tls</a>
+<span class="grp">| server:</span>
+<a href="13-ssrf.html" title="Server-Side Request Forgery">13·ssrf</a>
+<a href="14-deserialization-and-xxe.html" title="Deserialization and XXE">14·deserialize</a>
+<a href="15-environmental-security.html" title="Environmental Security">15·secrets</a>
+<a href="16-cryptography.html" title="Cryptography and Data Protection">16·crypto</a>
+<a href="17-dependencies-and-cves.html" title="Dependencies and CVEs">17·dependencies</a>
+<span class="grp">| ops:</span>
+<a href="18-intranet-and-admin.html" title="Intranet and Admin Security">18·admin</a>
+<a href="19-misconfiguration-and-errors.html" title="Misconfiguration and Error Handling">19·misconfig</a>
+<a href="20-insecure-design.html" title="Insecure Design and Business Logic">20·design</a>
+<a href="21-logging-and-incident-response.html" title="Logging, Alerting and Incident Response">21·logging</a>
+<a href="22-additional-resources.html" title="Additional Resources">22·resources</a>
+<span class="grp">| questionnaires:</span>
+<a href="q1-developer-survey.html" title="Developer Security Survey">Q1·developer</a>
+<a href="q2-awareness-survey.html" title="Cyber Threat Awareness Survey">Q2·cyber</a></nav>
+  <main>
+<div class="col">
+<p class="prompt">guest@websec ~ % <b>man 10-redirection-and-files</b></p>
+<h1>10 · Redirection and Files</h1>
+<p class="lede">Both turn user input into a place: a URL to go to, or a file on disk. Let users pick the place, and attackers will pick one you didn't plan for.</p>
+<h2>10.1 Redirection</h2>
+<p>Lots of apps have <code>/login?next=/dashboard</code>. If we redirect to whatever <code>next</code> says, attackers can craft a link that starts on our site and ends on theirs:</p>
+<pre class="plain">https://bank.test/login?next=https://bank-secure-login.evil.test/</pre>
+<p>The victim sees our domain, logs in for real, then lands on a fake "session expired" page. Perfect phishing.</p>
+<p>Fix: only redirect to paths on our own site. Use a real URL parser; string checks are easy to fool.</p>
+<div class="anim" data-actors="Victim|bank.test|bank-secure-login.evil.test" data-title="Open redirect phishing"><script type="application/json">[{"n": 0, "l": "email: \"Verify your account\" → bank.test/login?next=…", "k": "a", "c": "The link really points at bank.test, so it looks legitimate and passes many spam filters."}, {"f": 0, "t": 1, "l": "GET /login?next=https://bank-secure-login.evil.test", "c": "The victim logs in on the real site."}, {"f": 1, "t": 0, "l": "302 Location: https://bank-secure-login.evil.test", "k": "a", "c": "The app redirects to whatever <code>next<\/code> says."}, {"f": 0, "t": 2, "l": "GET /  (pixel-perfect copy)", "k": "a", "c": "\"Session expired, please sign in again.\""}, {"f": 0, "t": 2, "l": "POST password", "k": "a", "c": "<b>Credentials stolen<\/b>, right after a genuine login."}, {"n": 1, "l": "Rails 7+: raise_on_open_redirects / url_from", "k": "k", "c": "With Rails' default, <code>redirect_to<\/code> to a foreign host raises <code>UnsafeRedirectError<\/code>."}, {"f": 1, "t": 0, "l": "302 Location: /dashboard (fallback)", "k": "k", "c": "<code>url_from(params[:next]) || root_path<\/code> keeps the redirect on your own site."}]</script></div>
+<div class="demo"><header><b>sim: redirect validator showdown</b><span>try the bypasses</span></header><div class="body">
+<label for="rd-in">?next=</label><input id="rd-in" type="text" value="/dashboard"/>
+<div class="row" style="margin-top:8px"><span class="d">payloads:</span>
+<button class="btn" data-rd="/dashboard" type="button">/dashboard</button>
+<button class="btn" data-rd="https://evil.test/" type="button">https://evil.test/</button>
+<button class="btn" data-rd="//evil.test/" type="button">//evil.test/</button>
+<button class="btn" data-rd="https://bank.test.evil.test/" type="button">bank.test.evil.test</button>
+<button class="btn" data-rd="https://evil.test/?bank.test" type="button">evil.test/?bank.test</button>
+<button class="btn" data-rd="/\evil.test" type="button">/\evil.test</button>
+<button class="btn" data-rd="data:text/html,&lt;script&gt;alert(1)&lt;/script&gt;" type="button">data: URL</button>
+</div>
+<div class="tablewrap" style="margin-top:10px"><table><thead><tr><th>validator</th><th>decision</th><th>where the browser actually goes</th></tr></thead><tbody id="rd-out"></tbody></table></div>
+</div></div>
+<div class="code">
+<pre data-lang="rails"><span class="c"># Rails 7.0+ default: raise_on_open_redirects = true</span>
+redirect_to params[:next]                         <span class="c"># raises for foreign hosts</span>
+<span class="bad">redirect_to params[:next], allow_other_host: true</span>  # opts out: never with user input
+
+<span class="c"># keep "return to" on our own site</span>
+<span class="ok">redirect_to url_from(params[:next]) || root_path</span></pre>
+<pre data-lang="node">function safeNext(next) {
+  <span class="c">// resolve against our own origin, then require the same origin</span>
+  try {
+    const u = new URL(next, "https://bank.test");
+    if (u.origin !== "https://bank.test") return "/";
+    return u.pathname + u.search + u.hash;      <span class="ok">// relative, same-site</span>
+  } catch { return "/"; }
+}
+app.get("/after-login", (req, res) =&gt; res.redirect(safeNext(req.query.next)));</pre>
+</div>
+<div class="rp yes">Since Rails 7, <code>redirect_to</code> refuses other hosts unless you add <code>allow_other_host: true</code>. Use <code>url_from(params[:next])</code>. Older upgraded apps may still have this off, so grep for it.</div>
+
+
+<h2>10.2 File uploads: filenames</h2>
+<p>The filename comes from the attacker. Save it as-is and <code>../../config/master.key</code> lands outside your upload folder.</p>
+<p>Don't try to strip "bad" bits; that can create new ones. Allow only safe characters, or better, ignore their filename and use a random one.</p>
+<div class="demo"><header><b>sim: sanitizing a filename</b><span>blocklist vs allowlist</span></header><div class="body">
+<label for="fn-in">uploaded filename</label><input id="fn-in" type="text" value="....//....//etc/passwd"/>
+<div class="row" style="margin-top:8px"><span class="d">try:</span>
+<button class="btn" data-fn="vacation photo.jpg" type="button">normal</button>
+<button class="btn" data-fn="../../app/config.js" type="button">../ traversal</button>
+<button class="btn" data-fn="....//....//etc/passwd" type="button">....// nested</button>
+<button class="btn" data-fn="shell.php.jpg" type="button">double extension</button>
+<button class="btn" data-fn="..\..\windows\win.ini" type="button">backslashes</button>
+</div>
+<div class="grid3" style="margin-top:10px">
+<div class="box"><p class="cap r">blocklist: remove "../" once</p><div class="out" id="fn-a"></div></div>
+<div class="box"><p class="cap y">allowlist: keep [A-Za-z0-9._-]</p><div class="out" id="fn-b"></div></div>
+<div class="box"><p class="cap g">best: random name</p><div class="out" id="fn-c"></div></div>
+</div>
+</div></div>
+<div class="rp yes">Active Storage already uses random keys. Writing files yourself with <code>original_filename</code> brings the problem back.</div>
+<h3>Uploads and denial of service</h3>
+<p>Resizing and converting is slow. Do it in a background job, and cap upload size at the proxy.</p>
+<h2>10.3 Executable code in uploads</h2>
+<p>If uploads sit in a public folder, the server might run them, and an uploaded <code>.html</code> or <code>.svg</code> can run JavaScript on our domain.</p>
+<ul>
+<li>Store uploads <b>outside the web root</b>, or in object storage (S3, GCS) on a separate domain.</li>
+<li>Serve them with an explicit type and as a download.</li>
+<li>Send <code>X-Content-Type-Options: nosniff</code> so browsers don't guess (section 11).</li>
+<li>Validate the real file type by reading magic bytes, not by trusting the extension or the browser-supplied <code>Content-Type</code>.</li>
+</ul>
+<div class="rp partial">Active Storage keeps files out of <code>public/</code>, detects the real file type from the file's contents, and serves risky types like HTML and SVG as downloads instead of showing them. It doesn't <i>reject</i> anything, though: validating type and size is our job.</div>
+<h2>10.4 File downloads and path traversal</h2>
+<p>Same bug, other direction: a download URL that builds a path from a parameter.</p>
+<div class="code">
+<pre data-lang="rails"><span class="bad"># VULNERABLE</span>
+def download
+  send_file Rails.root.join("files", params[:name])
+end
+<span class="c"># GET /download?name=../config/master.key  → serves your master key</span></pre>
+<pre data-lang="node"><span class="bad">// VULNERABLE</span>
+app.get("/download", (req, res) =&gt;
+  res.sendFile(path.join(__dirname, "files", req.query.name)));
+<span class="c">// GET /download?name=../.env   → serves your secrets</span></pre>
+</div>
+<div class="demo"><header><b>sim: path resolver</b><span>base directory: /srv/app/files</span></header><div class="body">
+<label for="pt-in">GET /download?name=</label><input id="pt-in" type="text" value="report-2024.pdf"/>
+<div class="row" style="margin-top:8px"><span class="d">try:</span>
+<button class="btn" data-pt="report-2024.pdf" type="button">report-2024.pdf</button>
+<button class="btn" data-pt="../.env" type="button">../.env</button>
+<button class="btn" data-pt="../../../etc/passwd" type="button">../../../etc/passwd</button>
+<button class="btn" data-pt="/etc/shadow" type="button">/etc/shadow</button>
+<button class="btn" data-pt="sub/../../files-backup/db.sql" type="button">files-backup</button>
+</div>
+<div class="out" id="pt-out" style="margin-top:10px"></div>
+</div></div>
+<p>Two reliable fixes:</p>
+<ol>
+<li><b>Resolve, then check</b> the final path is still inside your folder.</li>
+<li><b>Better: no names at all.</b> Download by record ID and check the user may see it.</li>
+</ol>
+<div class="code">
+<pre data-lang="rails">BASE = Rails.root.join("files").realpath
+
+def download
+  path = BASE.join(params[:name].to_s).expand_path
+  return head :not_found unless path.to_s.start_with?("#{BASE}/") &amp;&amp; path.file?
+  send_file path
+end
+
+<span class="c"># better: Active Storage record, authorized first</span>
+def show
+  doc = current_user.documents.find(params[:id])
+  redirect_to rails_blob_path(doc.file, disposition: "attachment")
+end</pre>
+<pre data-lang="node">const BASE = path.resolve(__dirname, "files") + path.sep;
+app.get("/download", (req, res) =&gt; {
+  const target = path.resolve(BASE, String(req.query.name));
+  if (!target.startsWith(BASE)) return res.sendStatus(404);   <span class="ok">// escaped the folder</span>
+  res.sendFile(target);
+});
+<span class="c">// Express's res.sendFile(name, { root: BASE }) also rejects "../" escapes.</span></pre>
+</div>
+<div class="rp no"><code>send_file</code> doesn't check paths. Prefer <code>current_user.documents.find(params[:id])</code>.</div>
+</div>
+
+<div class="col"><label class="readmark"><input type="checkbox" id="read-10-redirection-and-files"> mark section 10 as read</label><div class="pager"><a href="09-mass-assignment-and-authorization.html">◀ 09 Mass Assignment and Authorization</a><a href="11-http-security-headers.html">11 HTTP Security Headers ▶</a></div></div>
+  </main>
+  <footer class="site">Based on the <a href="https://guides.rubyonrails.org/security.html">Ruby on Rails Security Guide</a> (CC BY-SA 4.0), the <a href="https://cheatsheetseries.owasp.org/">OWASP Cheat Sheet Series</a>, the <a href="https://owasp.org/Top10/2025/">OWASP Top 10:2025</a> and <a href="https://infosec.mozilla.org/guidelines/web_security.html">Mozilla's Web Security Guidelines</a>. Written for our dev team; code samples are illustrative.</footer>
+</div>
+<script src="assets/site.js?v=92ac7aa3f8"></script>
+<script>
+
+function browserTarget(v) {
+  try { const u = new URL(v.replace(/\\/g, "/"), "https://bank.test/login"); return u.protocol === "data:" ? "data: document (runs attacker HTML)" : u.href; } catch { return "(invalid)"; }
+}
+function rd() {
+  const v = $("#rd-in").value, dest = browserTarget(v), evil = !/^https:\/\/bank\.test\//.test(dest);
+  const vs = [
+    ["none: redirect(next)", true],
+    ["startsWith('/')", v.startsWith("/")],
+    ["includes('bank.test')", v.includes("bank.test") || v.startsWith("/")],
+    ["URL parse + origin === bank.test", (() => { try { const u = new URL(v, "https://bank.test"); return u.origin === "https://bank.test" && !v.includes("\\"); } catch { return false; } })()]];
+  $("#rd-out").innerHTML = vs.map(([n, ok]) => {
+    const went = ok ? dest : "https://bank.test/ (fallback)";
+    const bad = ok && evil;
+    return `<tr><td>${n}</td><td>${ok ? "allow" : "reject"}</td><td>${bad ? '<span class="r">' + esc(went) + " ✗ phished</span>" : '<span class="g">' + esc(went) + "</span>"}</td></tr>`;
+  }).join("");
+}
+$("#rd-in").addEventListener("input", rd); $$("[data-rd]").forEach(b => b.onclick = () => { $("#rd-in").value = b.dataset.rd; rd(); }); rd();
+
+function fn() {
+  const v = $("#fn-in").value;
+  const a = v.replace(/\.\.\//g, "");
+  const b = v.replace(/[^A-Za-z0-9._-]/g, "_").replace(/^\.+/, "_");
+  const id = crypto.randomUUID ? crypto.randomUUID() : "3f1c9a2e-7b44-4d0e-9c1a-5e2f8b6d0a11";
+  const ext = (v.match(/\.(jpg|jpeg|png|gif|pdf|txt)$/i) || [])[0] || "";
+  const flagA = a.includes("..") ? '\n<span class="r">still contains ../ → traversal</span>' : "";
+  const flagB = /\.php/i.test(b) ? '\n<span class="y">name is safe as a path, but "shell.php" in it shows why you also need 5.3</span>' : "";
+  $("#fn-a").innerHTML = esc(a) + flagA;
+  $("#fn-b").innerHTML = esc(b) + flagB + (b.includes("..") ? "" : '\n<span class="g">no path separators can survive</span>');
+  $("#fn-c").innerHTML = `uploads/${id}${ext.toLowerCase()}\n<span class="d">original_name: ${esc(v)} (stored in DB, shown escaped)</span>`;
+}
+$("#fn-in").addEventListener("input", fn); $$("[data-fn]").forEach(b => b.onclick = () => { $("#fn-in").value = b.dataset.fn; fn(); }); fn();
+
+function resolvePath(base, rel) {
+  const parts = (rel.startsWith("/") ? rel : base + "/" + rel).split("/"), out = [];
+  for (const p of parts) { if (!p || p === ".") continue; if (p === "..") out.pop(); else out.push(p); }
+  return "/" + out.join("/");
+}
+function pt() {
+  const v = $("#pt-in").value, base = "/srv/app/files", naive = resolvePath(base, v);
+  const inside = naive.startsWith(base + "/");
+  const sloppy = naive.startsWith(base);
+  $("#pt-out").innerHTML = `path.join / os.path.join → <span class="${inside ? "g" : "r"}">${esc(naive)}</span>\n\n` +
+    `vulnerable handler: ${inside ? '<span class="g">serves the intended file</span>' : '<span class="r">serves ' + esc(naive) + "!</span>"}\n` +
+    `check startsWith("${base}"): ${sloppy ? (inside ? "allow" : '<span class="r">allow (bug: no trailing slash)</span>') : '<span class="g">reject 404</span>'}\n` +
+    `check startsWith("${base}/"): ${inside ? "allow" : '<span class="g">reject 404</span>'}`;
+}
+$("#pt-in").addEventListener("input", pt); $$("[data-pt]").forEach(b => b.onclick = () => { $("#pt-in").value = b.dataset.pt; pt(); }); pt();
+
+</script>
+</body>
+</html>

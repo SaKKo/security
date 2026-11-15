@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en" data-lang="rails">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>03 Unsafe Query Generation · Web Security</title>
+
+<link rel="icon" href="favicon.ico" sizes="32x32">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="site.webmanifest">
+<meta name="theme-color" content="#000000">
+<link rel="stylesheet" href="assets/site.css?v=8f1e007517">
+<script src="assets/consent.js?v=9320b4a322"></script>
+</head>
+<body data-slug="03-unsafe-query-generation">
+<div class="win">
+  <div class="titlebar"><span class="dots"><i></i><i></i><i></i></span><span class="t">guest@websec: ~/websec/03-unsafe-query-generation — zsh — 100×40</span>
+    <a class="by" href="about.html" title="About the author"><span class="w0">by </span>SaKKo</a>
+    <span class="lsw" role="group" aria-label="Language"><a href="03-unsafe-query-generation.html" aria-current="true" data-setlang="en">EN</a><a href="th/03-unsafe-query-generation.html" data-setlang="th">TH</a></span>
+    <span class="langsw" role="group" aria-label="Code examples language"><span class="d">code:</span><button type="button" data-l="rails">rails</button><button type="button" data-l="node">node</button></span></div>
+  <nav class="top" aria-label="Sections"><a href="index.html" title="Web Security Field Guide">~/</a>
+<a class="trk on" href="index.html#security">#1 security</a>
+<a class="trk" href="r01-rails-api-app.html">#2 rails</a>
+<span class="grp">|</span>
+<a href="01-introduction.html" title="Introduction">01·introduction</a>
+<a href="02-sql-injection.html" title="SQL Injection">02·sql-injection</a>
+<a href="03-unsafe-query-generation.html" aria-current="page" title="Unsafe Query Generation">03·query-shape</a>
+<a href="04-xss-and-other-injection.html" title="XSS and Other Injection">04·xss</a>
+<span class="grp">| accounts:</span>
+<a href="05-authentication.html" title="Authentication">05·auth</a>
+<a href="05b-mfa.html" title="Multi-Factor Authentication">05b·mfa</a>
+<a href="06-sessions.html" title="Sessions">06·sessions</a>
+<a href="07-csrf.html" title="Cross-Site Request Forgery">07·csrf</a>
+<a href="08-user-management.html" title="User Management">08·accounts</a>
+<a href="09-mass-assignment-and-authorization.html" title="Mass Assignment and Authorization">09·authz</a>
+<span class="grp">| browser:</span>
+<a href="10-redirection-and-files.html" title="Redirection and Files">10·files</a>
+<a href="11-http-security-headers.html" title="HTTP Security Headers">11·headers</a>
+<a href="12-transport-cookies-third-party.html" title="Transport, Cookies and Third-Party Scripts">12·cookies-tls</a>
+<span class="grp">| server:</span>
+<a href="13-ssrf.html" title="Server-Side Request Forgery">13·ssrf</a>
+<a href="14-deserialization-and-xxe.html" title="Deserialization and XXE">14·deserialize</a>
+<a href="15-environmental-security.html" title="Environmental Security">15·secrets</a>
+<a href="16-cryptography.html" title="Cryptography and Data Protection">16·crypto</a>
+<a href="17-dependencies-and-cves.html" title="Dependencies and CVEs">17·dependencies</a>
+<span class="grp">| ops:</span>
+<a href="18-intranet-and-admin.html" title="Intranet and Admin Security">18·admin</a>
+<a href="19-misconfiguration-and-errors.html" title="Misconfiguration and Error Handling">19·misconfig</a>
+<a href="20-insecure-design.html" title="Insecure Design and Business Logic">20·design</a>
+<a href="21-logging-and-incident-response.html" title="Logging, Alerting and Incident Response">21·logging</a>
+<a href="22-additional-resources.html" title="Additional Resources">22·resources</a>
+<span class="grp">| questionnaires:</span>
+<a href="q1-developer-survey.html" title="Developer Security Survey">Q1·developer</a>
+<a href="q2-awareness-survey.html" title="Cyber Threat Awareness Survey">Q2·cyber</a></nav>
+  <main>
+<div class="col">
+<p class="prompt">guest@websec ~ % <b>man 03-unsafe-query-generation</b></p>
+<h1>03 · Unsafe Query Generation</h1>
+<p class="lede">Your query is parameterized and still returns the wrong row. Why? The request parser turned "a string" into <code>null</code>, an array or an object.</p>
+<h2>The problem: request parsers create types</h2>
+<p>HTTP sends text, but frameworks helpfully turn it into other types:</p>
+<div class="tablewrap"><table><thead><tr><th>request</th><th>parsed as</th><th>where</th></tr></thead><tbody>
+<tr><td><code>?token=abc</code></td><td><code>"abc"</code></td><td>everywhere</td></tr>
+<tr><td><code>?token[]=</code></td><td><code>[""]</code> or <code>[nil]</code></td><td>Rails, PHP, Express (<code>qs</code>)</td></tr>
+<tr><td><code>?token[]=a&amp;token[]=b</code></td><td><code>["a","b"]</code></td><td>Rails, PHP, Express</td></tr>
+<tr><td><code>?token[$ne]=x</code></td><td><code>{ "$ne": "x" }</code></td><td>Express (<code>qs</code>), PHP</td></tr>
+<tr><td><code>{"token": null}</code> (JSON body)</td><td><code>null</code></td><td>every JSON API</td></tr>
+<tr><td><code>{"token": {"$gt": ""}}</code></td><td>an object</td><td>every JSON API</td></tr>
+</tbody></table></div>
+<p>Then the query builder does its job: <code>null</code> becomes <code>IS NULL</code>, an array becomes <code>IN (…)</code>, and in MongoDB <code>{"$ne": null}</code> matches everyone.</p>
+<h2>Why it matters</h2>
+<p>Password reset looks up the user by token. Most users have no token (<code>NULL</code>). Send <code>null</code> and you match a random user, then reset their password. This exact bug hit Rails more than once.</p>
+<div class="anim" data-actors="Attacker|Rack param parser|Active Record|Database" data-title="A null that resets someone's password"><script type="application/json">[{"f": 0, "t": 1, "l": "POST /reset  {\"token\": null, \"password\": \"pwned\"}", "k": "a", "c": "A JSON body with <code>null<\/code>, or <code>token[]=<\/code> in a query string."}, {"n": 1, "l": "params[:token] → nil", "c": "The parser faithfully produces a Ruby <code>nil<\/code>."}, {"f": 1, "t": 2, "l": "User.find_by(reset_token: nil)", "k": "a", "c": "The controller passes it straight into a lookup."}, {"f": 2, "t": 3, "l": "WHERE reset_token IS NULL LIMIT 1", "k": "a", "c": "Active Record correctly translates <code>nil<\/code> into <code>IS NULL<\/code>, which matches every user without a pending reset."}, {"f": 3, "t": 2, "l": "ceo@corp.test", "k": "a", "c": "<b>The attacker resets a stranger's password.<\/b>"}, {"n": 1, "l": "fix: require a non-blank String, or a signed token", "k": "k", "c": "Check the type first, or use <code>find_by_password_reset_token!<\/code>, which checks a signature instead."}, {"f": 1, "t": 2, "l": "400 Bad Request (no query runs)", "k": "b", "c": "Invalid shape: the lookup never happens."}]</script></div>
+<div class="demo"><header><b>sim: password reset lookup</b><span>edit the request, watch the generated query</span></header><div class="body">
+<div class="grid2">
+<div>
+<label for="uq-in">request body / query</label>
+<textarea id="uq-in" rows="3">{"token": null, "password": "pwned123"}</textarea>
+<div class="row" style="margin-top:8px"><span class="d">try:</span>
+<button class="btn" data-uq='{"token": "7f3a9c", "password": "new-pass-1"}' type="button">valid token</button>
+<button class="btn" data-uq='{"token": null, "password": "pwned123"}' type="button">null</button>
+<button class="btn" data-uq='{"token": [null], "password": "pwned123"}' type="button">[null]</button>
+<button class="btn" data-uq='{"token": ["7f3a9c", "b81e02", "c44d10"], "password": "x"}' type="button">array of guesses</button>
+<button class="btn" data-uq='{"token": {"$ne": null}, "password": "pwned123"}' type="button">{"$ne": null}</button>
+<button class="btn" data-uq='{"token": {"$regex": "^"}, "password": "pwned123"}' type="button">{"$regex": "^"}</button>
+<button class="btn" data-uq='{"token": "", "password": "x"}' type="button">empty string</button>
+</div>
+<div class="row" style="margin-top:8px"><span>database:</span><label><input checked="" name="uq-db" type="radio" value="sql"/> SQL ORM</label><label><input name="uq-db" type="radio" value="mongo"/> MongoDB</label></div>
+<div style="margin-top:6px"><label><input id="uq-munge" type="checkbox"/> framework strips <code>null</code> from arrays (Rails' deep_munge)</label><br/><label><input id="uq-validate" type="checkbox"/> app validates: token must be a non-empty string</label></div>
+</div>
+<div><p class="cap">users table</p><div class="tablewrap"><table id="uq-tbl"></table></div></div>
+</div>
+<div class="out" id="uq-out" style="margin-top:10px"></div>
+</div></div>
+<h2>Rails' answer: deep_munge</h2>
+<div class="rp partial">Rails' <code>deep_munge</code> cleans up shapes like <code>[nil]</code>, and <code>params.permit(:token)</code> drops arrays and hashes. But <code>params[:token]</code> used directly can still be anything, and <code>find_by(token: nil)</code> still means <code>IS NULL</code>.</div>
+<h2>The general fix: validate types at the boundary</h2>
+<p>Decide the shape of each param and check it first. A token is a non-empty string. Anything else: 400.</p>
+<ul>
+<li>Use a schema validator (zod, pydantic, or strong params plus type checks in Rails).</li>
+
+<li>MongoDB: strip keys starting with <code>$</code>.</li>
+<li>Never look up by a value that might be empty.</li>
+</ul>
+<div class="code">
+<pre data-lang="rails">class PasswordsController &lt; ApplicationController
+  def update
+    token = params[:token]
+    return head :bad_request unless token.is_a?(String) &amp;&amp; token.present?
+    user = User.find_by_password_reset_token!(token)   <span class="c"># Rails 8: signed + expiring</span>
+    user.update!(params.permit(:password, :password_confirmation))
+    redirect_to new_session_path, notice: "Password updated."
+  rescue ActiveSupport::MessageVerifier::InvalidSignature
+    redirect_to new_password_path, alert: "Link invalid or expired."
+  end
+end
+<span class="c"># params.permit(:token) keeps only scalar values; arrays/hashes are dropped</span></pre>
+<pre data-lang="node">import { z } from "zod";
+const ResetBody = z.object({
+  token: z.string().regex(/^[a-f0-9]{32}$/),     <span class="ok">// exact shape, no null/array/object</span>
+  password: z.string().min(12).max(200),
+});
+
+app.post("/reset", async (req, res) =&gt; {
+  const parsed = ResetBody.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: "Invalid request" });
+  const { token, password } = parsed.data;
+  const user = await User.findOne({ where: { resetToken: hash(token) } });
+  if (!user) return res.status(400).json({ error: "Link invalid or expired" });
+  …
+});</pre>
+</div>
+
+</div>
+
+<div class="col"><label class="readmark"><input type="checkbox" id="read-03-unsafe-query-generation"> mark section 03 as read</label><div class="pager"><a href="02-sql-injection.html">◀ 02 SQL Injection</a><a href="04-xss-and-other-injection.html">04 XSS and Other Injection ▶</a></div></div>
+  </main>
+  <footer class="site">Based on the <a href="https://guides.rubyonrails.org/security.html">Ruby on Rails Security Guide</a> (CC BY-SA 4.0), the <a href="https://cheatsheetseries.owasp.org/">OWASP Cheat Sheet Series</a>, the <a href="https://owasp.org/Top10/2025/">OWASP Top 10:2025</a> and <a href="https://infosec.mozilla.org/guidelines/web_security.html">Mozilla's Web Security Guidelines</a>. Written for our dev team; code samples are illustrative.</footer>
+</div>
+<script src="assets/site.js?v=92ac7aa3f8"></script>
+<script>
+
+const users = [
+  { id: 1, email: "ceo@corp.test", reset_token: null },
+  { id: 2, email: "ana@corp.test", reset_token: "7f3a9c" },
+  { id: 3, email: "dev@corp.test", reset_token: null },
+  { id: 4, email: "lee@corp.test", reset_token: "c44d10" }];
+function renderTbl(hit = []) { $("#uq-tbl").innerHTML = "<tr><th>id</th><th>email</th><th>reset_token</th></tr>" + users.map(u => `<tr${hit.includes(u.id) ? ' style="background:#2a0000"' : ""}><td>${u.id}</td><td>${hit.includes(u.id) ? '<span class="r">' + u.email + "</span>" : u.email}</td><td>${u.reset_token === null ? '<span class="d">NULL</span>' : u.reset_token}</td></tr>`).join(""); }
+function uq() {
+  let body;
+  try { body = JSON.parse($("#uq-in").value); } catch (e) { $("#uq-out").innerHTML = '<span class="y">invalid JSON: ' + esc(e.message) + "</span>"; renderTbl(); return; }
+  let tok = body.token; const db = $("input[name=uq-db]:checked").value, lines = [`parsed token: <span class="k">${esc(JSON.stringify(tok))}</span> (${tok === null ? "null" : Array.isArray(tok) ? "array" : typeof tok})`];
+  if ($("#uq-munge").checked && Array.isArray(tok)) { const t2 = tok.filter(x => x !== null); if (t2.length !== tok.length) lines.push(`deep_munge: ${esc(JSON.stringify(tok))} → ${esc(JSON.stringify(t2.length ? t2 : null))}`); tok = t2.length ? t2 : null; }
+  if ($("#uq-validate").checked && !(typeof tok === "string" && tok.length > 0)) { lines.push('<span class="g">validation failed: token must be a non-empty string → 400 Bad Request. No query runs.</span>'); $("#uq-out").innerHTML = lines.join("\n"); renderTbl(); return; }
+  let q, match;
+  if (db === "sql") {
+    if (tok === null || tok === undefined) { q = "SELECT * FROM users WHERE reset_token IS NULL LIMIT 1"; match = u => u.reset_token === null; }
+    else if (Array.isArray(tok)) { const nn = tok.filter(x => x !== null), hasNull = nn.length !== tok.length; q = `SELECT * FROM users WHERE ${nn.length ? `reset_token IN (${nn.map(x => "'" + esc(String(x)) + "'").join(", ")})` : ""}${hasNull ? (nn.length ? " OR " : "") + "reset_token IS NULL" : ""}${!nn.length && !hasNull ? "1=0" : ""} LIMIT 1`; match = u => nn.map(String).includes(u.reset_token) || (hasNull && u.reset_token === null); }
+    else if (typeof tok === "object") { q = `SELECT * FROM users WHERE reset_token = '${esc(JSON.stringify(tok))}'  <span class="d">(object serialized; harmless here, error in many ORMs)</span>`; match = () => false; }
+    else { q = `SELECT * FROM users WHERE reset_token = $1  <span class="d">-- $1 = ${esc(JSON.stringify(String(tok)))}</span>`; match = u => u.reset_token === String(tok); }
+  } else {
+    q = `db.users.findOne({ reset_token: ${esc(JSON.stringify(tok))} })`;
+    if (tok === null) match = u => u.reset_token === null;
+    else if (Array.isArray(tok)) match = u => tok.some(x => x === u.reset_token);
+    else if (tok && typeof tok === "object") { const [op, val] = Object.entries(tok)[0] || []; match = u => op === "$ne" ? u.reset_token !== val : op === "$gt" ? u.reset_token !== null && u.reset_token > val : op === "$regex" ? u.reset_token !== null && new RegExp(val).test(u.reset_token) : false; if (op && op.startsWith("$")) lines.push(`<span class="y">MongoDB treats "${esc(op)}" as an operator</span>`); }
+    else match = u => u.reset_token === tok;
+  }
+  const hits = users.filter(match), first = hits[0];
+  lines.push("query: " + q);
+  const legit = first && typeof body.token === "string" && first.reset_token === body.token;
+  lines.push(first ? (legit ? `<span class="g">found ${first.email}: legitimate reset</span>` : `<span class="r">found ${first.email}: attacker resets a stranger's password to "${esc(String(body.password))}"</span>`) : '<span class="g">no user found → "link invalid or expired"</span>');
+  $("#uq-out").innerHTML = lines.join("\n"); renderTbl(first ? [first.id] : []);
+}
+$("#uq-in").addEventListener("input", uq); ["#uq-munge", "#uq-validate"].forEach(s => $(s).addEventListener("change", uq)); $$("input[name=uq-db]").forEach(r => r.addEventListener("change", uq));
+$$("[data-uq]").forEach(b => b.onclick = () => { $("#uq-in").value = b.dataset.uq; uq(); }); uq();
+
+</script>
+</body>
+</html>

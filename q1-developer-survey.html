@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en" data-lang="rails">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Q1 Developer Security Survey · Web Security</title>
+
+<link rel="icon" href="favicon.ico" sizes="32x32">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="site.webmanifest">
+<meta name="theme-color" content="#000000">
+<link rel="stylesheet" href="assets/site.css?v=8f1e007517">
+<script src="assets/consent.js?v=9320b4a322"></script>
+</head>
+<body data-slug="q1-developer-survey">
+<div class="win">
+  <div class="titlebar"><span class="dots"><i></i><i></i><i></i></span><span class="t">guest@websec: ~/websec/q1-developer-survey — zsh — 100×40</span>
+    <a class="by" href="about.html" title="About the author"><span class="w0">by </span>SaKKo</a>
+    <span class="lsw" role="group" aria-label="Language"><a href="q1-developer-survey.html" aria-current="true" data-setlang="en">EN</a><a href="th/q1-developer-survey.html" data-setlang="th">TH</a></span>
+    <span class="langsw" role="group" aria-label="Code examples language"><span class="d">code:</span><button type="button" data-l="rails">rails</button><button type="button" data-l="node">node</button></span></div>
+  <nav class="top" aria-label="Sections"><a href="index.html" title="Web Security Field Guide">~/</a>
+<a class="trk on" href="index.html#security">#1 security</a>
+<a class="trk" href="r01-rails-api-app.html">#2 rails</a>
+<span class="grp">|</span>
+<a href="01-introduction.html" title="Introduction">01·introduction</a>
+<a href="02-sql-injection.html" title="SQL Injection">02·sql-injection</a>
+<a href="03-unsafe-query-generation.html" title="Unsafe Query Generation">03·query-shape</a>
+<a href="04-xss-and-other-injection.html" title="XSS and Other Injection">04·xss</a>
+<span class="grp">| accounts:</span>
+<a href="05-authentication.html" title="Authentication">05·auth</a>
+<a href="05b-mfa.html" title="Multi-Factor Authentication">05b·mfa</a>
+<a href="06-sessions.html" title="Sessions">06·sessions</a>
+<a href="07-csrf.html" title="Cross-Site Request Forgery">07·csrf</a>
+<a href="08-user-management.html" title="User Management">08·accounts</a>
+<a href="09-mass-assignment-and-authorization.html" title="Mass Assignment and Authorization">09·authz</a>
+<span class="grp">| browser:</span>
+<a href="10-redirection-and-files.html" title="Redirection and Files">10·files</a>
+<a href="11-http-security-headers.html" title="HTTP Security Headers">11·headers</a>
+<a href="12-transport-cookies-third-party.html" title="Transport, Cookies and Third-Party Scripts">12·cookies-tls</a>
+<span class="grp">| server:</span>
+<a href="13-ssrf.html" title="Server-Side Request Forgery">13·ssrf</a>
+<a href="14-deserialization-and-xxe.html" title="Deserialization and XXE">14·deserialize</a>
+<a href="15-environmental-security.html" title="Environmental Security">15·secrets</a>
+<a href="16-cryptography.html" title="Cryptography and Data Protection">16·crypto</a>
+<a href="17-dependencies-and-cves.html" title="Dependencies and CVEs">17·dependencies</a>
+<span class="grp">| ops:</span>
+<a href="18-intranet-and-admin.html" title="Intranet and Admin Security">18·admin</a>
+<a href="19-misconfiguration-and-errors.html" title="Misconfiguration and Error Handling">19·misconfig</a>
+<a href="20-insecure-design.html" title="Insecure Design and Business Logic">20·design</a>
+<a href="21-logging-and-incident-response.html" title="Logging, Alerting and Incident Response">21·logging</a>
+<a href="22-additional-resources.html" title="Additional Resources">22·resources</a>
+<span class="grp">| questionnaires:</span>
+<a href="q1-developer-survey.html" aria-current="page" title="Developer Security Survey">Q1·developer</a>
+<a href="q2-awareness-survey.html" title="Cyber Threat Awareness Survey">Q2·cyber</a></nav>
+  <main>
+<div class="col">
+<p class="prompt">guest@websec ~ % <b>./q1-developer-survey.sh</b></p>
+<h1>Q1 · Developer Security Survey</h1>
+<p class="lede">50 questions across every topic. Answer from memory, no peeking. You'll see the answers and explanations at the end.</p>
+<div class="note">About 25 minutes. Nothing is saved or sent anywhere: this is a private self-assessment, and your answers disappear when you leave the page.</div>
+<form id="sv-form" onsubmit="return false">
+<div id="sv-qs"></div>
+<div class="sticky-sub"><button class="btn on" disabled="" id="sv-submit" type="button">submit answers</button><button class="btn" id="sv-next" type="button"></button><span class="d" id="sv-prog"></span><div id="sv-map" class="sv-map"></div></div>
+</form>
+<div id="sv-result" style="margin-top:18px"></div>
+</div>
+
+<div class="col"><div class="pager"><a href="22-additional-resources.html">◀ 22 Additional Resources</a><a href="q2-awareness-survey.html">Q2 Cyber Threat Awareness Survey ▶</a></div></div>
+  </main>
+  <footer class="site">Based on the <a href="https://guides.rubyonrails.org/security.html">Ruby on Rails Security Guide</a> (CC BY-SA 4.0), the <a href="https://cheatsheetseries.owasp.org/">OWASP Cheat Sheet Series</a>, the <a href="https://owasp.org/Top10/2025/">OWASP Top 10:2025</a> and <a href="https://infosec.mozilla.org/guidelines/web_security.html">Mozilla's Web Security Guidelines</a>. Written for our dev team; code samples are illustrative.</footer>
+</div>
+<script src="assets/site.js?v=92ac7aa3f8"></script>
+<script>
+
+const DATA = {"kind": "dev", "title": "Developer Security Survey", "t": {"likert": ["Always", "Often", "Sometimes", "Never"], "answered": "answered", "score": "Score", "knowledge": "Knowledge", "habits": "Safe habits", "lvl3": "Strong. You know the material well.", "lvl2": "Good foundation, with some gaps to close.", "lvl1": "Needs attention. Review the items below.", "copy": "copy my results", "retake": "retake", "copied": "copied", "copyFail": "copy failed"}, "secs": {"01": ["01-introduction", "Introduction"], "02": ["02-sql-injection", "SQL Injection"], "03": ["03-unsafe-query-generation", "Unsafe Query Generation"], "04": ["04-xss-and-other-injection", "XSS and Other Injection"], "05": ["05-authentication", "Authentication"], "06": ["06-sessions", "Sessions"], "07": ["07-csrf", "Cross-Site Request Forgery"], "08": ["08-user-management", "User Management"], "09": ["09-mass-assignment-and-authorization", "Mass Assignment and Authorization"], "10": ["10-redirection-and-files", "Redirection and Files"], "11": ["11-http-security-headers", "HTTP Security Headers"], "12": ["12-transport-cookies-third-party", "Transport, Cookies and Third-Party Scripts"], "13": ["13-ssrf", "Server-Side Request Forgery"], "14": ["14-deserialization-and-xxe", "Deserialization and XXE"], "15": ["15-environmental-security", "Environmental Security"], "16": ["16-cryptography", "Cryptography and Data Protection"], "17": ["17-dependencies-and-cves", "Dependencies and CVEs"], "18": ["18-intranet-and-admin", "Intranet and Admin Security"], "19": ["19-misconfiguration-and-errors", "Misconfiguration and Error Handling"], "20": ["20-insecure-design", "Insecure Design and Business Logic"], "21": ["21-logging-and-incident-response", "Logging, Alerting and Incident Response"], "22": ["22-additional-resources", "Additional Resources"]}, "questions": [{"sec": "01", "q": "Your framework auto-escapes HTML and adds CSRF tokens. Which statement is true?", "opts": ["The app is now secure against the OWASP Top 10.", "You only need to worry about the database.", "You're protected from some common mistakes, but access control, configuration, dependencies and custom code are still your responsibility."], "a": 2, "why": "Defaults eliminate predictable bugs. They can't know which pages should be private, whether your server leaks files, or whether a library you installed last year has a published exploit.", "id": "d00"}, {"sec": "01", "q": "Why must security work continue after launch?", "opts": ["Search engines rank secure sites higher.", "New vulnerabilities are discovered in code and libraries you already shipped.", "TLS certificates make the code slower over time."], "a": 1, "why": "A dependency that was safe on launch day can have a public exploit next month. Watching advisories and updating is part of running the app (see section 17).", "id": "d01"}, {"sec": "02", "q": "Which line is safe from SQL injection?", "opts": ["<code>db.query(\"SELECT * FROM t WHERE id = \" + Number(id))<\/code>", "<code>db.query(`SELECT * FROM t WHERE name = '${name.replace(\"'\", \"\")}'`)<\/code>", "<code>db.query(\"SELECT * FROM t WHERE name = $1\", [name])<\/code>"], "a": 2, "why": "(a) happens to be safe for numbers but relies on discipline; (b) only removes the first quote. (c) is parameterized: the value can never be parsed as SQL.", "id": "d14"}, {"sec": "02", "q": "Your app hides all database errors and only ever shows \"Login failed\". Can an SQL injection in the login form still be exploited?", "opts": ["No, the attacker can't see any data.", "Yes. Blind injection asks yes/no questions through the page's behavior or timing, and can pull out whole tables.", "Only if the database is MySQL."], "a": 1, "why": "Hiding errors makes the attack slower, not impossible. Tools like sqlmap automate blind injection. Parameterize the query.", "id": "d48"}, {"sec": "02", "q": "Which Rails line is open to SQL injection?", "opts": ["<code>User.where(email: params[:email])<\/code>", "<code>User.where(\"email = ?\", params[:email])<\/code>", "<code>User.order(\"#{params[:sort]} ASC\")<\/code>"], "a": 2, "why": "Hash conditions and <code>?<\/code> placeholders send the value as a parameter. A column name or sort order can't be a parameter, so map it from an allowlist instead.", "id": "d49"}, {"sec": "03", "q": "Your query is fully parameterized: <code>WHERE reset_token = $1<\/code>. How can it still be abused?", "opts": ["It can't; parameterized queries prevent all injection.", "An ORM given <code>null<\/code> may rewrite it to <code>IS NULL<\/code>, matching every user without a pending reset.", "Only through a UNION attack."], "a": 1, "why": "Parameterization stops SQL syntax injection, but the query builder still chooses the operator based on the value's type. Validate the type first.", "id": "d20"}, {"sec": "03", "q": "Which input makes a MongoDB lookup <code>{ token: req.body.token }<\/code> match any user who has a token?", "opts": ["<code>\"' OR 1=1\"<\/code>", "<code>\"*\"<\/code>", "<code>{\"$ne\": null}<\/code>"], "a": 2, "why": "MongoDB interprets objects with <code>$<\/code> keys as operators. Cast to string or sanitize keys.", "id": "d21"}, {"sec": "04", "q": "A React component renders <code>&lt;a href={user.website}&gt;<\/code>. JSX escapes it. Is it XSS-safe?", "opts": ["No. Escaping doesn't stop a <code>javascript:<\/code> URL; validate the scheme.", "Yes, JSX escaping covers all attributes.", "Only if the site uses HTTPS."], "a": 0, "why": "Escaping keeps the value from breaking out of the attribute, but <code>javascript:alert(1)<\/code> doesn't need to break out. Allow only http(s) URLs.", "id": "d15"}, {"sec": "04", "q": "What makes <code>execFile(\"convert\", [name, …])<\/code> safer than <code>exec(\"convert \" + name)<\/code>?", "opts": ["It escapes the filename with backslashes.", "No shell is involved, so <code>;<\/code>, <code>|<\/code> and <code>$( )<\/code> have no meaning.", "It runs as a lower-privileged user."], "a": 1, "why": "The arguments go straight to the program as an array. There's no shell to interpret metacharacters.", "id": "d16"}, {"sec": "04", "q": "Which value is still dangerous even after ERB escapes it?", "opts": ["A name shown inside a &lt;p&gt;", "A user's website rendered as <code>link_to \"site\", user.website<\/code>", "A comment shown inside a quoted title attribute"], "a": 1, "why": "Escaping doesn't stop a <code>javascript:<\/code> URL. Validate that links start with http(s).", "id": "d17"}, {"sec": "04", "q": "Front-end code does <code>el.innerHTML = location.hash.slice(1)<\/code>. Why won't server-side escaping or a WAF catch the attack?", "opts": ["The fragment after # is never sent to the server", "WAFs don't inspect GET requests", "Rails escapes hashes automatically"], "a": 0, "why": "That's DOM-based XSS: source (location.hash) → dangerous sink (innerHTML), entirely in the browser. Use textContent or Trusted Types.", "id": "d18"}, {"sec": "04", "q": "Which is an OWASP-listed anti-pattern for XSS defense?", "opts": ["Escaping at output for the specific context", "A global before_save filter that 'cleans' all input", "Sanitizing rich text with an allowlist"], "a": 1, "why": "Global input filters encode for the wrong context, double-encode, and miss DOM XSS and data from other systems.", "id": "d19"}, {"sec": "05", "q": "Why is SHA-256 a poor choice for storing passwords?", "opts": ["It's been broken and produces collisions.", "It's too fast, so attackers can test billions of guesses per second.", "Its output is too long to store."], "a": 1, "why": "SHA-256 is fine as a general hash. For passwords you want deliberate slowness plus a per-user salt, which bcrypt, scrypt and Argon2 provide.", "id": "d02"}, {"sec": "05", "q": "A user sets a 100-character passphrase and your app uses bcrypt. What happens?", "opts": ["Only the first 72 bytes count, so either reject long input or pre-hash it in a documented way.", "bcrypt throws an error at login.", "The hash gets longer."], "a": 0, "why": "bcrypt truncates input at 72 bytes. Rails rejects longer passwords for that reason; Argon2 has no such limit.", "id": "d03"}, {"sec": "05", "q": "Why do passkeys (WebAuthn) resist phishing better than authenticator-app codes?", "opts": ["They're longer than 6 digits", "The browser signs the challenge for the real site's origin, so a look-alike domain gets a useless signature", "They expire faster"], "a": 1, "why": "A TOTP code typed into a fake site can be relayed in real time. A passkey signature is bound to the origin, so the real site rejects it.", "id": "d04"}, {"sec": "05", "q": "In our Rails 8 app, what does <code>has_secure_password<\/code> NOT do for you?", "opts": ["Hash the password with bcrypt", "Reject passwords over 72 bytes", "Enforce a minimum password length"], "a": 2, "why": "Add <code>validates :password, length: { minimum: 12 }<\/code> yourself.", "id": "d05"}, {"sec": "06", "q": "Which single step defeats session fixation?", "opts": ["Encrypting the session cookie", "Adding a CAPTCHA to login", "Issuing a new session ID at login"], "a": 2, "why": "Fixation works because the pre-login ID survives login. Regenerate it and the attacker's copy is worthless.", "id": "d06"}, {"sec": "06", "q": "Your session cookie is signed and encrypted. Is it safe to store a user's account balance in it?", "opts": ["Yes, encryption means the user can't change it.", "No, the user can replay an older valid cookie to restore an older balance.", "Yes, as long as it's under 4 KB."], "a": 1, "why": "The server signed the old cookie too, so it still verifies. Keep balances in the database.", "id": "d07"}, {"sec": "07", "q": "Your app has CSRF tokens on all forms and SameSite=Lax cookies. A \"delete account\" action is reachable at <code>GET /account/delete<\/code>. Is it protected?", "opts": ["No. Token checks skip GET, and Lax still sends cookies on top-level GET links.", "Yes, SameSite=Lax blocks all cross-site requests.", "Yes, tokens cover every request."], "a": 0, "why": "A link on any site to /account/delete will work. Move it to POST or DELETE.", "id": "d08"}, {"sec": "07", "q": "Why can't evil.test just read the CSRF token from bank.test's form?", "opts": ["The token is encrypted with the user's password.", "Tokens are only sent over HTTPS.", "The same-origin policy prevents one site from reading another site's responses."], "a": 2, "why": "evil.test can cause requests to bank.test but can't see what comes back, so it never learns the token. XSS on bank.test changes that.", "id": "d09"}, {"sec": "08", "q": "A botnet tries passwords for one account from 50,000 different IPs, one attempt each. Which defense actually slows it?", "opts": ["Per-IP rate limiting", "Per-account limits plus MFA", "A honeypot field"], "a": 1, "why": "Each IP stays under any per-IP limit. Counting failures per account catches the pattern, and MFA makes a correct password insufficient.", "id": "d12"}, {"sec": "08", "q": "In Ruby, does <code>\"admin\\n&lt;script&gt;\".match?(/^[a-z]+$/)<\/code> return true?", "opts": ["Yes: <code>^<\/code> and <code>$<\/code> match at any line break.", "No: <code>\\n<\/code> isn't in <code>[a-z]<\/code>.", "Only with the <code>/m<\/code> flag."], "a": 0, "why": "In Ruby <code>^<\/code> and <code>$<\/code> are line anchors, so the first line passes. Use <code>\\A<\/code> and <code>\\z<\/code> for whole-string checks; Rails' format validator even raises if you use <code>^<\/code>/<code>$<\/code>.", "id": "d13"}, {"sec": "09", "q": "Rails raises <code>ForbiddenAttributesError<\/code> when you pass raw params to <code>update<\/code>. What reintroduces mass assignment?", "opts": ["<code>params.expect(user: [:name])<\/code>", "<code>params.require(:user).permit!<\/code>", "<code>params.permit(:name, :email)<\/code>"], "a": 1, "why": "<code>permit!<\/code> permits every key, including role, admin or account_id.", "id": "d30"}, {"sec": "09", "q": "A regular user calls <code>POST /admin/refunds<\/code> directly and it works because only the button was hidden. What's this called?", "opts": ["Broken function-level authorization (BFLA)", "Cross-site request forgery", "Session fixation"], "a": 0, "why": "Hiding UI isn't authorization. Check the user's permission for the function on the server.", "id": "d31"}, {"sec": "10", "q": "A filter removes every <code>../<\/code> from a filename in one pass. What does <code>....//secret<\/code> become?", "opts": ["<code>secret<\/code>", "<code>../secret<\/code>", "<code>....secret<\/code>"], "a": 1, "why": "Removing the inner <code>../<\/code> joins the outer characters into a new <code>../<\/code>. That's why allowlists beat blocklists.", "id": "d10"}, {"sec": "10", "q": "Which redirect check is safe?", "opts": ["<code>next.startsWith(\"/\")<\/code>", "<code>next.includes(\"bank.test\")<\/code>", "Parse with a URL parser against your origin and require the resulting origin to equal yours"], "a": 2, "why": "<code>//evil.test<\/code> starts with \"/\" and is a protocol-relative URL to another host. <code>bank.test.evil.test<\/code> contains \"bank.test\". Only a real parse plus an exact origin match holds up.", "id": "d11"}, {"sec": "11", "q": "Your CSP includes <code>script-src 'self' 'unsafe-inline'<\/code>. An attacker injects <code>&lt;script&gt;steal()&lt;/script&gt;<\/code>. What happens?", "opts": ["It runs; 'unsafe-inline' allows any inline script.", "It's blocked because it's not from 'self'.", "It runs only in Report-Only mode."], "a": 0, "why": "'unsafe-inline' cancels most of CSP's XSS protection. Use nonces or hashes.", "id": "d22"}, {"sec": "11", "q": "Which CORS setup is dangerous?", "opts": ["<code>Allow-Origin: *<\/code> without credentials on a public, read-only API", "An exact allowlist with credentials", "Echoing back whatever <code>Origin<\/code> arrives, with <code>Allow-Credentials: true<\/code>"], "a": 2, "why": "Reflection plus credentials lets any site make authenticated reads of your users' data. Browsers refuse <code>*<\/code> with credentials for this reason.", "id": "d23"}, {"sec": "12", "q": "Which cookie does the browser reject?", "opts": ["<code>__Host-sid=…; Secure; Path=/<\/code>", "<code>__Host-sid=…; Secure; Path=/; Domain=example.com<\/code>", "<code>sid=…; Secure; HttpOnly; SameSite=Lax<\/code>"], "a": 1, "why": "The __Host- prefix requires Secure, Path=/ and no Domain attribute.", "id": "d36"}, {"sec": "12", "q": "What does Subresource Integrity (SRI) protect against?", "opts": ["A CDN serving a modified version of a script you included", "SQL injection", "Session hijacking over Wi-Fi"], "a": 0, "why": "The browser hashes the downloaded file and refuses to run it if it doesn't match the integrity attribute.", "id": "d37"}, {"sec": "13", "q": "Your feature fetches an avatar from a user-supplied URL. What's the most important SSRF defense?", "opts": ["Block URLs containing the string 'localhost'", "Resolve the hostname, block private/link-local ranges, pin the IP and don't follow redirects", "Only allow URLs ending in .png"], "a": 1, "why": "String checks are bypassed with decimal IPs, DNS names that resolve internally, or redirects. Validate the resolved IP (or use ssrf_filter).", "id": "d32"}, {"sec": "13", "q": "Why is <code>http://169.254.169.254/<\/code> a favorite SSRF target in the cloud?", "opts": ["It's the default Rails console", "The instance metadata service can return the server's cloud credentials", "It's the load balancer's admin panel"], "a": 1, "why": "Require IMDSv2 and block link-local addresses for outbound fetches.", "id": "d33"}, {"sec": "14", "q": "Which line is dangerous with data from a request?", "opts": ["<code>JSON.parse(body)<\/code>", "<code>YAML.load(body)<\/code> on Ruby 3.1+", "<code>Marshal.load(Base64.decode64(params[:state]))<\/code>"], "a": 2, "why": "Marshal (like YAML.unsafe_load or pickle) can instantiate arbitrary classes and lead to code execution.", "id": "d34"}, {"sec": "14", "q": "With default options, is Nokogiri vulnerable to XXE?", "opts": ["Yes, always", "No, unless someone enables options like noent or dtdload", "Only when parsing HTML"], "a": 1, "why": "Nokogiri doesn't substitute external entities or use the network by default.", "id": "d35"}, {"sec": "15", "q": "Rails' <code>credentials.yml.enc<\/code> is committed to the repo. What must <i>not<\/i> be committed?", "opts": ["The <code>.gitignore<\/code> file", "<code>config/master.key<\/code>, the key that decrypts it", "The <code>Gemfile.lock<\/code>"], "a": 1, "why": "The encrypted file is useless without the key. Commit both and you've effectively committed plaintext.", "id": "d26"}, {"sec": "15", "q": "You pushed an API key to a public repo and force-pushed it away a minute later. What now?", "opts": ["Revoke and rotate the key immediately, then add a secret scanner.", "Nothing, the commit is gone.", "Make the repo private."], "a": 0, "why": "Automated scrapers watch public pushes in real time. Assume the key is compromised.", "id": "d27"}, {"sec": "16", "q": "Which is true about Base64?", "opts": ["It's a lightweight encryption", "Anyone can decode it; it provides no secrecy", "It's a one-way hash"], "a": 1, "why": "Encoding is for transport, not secrecy. Use encryption (e.g. Active Record Encryption) for sensitive fields.", "id": "d38"}, {"sec": "16", "q": "How should you compare a submitted webhook signature to the expected one?", "opts": ["<code>sig == expected<\/code>", "<code>ActiveSupport::SecurityUtils.secure_compare(sig, expected)<\/code>", "<code>sig.include?(expected)<\/code>"], "a": 1, "why": "== stops at the first mismatch and leaks timing information. secure_compare takes the same time regardless.", "id": "d39"}, {"sec": "16", "q": "Which generates a safe password-reset token?", "opts": ["<code>rand(1_000_000).to_s<\/code>", "<code>SecureRandom.urlsafe_base64(32)<\/code>", "<code>Digest::MD5.hexdigest(user.email + Time.now.to_s)<\/code>"], "a": 1, "why": "Use a cryptographic RNG and at least 128 bits. The others are guessable.", "id": "d40"}, {"sec": "17", "q": "A CVE is published for a library that's a dependency of a dependency. Your manifest doesn't mention it. Are you affected?", "opts": ["No, only direct dependencies matter.", "Only if you import it yourself.", "Possibly. It's installed and runs in your app; check whether the vulnerable code path is reachable and update it."], "a": 2, "why": "Transitive dependencies run with the same privileges. Audit tools scan the whole lockfile for this reason.", "id": "d28"}, {"sec": "17", "q": "Why prefer a conservative, single-package update when patching?", "opts": ["It ships the security fix with the fewest unrelated changes, so it's easy to test and safe to deploy quickly.", "It's the only way to update transitive dependencies.", "Full updates don't install security patches."], "a": 0, "why": "You want the patch in production today. A full update can turn that into a week of fixing unrelated breakage.", "id": "d29"}, {"sec": "18", "q": "Why does hosting the admin panel at <code>admin.example.com<\/code> instead of <code>example.com/admin<\/code> help?", "opts": ["Search engines can't find subdomains.", "Different origins don't share cookies or DOM access, so an XSS on the main site can't reach the admin session.", "Subdomains automatically require HTTPS."], "a": 1, "why": "The same-origin policy separates them. (Be careful not to scope cookies to <code>.example.com<\/code>, which would share them again.)", "id": "d24"}, {"sec": "18", "q": "A support ticket's subject is escaped on the public site. Is the admin tool automatically safe?", "opts": ["Yes, escaping happens when the data is saved.", "Yes, admins are trusted users.", "No, escaping happens at output; each place that displays the data must escape it."], "a": 2, "why": "Escape on output, in every template, in every app. Internal tools often use different rendering code.", "id": "d25"}, {"sec": "19", "q": "The permission service times out while checking whether a user may delete a record. What should the code do?", "opts": ["Allow it, since the user is probably fine", "Deny it (fail closed) and report the error", "Retry forever"], "a": 1, "why": "Security checks that error must deny. A broad rescue that returns true turns an outage into a hole.", "id": "d41"}, {"sec": "19", "q": "Which is a misconfiguration even though Rails' production defaults are fine?", "opts": ["<code>consider_all_requests_local = false<\/code>", "<code>mount Sidekiq::Web => \"/sidekiq\"<\/code> with no authentication constraint", "Serving <code>public/500.html<\/code> on errors"], "a": 1, "why": "Dashboards for jobs, feature flags and databases must sit behind admin authentication.", "id": "d42"}, {"sec": "20", "q": "Two identical 'redeem coupon' requests arrive at the same instant. Which approach prevents double redemption?", "opts": ["Check <code>coupon.used?<\/code> then update", "An atomic <code>update_all<\/code> with <code>WHERE used = false<\/code>, a row lock, or a unique index", "A model validation <code>validates :used, inclusion: [false]<\/code>"], "a": 1, "why": "Check-then-act races. Make the claim atomic in the database.", "id": "d43"}, {"sec": "20", "q": "A checkout request includes <code>price: 0.01<\/code> for a laptop. What's the right design?", "opts": ["Accept it; the front end calculated it", "Ignore client prices and look them up server-side", "Reject prices under $1"], "a": 1, "why": "Never trust the client with business rules such as price, discount or quantity limits.", "id": "d44"}, {"sec": "21", "q": "Which should NEVER appear in logs?", "opts": ["The user id of a failed login", "The password typed in a failed login", "The request id"], "a": 1, "why": "Wrong passwords are often real passwords with a typo. Rails' filter_parameters masks them.", "id": "d45"}, {"sec": "21", "q": "Why use structured (JSON) logs for security events?", "opts": ["They're smaller", "User input with newlines can't forge extra log lines, and logs are searchable for alerts", "Rails requires it"], "a": 1, "why": "Raw string interpolation lets attackers inject fake entries; structured fields keep input contained.", "id": "d46"}, {"sec": "21", "q": "During an incident, what comes first after confirming what's happening?", "opts": ["Write the post-mortem", "Contain: block the attacker, disable accounts, revoke sessions", "Wait until the fix is ready"], "a": 1, "why": "Stop ongoing damage first, escalate early, then eradicate and recover.", "id": "d47"}]};
+
+const KIND = DATA.kind, T = DATA.t;
+const U = document.documentElement.lang === "th"
+  ? { next: "ไปข้อที่ยังไม่ตอบ ↓", leave: "คำตอบยังไม่ถูกส่ง ถ้าออกจากหน้านี้คำตอบจะหายไป", jump: "ข้อ" }
+  : { next: "next unanswered ↓", leave: "Your answers aren't submitted yet and will be lost if you leave.", jump: "question" };
+const secName = s => (DATA.cats && DATA.cats[s]) || s;
+let submitted = false;
+const ids = () => DATA.questions.map(q => q.id).concat((DATA.habits || []).map(h => h.id));
+const label = id => { const q = DATA.questions.findIndex(x => x.id === id); return q >= 0 ? "Q" + (q + 1) : "H" + ((DATA.habits || []).findIndex(x => x.id === id) + 1); };
+function render() {
+  const out = [];
+  let lastSec = null;
+  DATA.questions.forEach((q, i) => {
+    if (q.sec !== lastSec) { lastSec = q.sec; const s = DATA.secs[q.sec]; out.push(`<h3 id="sec-${q.sec}">${s ? `<a href="${s[0]}.html">${q.sec} · ${esc(s[1])}</a>` : esc(secName(q.sec))}</h3>`); }
+    out.push(`<div class="qcard" id="c-${q.id}"><p class="qh"><span class="sec">Q${i + 1}</span>${q.q}</p>` + q.opts.map((o, j) => `<label class="opt"><input type="radio" name="${q.id}" value="${j}"> <span>${o}</span></label>`).join("") + `<div class="why">${q.why}</div></div>`);
+  });
+  $("#sv-qs").innerHTML = out.join("");
+  if (DATA.habits) {
+    $("#sv-habits").innerHTML = DATA.habits.map((h, i) => `<div class="qcard" id="c-${h.id}"><p class="qh"><span class="sec">H${i + 1}</span>${esc(h.t)}</p><div class="likert">${T.likert.map((l, j) => `<label><input type="radio" name="${h.id}" value="${3 - j}">${l}</label>`).join("")}</div><div class="why">${esc(DATA.tips[i])}</div></div>`).join("");
+  }
+  $$("#sv-form input[type=radio]").forEach(r => r.addEventListener("change", progress));
+  $("#sv-next").textContent = U.next;
+  progress();
+}
+function answers() { const a = {}; ids().forEach(id => { const r = $(`input[name="${id}"]:checked`); if (r) a[id] = +r.value; }); return a; }
+function progress() {
+  const a = answers(), all = ids(), n = Object.keys(a).length;
+  const cur = submitted ? null : all.find(id => !(id in a));
+  $("#sv-prog").textContent = `${n}/${all.length} ${T.answered}`;
+  $("#sv-submit").disabled = submitted || n < all.length;
+  $("#sv-next").hidden = !cur;
+  if (!submitted) {
+    all.forEach(id => { const c = $("#c-" + id); c.classList.toggle("done", id in a); c.classList.toggle("cur", id === cur); });
+    $("#sv-map").innerHTML = all.map(id => `<a href="#c-${id}" class="${id in a ? "done" : id === cur ? "cur" : ""}" title="${U.jump} ${label(id)}">${label(id)}</a>`).join("");
+  }
+}
+function jump(id) {
+  const c = $("#c-" + id); if (!c) return;
+  c.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "center" });
+  const i = $("input:not(:disabled)", c); if (i) i.focus({ preventScroll: true });
+}
+$("#sv-next").addEventListener("click", () => { const a = answers(); jump(ids().find(id => !(id in a))); });
+$("#sv-map").addEventListener("click", e => { const l = e.target.closest("a"); if (!l) return; e.preventDefault(); jump(l.getAttribute("href").slice(3)); });
+function grade(a) {
+  const by = {}; let c = 0;
+  DATA.questions.forEach(q => { by[q.sec] = by[q.sec] || [0, 0]; by[q.sec][1]++; if (a[q.id] === q.a) { by[q.sec][0]++; c++; } });
+  let habit = null;
+  if (DATA.habits) { let s = 0; DATA.habits.forEach(h => { const v = a[h.id] ?? 0; s += h.rev ? 3 - v : v; }); habit = Math.round(s / (DATA.habits.length * 3) * 100); }
+  return { correct: c, total: DATA.questions.length, by, habit };
+}
+function showGrades(a) {
+  const marks = {};
+  DATA.questions.forEach(q => {
+    const card = $("#c-" + q.id); card.classList.remove("cur", "done"); card.classList.add("graded");
+    $$("label.opt", card).forEach((l, j) => { if (j === q.a) l.classList.add("right"); else if (a[q.id] === j) l.classList.add("wrong"); });
+    marks[q.id] = a[q.id] === q.a ? "right" : "wrong";
+  });
+  (DATA.habits || []).forEach(h => {
+    const v = a[h.id] ?? 0, good = h.rev ? 3 - v : v, card = $("#c-" + h.id);
+    card.classList.remove("cur", "done");
+    if (good < 2) card.classList.add("graded");
+    marks[h.id] = good < 2 ? "wrong" : "right";
+  });
+  $$("#sv-form input").forEach(i => i.disabled = true);
+  $("#sv-map").innerHTML = ids().map(id => `<a href="#c-${id}" class="${marks[id]}" title="${U.jump} ${label(id)}">${label(id)}</a>`).join("");
+}
+function summaryHTML(g) {
+  const pct = Math.round(g.correct / g.total * 100);
+  let h = `<div class="tldr" style="margin-top:0"><b style="font-size:20px">${KIND === "dev" ? T.score : T.knowledge}: ${g.correct}/${g.total} (${pct}%)</b>`;
+  if (g.habit !== null) h += `<br><b style="font-size:20px">${T.habits}: ${g.habit}%</b>`;
+  const lvl = g.habit === null ? pct : Math.round((pct + g.habit) / 2);
+  h += `<br>${lvl >= 85 ? `<span class="g">${T.lvl3}</span>` : lvl >= 65 ? `<span class="y">${T.lvl2}</span>` : `<span class="r">${T.lvl1}</span>`}</div>`;
+  h += Object.entries(g.by).map(([s, [c, t]]) => { const nm = DATA.secs[s] ? DATA.secs[s][1] : secName(s); return `<div class="bar"><span>${DATA.secs[s] ? `<a href="${DATA.secs[s][0]}.html">${s} ${esc(nm)}</a>` : esc(nm)}</span><div class="track"><span style="width:${c / t * 100}%;background:${c === t ? "var(--fg)" : c / t >= .5 ? "var(--yellow)" : "var(--red)"}"></span></div><span>${c}/${t}</span></div>`; }).join("");
+  return h;
+}
+function resultText(g) {
+  return `${DATA.title}\n${KIND === "dev" ? T.score : T.knowledge}: ${g.correct}/${g.total}` + (g.habit !== null ? `\n${T.habits}: ${g.habit}%` : "") + "\n" + Object.entries(g.by).map(([s, [c, t]]) => `${DATA.secs[s] ? s + " " + DATA.secs[s][1] : secName(s)}: ${c}/${t}`).join("\n") + `\n${new Date().toISOString().slice(0, 10)}`;
+}
+$("#sv-submit").addEventListener("click", () => {
+  const a = answers(); if (Object.keys(a).length < ids().length) return;
+  submitted = true; progress();
+  const g = grade(a); showGrades(a);
+  $("#sv-result").innerHTML = summaryHTML(g) + `<div class="row" style="margin-top:10px"><button class="btn" id="sv-copy" type="button">${T.copy}</button><button class="btn" id="sv-retake" type="button">${T.retake}</button></div>`;
+  $("#sv-result").scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+  $("#sv-copy").onclick = async () => { try { await navigator.clipboard.writeText(resultText(g)); $("#sv-copy").textContent = T.copied; } catch (e) { $("#sv-copy").textContent = T.copyFail; } };
+  $("#sv-retake").onclick = () => { submitted = false; $("#sv-result").innerHTML = ""; render(); window.scrollTo(0, 0); };
+});
+// links inside the questionnaire open in a new tab, so answers are never lost
+document.querySelector("main").addEventListener("click", e => {
+  const a = e.target.closest("a[href]");
+  if (!a || a.closest(".pager") || a.closest("#sv-map") || a.getAttribute("href").startsWith("#")) return;
+  a.target = "_blank"; a.rel = "noopener";
+});
+window.addEventListener("beforeunload", e => {
+  if (!submitted && Object.keys(answers()).length) { e.preventDefault(); e.returnValue = U.leave; }
+});
+render();
+</script>
+</body>
+</html>

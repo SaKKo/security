@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en" data-lang="rails">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>07 Cross-Site Request Forgery · Web Security</title>
+
+<link rel="icon" href="favicon.ico" sizes="32x32">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="site.webmanifest">
+<meta name="theme-color" content="#000000">
+<link rel="stylesheet" href="assets/site.css?v=8f1e007517">
+<script src="assets/consent.js?v=9320b4a322"></script>
+</head>
+<body data-slug="07-csrf">
+<div class="win">
+  <div class="titlebar"><span class="dots"><i></i><i></i><i></i></span><span class="t">guest@websec: ~/websec/07-csrf — zsh — 100×40</span>
+    <a class="by" href="about.html" title="About the author"><span class="w0">by </span>SaKKo</a>
+    <span class="lsw" role="group" aria-label="Language"><a href="07-csrf.html" aria-current="true" data-setlang="en">EN</a><a href="th/07-csrf.html" data-setlang="th">TH</a></span>
+    <span class="langsw" role="group" aria-label="Code examples language"><span class="d">code:</span><button type="button" data-l="rails">rails</button><button type="button" data-l="node">node</button></span></div>
+  <nav class="top" aria-label="Sections"><a href="index.html" title="Web Security Field Guide">~/</a>
+<a class="trk on" href="index.html#security">#1 security</a>
+<a class="trk" href="r01-rails-api-app.html">#2 rails</a>
+<span class="grp">|</span>
+<a href="01-introduction.html" title="Introduction">01·introduction</a>
+<a href="02-sql-injection.html" title="SQL Injection">02·sql-injection</a>
+<a href="03-unsafe-query-generation.html" title="Unsafe Query Generation">03·query-shape</a>
+<a href="04-xss-and-other-injection.html" title="XSS and Other Injection">04·xss</a>
+<span class="grp">| accounts:</span>
+<a href="05-authentication.html" title="Authentication">05·auth</a>
+<a href="05b-mfa.html" title="Multi-Factor Authentication">05b·mfa</a>
+<a href="06-sessions.html" title="Sessions">06·sessions</a>
+<a href="07-csrf.html" aria-current="page" title="Cross-Site Request Forgery">07·csrf</a>
+<a href="08-user-management.html" title="User Management">08·accounts</a>
+<a href="09-mass-assignment-and-authorization.html" title="Mass Assignment and Authorization">09·authz</a>
+<span class="grp">| browser:</span>
+<a href="10-redirection-and-files.html" title="Redirection and Files">10·files</a>
+<a href="11-http-security-headers.html" title="HTTP Security Headers">11·headers</a>
+<a href="12-transport-cookies-third-party.html" title="Transport, Cookies and Third-Party Scripts">12·cookies-tls</a>
+<span class="grp">| server:</span>
+<a href="13-ssrf.html" title="Server-Side Request Forgery">13·ssrf</a>
+<a href="14-deserialization-and-xxe.html" title="Deserialization and XXE">14·deserialize</a>
+<a href="15-environmental-security.html" title="Environmental Security">15·secrets</a>
+<a href="16-cryptography.html" title="Cryptography and Data Protection">16·crypto</a>
+<a href="17-dependencies-and-cves.html" title="Dependencies and CVEs">17·dependencies</a>
+<span class="grp">| ops:</span>
+<a href="18-intranet-and-admin.html" title="Intranet and Admin Security">18·admin</a>
+<a href="19-misconfiguration-and-errors.html" title="Misconfiguration and Error Handling">19·misconfig</a>
+<a href="20-insecure-design.html" title="Insecure Design and Business Logic">20·design</a>
+<a href="21-logging-and-incident-response.html" title="Logging, Alerting and Incident Response">21·logging</a>
+<a href="22-additional-resources.html" title="Additional Resources">22·resources</a>
+<span class="grp">| questionnaires:</span>
+<a href="q1-developer-survey.html" title="Developer Security Survey">Q1·developer</a>
+<a href="q2-awareness-survey.html" title="Cyber Threat Awareness Survey">Q2·cyber</a></nav>
+  <main>
+<div class="col">
+<p class="prompt">guest@websec ~ % <b>man 07-csrf</b></p>
+<h1>07 · Cross-Site Request Forgery</h1>
+<p class="lede">CSRF tricks your logged-in browser into sending a request you never meant to send. Your cookies go along for the ride, so the app thinks it was you.</p>
+<h2>How it works</h2>
+<p>Browsers send your cookies with every request to a site, no matter which page started it. That's what keeps you logged in, and what CSRF abuses.</p>
+<div class="anim" data-actors="Alice's browser|evil.test|bank.test" data-title="A forged transfer"><script type="application/json">[{"f": 0, "t": 2, "l": "POST /session (logs in)", "c": "Alice logs into her bank. Her browser stores the session cookie."}, {"f": 0, "t": 1, "l": "GET /cute-cats", "c": "In another tab she opens a page on evil.test: a forum post, an email link, a hijacked ad."}, {"f": 1, "t": 0, "l": "<form action=bank.test/transfers> + auto-submit", "k": "a", "c": "The page contains a hidden form that submits itself with JavaScript (or an <code>&lt;img&gt;<\/code> pointing at a GET URL)."}, {"f": 0, "t": 2, "l": "POST /transfers to=mallory  Cookie: sid=…", "k": "a", "c": "The browser sends the request and, as always, attaches Alice's bank cookie."}, {"f": 2, "t": 0, "l": "302 → transfer done", "k": "a", "c": "Without a CSRF check the bank sees a valid session and moves the money."}, {"n": 2, "l": "with protect_from_forgery (Rails default)", "k": "k", "c": "Same attack against a Rails app with default settings."}, {"f": 0, "t": 2, "l": "POST /transfers (no authenticity_token)", "k": "b", "c": "evil.test can't read bank.test's pages, so it can't know the token. Rails raises <code>InvalidAuthenticityToken<\/code>. <b>Blocked.<\/b>"}]</script></div>
+<p>The attacker can't see the response. They just make things happen: change an email, move money, add an admin.</p>
+<h2>Try it</h2>
+<div class="demo"><header><b>sim: bank.test vs evil.test</b><span>set defenses, launch attacks</span></header><div class="body">
+<p class="hint">Alice is logged in to the bank. Set up the bank's defenses, then attack from the evil page.</p>
+<div class="grid2">
+<div class="box"><p class="cap g">bank.test configuration</p>
+<label><input checked="" id="c-get" type="checkbox"/> /transfer also accepts GET</label><br/>
+<label><input id="c-token" type="checkbox"/> require CSRF token on POST/PUT/PATCH/DELETE</label><br/>
+<label><input id="c-lax" type="checkbox"/> session cookie <code>SameSite=Lax</code></label><br/>
+<label><input id="c-origin" type="checkbox"/> reject POSTs whose <code>Origin</code> isn't bank.test</label>
+<p style="margin:10px 0 0">Alice's balance: <b id="c-bal">$5,000</b></p>
+</div>
+<div class="box"><p class="cap r">evil.test page</p>
+<div style="display:grid;gap:6px">
+<button class="btn red" data-atk="img" type="button">&lt;img src="…/transfer?amount=1000"&gt;</button>
+<button class="btn red" data-atk="link" type="button">link Alice clicks (top-level GET)</button>
+<button class="btn red" data-atk="form" type="button">auto-submitting hidden &lt;form method=POST&gt;</button>
+<button class="btn red" data-atk="fetch" type="button">fetch(…, {method:"POST", credentials:"include"})</button>
+</div></div>
+</div>
+<div class="log" id="c-log" style="margin-top:10px"></div>
+</div></div>
+<h2>7.1 Countermeasures</h2>
+<h3>Use GET and POST correctly</h3>
+<p>Rule one: <b>GET only reads</b>. Anything that changes data uses POST, PATCH or DELETE. Most CSRF defenses skip GET on purpose, so a GET that deletes stuff is wide open.</p>
+
+<h3>Require a secret token on state-changing requests</h3>
+<p>The classic fix: a secret <b>token</b> in every form. The evil site can make your browser send cookies, but it can't read our page, so it never knows the token.</p>
+<div class="rp yes">On by default. Rails forms include the token, and <code>csrf_meta_tags</code> covers Turbo and fetch. <b>Watch out:</b> API-only controllers have no CSRF protection, and any <code>skip_forgery_protection</code> deserves a second look.</div>
+<div class="code">
+<pre data-lang="rails">class ApplicationController &lt; ActionController::Base
+  <span class="c"># on by default since Rails 5.2; being explicit makes failures loud</span>
+  protect_from_forgery with: :exception
+
+  rescue_from ActionController::InvalidAuthenticityToken do
+    terminate_session if respond_to?(:terminate_session, true)   <span class="c"># generator helper</span>
+    cookies.delete(:remember_token)
+    redirect_to new_session_path, alert: "Please sign in again."
+  end
+end
+
+&lt;%# app/views/layouts/application.html.erb %&gt;
+&lt;%= csrf_meta_tags %&gt;                         &lt;%# token for Turbo / JS %&gt;
+&lt;%= form_with model: @transfer do |f| %&gt;      &lt;%# hidden authenticity_token %&gt;
+
+// your own fetch() calls
+fetch("/transfers", { method: "POST", headers: {
+  "X-CSRF-Token": document.querySelector("meta[name=csrf-token]").content }, body })</pre>
+<pre data-lang="node"><span class="c">// npm install csrf-sync   (synchronizer token pattern)</span>
+const { csrfSynchronisedProtection, generateToken } = require("csrf-sync")({
+  getTokenFromRequest: req =&gt; req.body._csrf || req.get("x-csrf-token"),
+});
+app.use(session(/* … */));
+app.use(csrfSynchronisedProtection);   <span class="c">// checks POST/PUT/PATCH/DELETE</span>
+
+app.get("/transfer", (req, res) =&gt;
+  res.render("transfer", { csrfToken: generateToken(req) }));
+
+<span class="c">&lt;!-- template --&gt;</span>
+&lt;meta name="csrf-token" content="&lt;%= csrfToken %&gt;"&gt;
+&lt;form method="post" action="/transfer"&gt;
+  &lt;input type="hidden" name="_csrf" value="&lt;%= csrfToken %&gt;"&gt; …
+
+<span class="c">// fetch from your own JS</span>
+fetch("/transfer", { method: "POST", headers: {
+  "X-CSRF-Token": document.querySelector("meta[name=csrf-token]").content }, body });</pre>
+</div>
+<h3>Layer on SameSite cookies and origin checks</h3>
+<p>Two cheap extra layers:</p>
+<ul>
+<li><b><code>SameSite=Lax</code></b> cookies aren't sent on cross-site POSTs or images. They still go with normal link clicks, so it won't save a dangerous GET.</li>
+<li><b>Origin checks</b>: reject POSTs that say they came from another site.</li>
+</ul>
+<div class="rp yes">Rails sets <code>SameSite=Lax</code> on cookies by default (since 6.1). Check older apps haven't turned it off.</div>
+<h3>Don't let other sites load your data as a script</h3>
+<p>If a URL returns private data as JavaScript, another site can load it with a <code>&lt;script&gt;</code> tag and read it. Return JSON instead, never JSONP.</p>
+<div class="rp yes">Rails already blocks this for <code>.js</code> responses.</div>
+<h3>Clear persistent cookies when a forgery is detected</h3>
+<p>When a forged request is caught, also clear any "remember me" cookie, or the user just gets logged straight back in.</p>
+<div class="rp partial">By default Rails raises and clears nothing. Add a <code>rescue_from ActionController::InvalidAuthenticityToken</code> that ends the session and deletes those cookies.</div>
+<div class="warn"><b>XSS beats all of this.</b> Injected script runs on our own site and can read the token. Stop XSS first (section 04).</div>
+</div>
+
+<div class="col"><label class="readmark"><input type="checkbox" id="read-07-csrf"> mark section 07 as read</label><div class="pager"><a href="06-sessions.html">◀ 06 Sessions</a><a href="08-user-management.html">08 User Management ▶</a></div></div>
+  </main>
+  <footer class="site">Based on the <a href="https://guides.rubyonrails.org/security.html">Ruby on Rails Security Guide</a> (CC BY-SA 4.0), the <a href="https://cheatsheetseries.owasp.org/">OWASP Cheat Sheet Series</a>, the <a href="https://owasp.org/Top10/2025/">OWASP Top 10:2025</a> and <a href="https://infosec.mozilla.org/guidelines/web_security.html">Mozilla's Web Security Guidelines</a>. Written for our dev team; code samples are illustrative.</footer>
+</div>
+<script src="assets/site.js?v=92ac7aa3f8"></script>
+<script>
+
+let cbal = 5000;
+function clog(s) { $("#c-log").innerHTML += s + "\n"; $("#c-log").scrollTop = 1e9; }
+const names = { img: "<img> tag (cross-site sub-request, GET)", link: "link click (top-level navigation, GET)", form: "hidden form auto-submit (top-level navigation, POST)", fetch: "fetch with credentials (cross-site sub-request, POST)" };
+$$("[data-atk]").forEach(b => b.onclick = () => {
+  const a = b.dataset.atk, get = $("#c-get").checked, token = $("#c-token").checked, lax = $("#c-lax").checked, origin = $("#c-origin").checked;
+  const method = (a === "img" || a === "link") ? "GET" : "POST";
+  const topLevel = a === "link" || a === "form";
+  clog(`<span class="w">▶ ${names[a]}</span>`);
+  if (method === "GET" && !get) return clog('  <span class="g">405 Method Not Allowed: /transfer only accepts POST. Blocked.</span>');
+  const cookieSent = !lax || (topLevel && method === "GET");
+  if (!cookieSent) return clog('  <span class="g">browser omitted the session cookie (SameSite=Lax) → request arrives anonymous → 401. Blocked.</span>');
+  clog("  cookie sent: sid=… (Alice is logged in)");
+  if (method === "POST" && origin) return clog('  <span class="g">Origin: https://evil.test ≠ bank.test → 403. Blocked.</span>');
+  if (method === "POST" && token) return clog('  <span class="g">no valid CSRF token in body or header → 422. Blocked.</span>');
+  if (method === "GET" && (token || origin)) clog('  <span class="y">token/origin checks only run on POST-like methods, and this was a GET…</span>');
+  cbal -= 1000; $("#c-bal").textContent = "$" + cbal.toLocaleString();
+  clog(`  <span class="r">200 OK: transferred $1,000 to mallory. Balance $${cbal.toLocaleString()}</span>`);
+});
+
+</script>
+</body>
+</html>

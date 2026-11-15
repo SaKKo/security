@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en" data-lang="rails">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>09 Mass Assignment and Authorization · Web Security</title>
+
+<link rel="icon" href="favicon.ico" sizes="32x32">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="site.webmanifest">
+<meta name="theme-color" content="#000000">
+<link rel="stylesheet" href="assets/site.css?v=8f1e007517">
+<script src="assets/consent.js?v=9320b4a322"></script>
+</head>
+<body data-slug="09-mass-assignment-and-authorization">
+<div class="win">
+  <div class="titlebar"><span class="dots"><i></i><i></i><i></i></span><span class="t">guest@websec: ~/websec/09-mass-assignment-and-authorization — zsh — 100×40</span>
+    <a class="by" href="about.html" title="About the author"><span class="w0">by </span>SaKKo</a>
+    <span class="lsw" role="group" aria-label="Language"><a href="09-mass-assignment-and-authorization.html" aria-current="true" data-setlang="en">EN</a><a href="th/09-mass-assignment-and-authorization.html" data-setlang="th">TH</a></span>
+    <span class="langsw" role="group" aria-label="Code examples language"><span class="d">code:</span><button type="button" data-l="rails">rails</button><button type="button" data-l="node">node</button></span></div>
+  <nav class="top" aria-label="Sections"><a href="index.html" title="Web Security Field Guide">~/</a>
+<a class="trk on" href="index.html#security">#1 security</a>
+<a class="trk" href="r01-rails-api-app.html">#2 rails</a>
+<span class="grp">|</span>
+<a href="01-introduction.html" title="Introduction">01·introduction</a>
+<a href="02-sql-injection.html" title="SQL Injection">02·sql-injection</a>
+<a href="03-unsafe-query-generation.html" title="Unsafe Query Generation">03·query-shape</a>
+<a href="04-xss-and-other-injection.html" title="XSS and Other Injection">04·xss</a>
+<span class="grp">| accounts:</span>
+<a href="05-authentication.html" title="Authentication">05·auth</a>
+<a href="05b-mfa.html" title="Multi-Factor Authentication">05b·mfa</a>
+<a href="06-sessions.html" title="Sessions">06·sessions</a>
+<a href="07-csrf.html" title="Cross-Site Request Forgery">07·csrf</a>
+<a href="08-user-management.html" title="User Management">08·accounts</a>
+<a href="09-mass-assignment-and-authorization.html" aria-current="page" title="Mass Assignment and Authorization">09·authz</a>
+<span class="grp">| browser:</span>
+<a href="10-redirection-and-files.html" title="Redirection and Files">10·files</a>
+<a href="11-http-security-headers.html" title="HTTP Security Headers">11·headers</a>
+<a href="12-transport-cookies-third-party.html" title="Transport, Cookies and Third-Party Scripts">12·cookies-tls</a>
+<span class="grp">| server:</span>
+<a href="13-ssrf.html" title="Server-Side Request Forgery">13·ssrf</a>
+<a href="14-deserialization-and-xxe.html" title="Deserialization and XXE">14·deserialize</a>
+<a href="15-environmental-security.html" title="Environmental Security">15·secrets</a>
+<a href="16-cryptography.html" title="Cryptography and Data Protection">16·crypto</a>
+<a href="17-dependencies-and-cves.html" title="Dependencies and CVEs">17·dependencies</a>
+<span class="grp">| ops:</span>
+<a href="18-intranet-and-admin.html" title="Intranet and Admin Security">18·admin</a>
+<a href="19-misconfiguration-and-errors.html" title="Misconfiguration and Error Handling">19·misconfig</a>
+<a href="20-insecure-design.html" title="Insecure Design and Business Logic">20·design</a>
+<a href="21-logging-and-incident-response.html" title="Logging, Alerting and Incident Response">21·logging</a>
+<a href="22-additional-resources.html" title="Additional Resources">22·resources</a>
+<span class="grp">| questionnaires:</span>
+<a href="q1-developer-survey.html" title="Developer Security Survey">Q1·developer</a>
+<a href="q2-awareness-survey.html" title="Cyber Threat Awareness Survey">Q2·cyber</a></nav>
+  <main>
+<div class="col">
+<p class="prompt">guest@websec ~ % <b>man 09-mass-assignment-and-authorization</b></p>
+<h1>09 · Mass Assignment and Authorization</h1>
+<p class="lede">Broken access control is the #1 web risk. Two questions on every request: which fields may this user set, and what may they do to which records?</p>
+<div class="toc"><b>on this page</b><ol><li><a href="#mass">Mass assignment</a></li><li><a href="#authz">Authorization: objects and functions</a></li><li><a href="#design">Designing authorization that holds</a></li></ol></div>
+<h2 id="mass">9.1 Mass assignment</h2>
+<p>It's tempting to copy the whole form onto the model: <code>User.update(params[:user])</code>. But the attacker writes that form. They can just add <code>role: "admin"</code>.</p>
+<p>This happened to GitHub in 2012, and it's why Rails has strong parameters.</p>
+<div class="anim" data-actors="Attacker|Rails controller|users table" data-title="Mass assignment"><script type="application/json">[{"f": 0, "t": 1, "l": "PATCH /profile {name: \"Eve\", role: \"admin\"}", "k": "a", "c": "The profile form only has a name field, but the attacker adds <code>role<\/code> to the request with dev tools or curl."}, {"n": 1, "l": "current_user.update(params[:user].permit!)", "k": "a", "c": "The controller copies every submitted attribute onto the model."}, {"f": 1, "t": 2, "l": "UPDATE users SET name='Eve', role='admin'", "k": "a", "c": "<b>Privilege escalation<\/b> through an ordinary form."}, {"n": 1, "l": "params.expect(user: [:name])", "k": "k", "c": "With an explicit allowlist, only <code>name<\/code> survives; <code>role<\/code> is dropped (and logged)."}, {"f": 1, "t": 2, "l": "UPDATE users SET name='Eve'", "c": "The role stays as it was."}]</script></div>
+<div class="demo"><header><b>sim: profile update request</b><span>edit the JSON the browser sends</span></header><div class="body">
+<div class="grid2"><div>
+<label for="ma-in">PATCH /profile body</label>
+<textarea id="ma-in" rows="5">{"user": {"name": "Eve", "role": "admin", "account_id": 1, "verified": true}}</textarea>
+<div class="row" style="margin-top:8px"><span>controller uses:</span>
+<label><input name="ma-mode" type="radio" value="all"/> params[:user].permit!</label>
+<label><input checked="" name="ma-mode" type="radio" value="permit"/> params.expect(user: [:name, :email])</label></div>
+</div><div><p class="cap">user record after save</p><div class="out" id="ma-out"></div></div></div>
+</div></div>
+<div class="rp yes">Strong params are on by default: raw params raise an error, so you list allowed keys with <code>permit</code> or <code>params.expect</code>. <b>The hole is <code>permit!</code></b> (allows everything), and permit lists that include <code>:role</code>. Brakeman flags both.</div><div class="code">
+<pre data-lang="rails"><span class="c"># Rails 8: expect = require + permit, and rejects wrongly shaped params with 400</span>
+def profile_params
+  params.expect(user: [:name, :email])
+end
+
+<span class="c"># admin-only fields get their own permit list in the admin controller</span>
+def admin_user_params
+  params.expect(user: [:name, :email, :role])
+end
+
+<span class="bad">params.require(:user).permit!            # permits everything: never on user input</span></pre>
+<pre data-lang="node"><span class="c">// JS stacks have the same bug: Object.assign(user, req.body) or ORM.update(req.body)</span>
+const { name, email } = req.body;              <span class="ok">// pick fields explicitly</span>
+await User.update({ name, email }, { where: { id: req.user.id } });
+<span class="bad">await User.update(req.body, { where: { id: req.user.id } });   // mass assignment</span></pre>
+</div>
+<h2 id="authz">9.2 Authorization: objects and functions</h2>
+<p>Authentication = who you are. Authorization = what you may do. Two ways it breaks:</p>
+<ul>
+<li><b>Wrong record</b> (BOLA/IDOR): allowed to view invoices, just not <i>that</i> one.</li>
+<li><b>Wrong action</b> (BFLA): a normal user calls <code>POST /admin/refunds</code> because we only hid the button.</li>
+</ul>
+<p>Also watch for: changing <code>account_id</code> in a request, skipping steps in a flow, and API endpoints that missed the checks the HTML page has.</p>
+<div class="demo"><header><b>sim: who can do what?</b><span>pick a role and an action</span></header><div class="body">
+<div class="row"><label for="az-role">signed in as</label><select id="az-role" style="width:auto"><option value="viewer">viewer (Acme)</option><option selected="" value="member">member (Acme)</option><option value="manager">manager (Acme)</option><option value="admin">admin (Acme)</option><option value="other">member (Globex)</option></select>
+<label><input checked="" id="az-policy" type="checkbox"/> server checks a policy on every action</label></div>
+<div class="tablewrap" style="margin-top:10px"><table id="az-tbl"></table></div>
+</div></div>
+<div class="rp no">Nothing built in. Scope through <code>Current.user</code> and use <b>Pundit</b> or <b>Action Policy</b> with <code>verify_authorized</code>, so a forgotten check fails loudly.</div><div class="code">
+<pre data-lang="rails">class ApplicationController &lt; ActionController::Base
+  include Pundit::Authorization
+  after_action :verify_authorized, except: :index     <span class="c"># forgot authorize? → error</span>
+  after_action :verify_policy_scoped, only: :index
+end
+
+class RefundsController &lt; ApplicationController
+  def create
+    order = policy_scope(Order).find(params[:order_id])  <span class="c"># object level (BOLA)</span>
+    authorize order, :refund?                            <span class="c"># function level (BFLA)</span>
+    order.refund!(amount: params.expect(:amount))
+  end
+end
+
+class OrderPolicy &lt; ApplicationPolicy
+  def refund? = user.manager? &amp;&amp; record.account_id == user.account_id
+  class Scope &lt; ApplicationPolicy::Scope
+    def resolve = scope.where(account_id: user.account_id)   <span class="c"># tenant isolation</span>
+  end
+end</pre>
+</div>
+<h2 id="design">9.3 Designing authorization that holds</h2>
+<ul>
+<li><b>Deny by default.</b> No rule, no access.</li>
+<li><b>Check on the server, every time.</b> Hidden buttons aren't security.</li>
+<li><b>One place for rules</b> (policy objects), not <code>if admin?</code> everywhere.</li>
+<li><b>Take the account from the session</b>, never from params.</li>
+<li><b>Test it</b>: sign in as each role and check you get 403/404.</li>
+<li><b>Prefer 404 over 403</b> so IDs can't be probed.</li>
+</ul>
+</div>
+
+<div class="col"><label class="readmark"><input type="checkbox" id="read-09-mass-assignment-and-authorization"> mark section 09 as read</label><div class="pager"><a href="08-user-management.html">◀ 08 User Management</a><a href="10-redirection-and-files.html">10 Redirection and Files ▶</a></div></div>
+  </main>
+  <footer class="site">Based on the <a href="https://guides.rubyonrails.org/security.html">Ruby on Rails Security Guide</a> (CC BY-SA 4.0), the <a href="https://cheatsheetseries.owasp.org/">OWASP Cheat Sheet Series</a>, the <a href="https://owasp.org/Top10/2025/">OWASP Top 10:2025</a> and <a href="https://infosec.mozilla.org/guidelines/web_security.html">Mozilla's Web Security Guidelines</a>. Written for our dev team; code samples are illustrative.</footer>
+</div>
+<script src="assets/site.js?v=92ac7aa3f8"></script>
+<script>
+
+function ma() {
+  let body; try { body = JSON.parse($("#ma-in").value); } catch (e) { $("#ma-out").innerHTML = '<span class="y">invalid JSON</span>'; return; }
+  const u = body.user || {}, mode = $("input[name=ma-mode]:checked").value;
+  const rec = { id: 7, name: "Eve", email: "eve@acme.test", role: "member", account_id: 3, verified: false };
+  const allowed = mode === "all" ? Object.keys(u) : ["name", "email"];
+  const dropped = Object.keys(u).filter(k => !allowed.includes(k));
+  Object.keys(u).forEach(k => { if (allowed.includes(k) && k in rec) rec[k] = u[k]; });
+  const sens = ["role", "account_id", "verified"];
+  $("#ma-out").innerHTML = Object.entries(rec).map(([k, v]) => { const changed = k in u && allowed.includes(k); const bad = changed && sens.includes(k); return `${k}: ${bad ? '<span class="r">' + esc(JSON.stringify(v)) + "  ← attacker-set</span>" : changed ? '<span class="g">' + esc(JSON.stringify(v)) + "</span>" : esc(JSON.stringify(v))}`; }).join("\n") + (dropped.length ? `\n\n<span class="d">Unpermitted parameters: ${dropped.map(esc).join(", ")} (dropped, logged)</span>` : "");
+}
+$("#ma-in").addEventListener("input", ma); $$("input[name=ma-mode]").forEach(r => r.addEventListener("change", ma)); ma();
+const acts = [
+  ["GET /projects/41 (Acme project)", "object", { viewer: 1, member: 1, manager: 1, admin: 1, other: 0 }],
+  ["PATCH /projects/41", "object", { viewer: 0, member: 1, manager: 1, admin: 1, other: 0 }],
+  ["POST /refunds (order 900, Acme)", "function", { viewer: 0, member: 0, manager: 1, admin: 1, other: 0 }],
+  ["POST /admin/users (create admin)", "function", { viewer: 0, member: 0, manager: 0, admin: 1, other: 0 }],
+  ["GET /api/v1/invoices?account_id=3", "tenant", { viewer: 1, member: 1, manager: 1, admin: 1, other: 0 }],
+  ["POST /checkout/confirm (skipping /pay)", "workflow", { viewer: 0, member: 0, manager: 0, admin: 0, other: 0 }]];
+function az() {
+  const r = $("#az-role").value, pol = $("#az-policy").checked;
+  $("#az-tbl").innerHTML = "<tr><th>request</th><th>kind</th><th>should be</th><th>server answers</th></tr>" + acts.map(([a, kind, m]) => {
+    const should = !!m[r], got = pol ? should : true;
+    return `<tr><td><code>${esc(a)}</code></td><td>${kind}</td><td>${should ? "allowed" : "denied"}</td><td>${got === should ? (got ? '<span class="pill safe">200</span>' : '<span class="pill safe">404 / 403</span>') : '<span class="pill bad">200: broken access control</span>'}</td></tr>`;
+  }).join("");
+}
+$("#az-role").addEventListener("change", az); $("#az-policy").addEventListener("change", az); az();
+
+</script>
+</body>
+</html>

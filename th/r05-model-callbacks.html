@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="th" data-lang="rails">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Model Callback · Rails Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600&display=swap" rel="stylesheet">
+<link rel="icon" href="../favicon.ico" sizes="32x32">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<link rel="manifest" href="../site.webmanifest">
+<meta name="theme-color" content="#000000">
+<link rel="stylesheet" href="../assets/site.css?v=8f1e007517">
+<script src="../assets/consent.js?v=9320b4a322"></script>
+</head>
+<body data-slug="r05-model-callbacks">
+<div class="win">
+  <div class="titlebar"><span class="dots"><i></i><i></i><i></i></span><span class="t">guest@websec: ~/websec/r05-model-callbacks/th — zsh — 100×40</span>
+    <a class="by" href="about.html" title="เกี่ยวกับผู้เขียน"><span class="w0">เขียนโดย </span>SaKKo</a>
+    <span class="lsw" role="group" aria-label="ภาษา"><a href="../r05-model-callbacks.html" data-setlang="en">EN</a><a href="r05-model-callbacks.html" aria-current="true" data-setlang="th">TH</a></span></div>
+  <nav class="top" aria-label="บทเรียน"><a href="index.html#rails" title="หน้าแรก">~/</a>
+<a class="trk" href="index.html#security">#1 ความปลอดภัย</a>
+<a class="trk on" href="r01-rails-api-app.html">#2 rails</a>
+<span class="grp">| พื้นฐาน:</span>
+<a href="r01-rails-api-app.html" title="แอป Rails แบบ API">r01·api-app</a>
+<a href="r02-rails-commands.html" title="คำสั่ง Rails">r02·commands</a>
+<a href="r03-migrations.html" title="Migration">r03·migrations</a>
+<span class="grp">| model:</span>
+<a href="r04-models.html" title="Model และ ApplicationRecord">r04·models</a>
+<a href="r05-model-callbacks.html" aria-current="page" title="Model Callback">r05·model-hooks</a>
+<span class="grp">| controller:</span>
+<a href="r06-controllers.html" title="Controller และลำดับชั้นของ API">r06·controllers</a>
+<a href="r07-controller-callbacks.html" title="Controller Callback">r07·controller-hooks</a>
+<a href="r08-where-code-goes.html" title="Controller, Model หรือ Service?">r08·services</a>
+<span class="grp">| api:</span>
+<a href="r09-rest-routes.html" title="Route แบบ RESTful และ Resourceful">r09·rest-routes</a>
+<a href="r10-testing.html" title="การทดสอบ API">r10·testing</a></nav>
+  <main>
+<div class="col">
+<p class="prompt">guest@websec ~ % <b>man r05-model-callbacks</b></p>
+<h1>Model Callback</h1>
+<p class="lede">callback คือ method ที่ Active Record เรียกให้ ณ จังหวะที่กำหนดในชีวิตของ record: ก่อน validate หลัง save หลัง transaction commit การรู้ลำดับที่แน่นอนคือความต่างระหว่างการตั้งค่า default อย่างเรียบร้อย กับ bug บน production</p>
+<h2>การลงทะเบียน callback</h2><div class="code" data-label="ruby"><pre>class User &lt; ApplicationRecord
+  before_validation :initialize_authentication_token, on: [:create]   <span class="c"># method name + options</span>
+  after_soft_delete :cascade_soft_delete                              <span class="c"># custom callback (see below)</span>
+end
+
+class Role &lt; ApplicationRecord
+  after_commit :broadcast_webhook_event
+  before_save :strip_name, if: :name_changed?                         <span class="c"># conditional</span>
+  after_create_commit -&gt; { Rails.logger.info("role #{id} created") }  # a block works too
+end</pre></div><p>option: <code>on:</code> (<code>:create</code>, <code>:update</code> หรือ validation context ที่กำหนดเอง), <code>if:</code> / <code>unless:</code> (ชื่อ method หรือ lambda), <code>prepend: true</code> (ให้ทำงานก่อน callback ที่ประกาศไว้ก่อนหน้า)</p><h2>callback ทั้งหมดตามลำดับ</h2><div class="tablewrap"><table><thead><tr><th>create</th><th>update</th><th>destroy</th></tr></thead><tbody><tr><td><code>before_validation</code></td><td><code>before_validation</code></td><td><code>before_destroy</code></td></tr><tr><td><code>after_validation</code></td><td><code>after_validation</code></td><td><code>around_destroy</code></td></tr><tr><td><code>before_save</code></td><td><code>before_save</code></td><td><code><span class='k'>DELETE</span></code></td></tr><tr><td><code>around_save</code></td><td><code>around_save</code></td><td><code>after_destroy</code></td></tr><tr><td><code>before_create</code></td><td><code>before_update</code></td><td><code>after_commit / after_rollback</code></td></tr><tr><td><code>around_create</code></td><td><code>around_update</code></td><td></td></tr><tr><td><code><span class='k'>INSERT</span></code></td><td><code><span class='k'>UPDATE</span></code></td><td></td></tr><tr><td><code>after_create</code></td><td><code>after_update</code></td><td></td></tr><tr><td><code>after_save</code></td><td><code>after_save</code></td><td></td></tr><tr><td><code>after_commit / after_rollback</code></td><td><code>after_commit / after_rollback</code></td><td></td></tr></tbody></table></div><p>นอกจากนี้: <code>after_initialize</code> (ทุกครั้งที่ <code>new</code> และทุก record ที่โหลด), <code>after_find</code> (ทุก record ที่โหลด ก่อน <code>after_initialize</code>), <code>after_touch</code> ทางลัดของ commit: <code>after_create_commit</code>, <code>after_update_commit</code>, <code>after_destroy_commit</code>, <code>after_save_commit</code></p><div class="demo"><header><b>explorer: callback ไหนทำงานบ้าง?</b><span>เลือก operation และสถานการณ์</span></header><div class="body"><div class="cbx"><script type="application/json">{"ops": [{"id": "create", "label": "Role.new(…).save", "hint": ""}, {"id": "update", "label": "role.update(…)", "hint": ""}, {"id": "destroy", "label": "role.destroy", "hint": ""}, {"id": "soft", "label": "role.soft_delete!", "hint": "operation ที่เราเขียนเองใน <code>SoftDeletable<\/code>"}, {"id": "columns", "label": "role.update_columns(…)", "hint": ""}, {"id": "touch", "label": "role.touch", "hint": ""}], "scen": [{"id": "ok", "label": "ปกติ"}, {"id": "invalid", "label": "validation ไม่ผ่าน"}, {"id": "abort", "label": "before_* throw :abort"}, {"id": "raise", "label": "after_save raise"}], "seq": {"create|ok": {"steps": [{"h": "after_initialize", "x": "<code>Role.new(...)<\/code>"}, {"h": "เปิด transaction", "k": "tx"}, {"h": "before_validation"}, {"h": "validate", "x": "รัน validator และ <code>validate :method<\/code>"}, {"h": "after_validation"}, {"h": "before_save"}, {"h": "around_save", "x": "โค้ดก่อน <code>yield<\/code>"}, {"h": "before_create"}, {"h": "around_create", "x": "โค้ดก่อน <code>yield<\/code>"}, {"h": "INSERT INTO \"roles\" …", "k": "db"}, {"h": "around_create", "x": "โค้ดหลัง <code>yield<\/code>"}, {"h": "after_create"}, {"h": "around_save", "x": "โค้ดหลัง <code>yield<\/code>"}, {"h": "after_save"}, {"h": "COMMIT", "k": "tx"}, {"h": "after_commit", "x": "รวมถึง <code>after_create_commit<\/code> / <code>after_save_commit<\/code>"}], "ret": "save → true · save! → true"}, "create|invalid": {"steps": [{"h": "after_initialize", "x": "<code>Role.new(...)<\/code>"}, {"h": "เปิด transaction", "k": "tx"}, {"h": "before_validation"}, {"h": "validate", "k": "halt", "x": "มี error → หยุด"}, {"h": "after_validation"}, {"h": "ROLLBACK: ไม่มีอะไรถูกเขียน", "k": "tx"}], "ret": "save → false · save! → raise RecordInvalid (API ของเรา: 400)", "bad": true}, "create|abort": {"steps": [{"h": "after_initialize", "x": "<code>Role.new(...)<\/code>"}, {"h": "เปิด transaction", "k": "tx"}, {"h": "before_validation"}, {"h": "validate", "x": "รัน validator และ <code>validate :method<\/code>"}, {"h": "after_validation"}, {"h": "before_save", "k": "halt", "x": "<code>throw :abort<\/code>"}, {"h": "ROLLBACK", "k": "tx"}], "ret": "save → false · save! → raise RecordNotSaved", "bad": true}, "create|raise": {"steps": [{"h": "after_initialize", "x": "<code>Role.new(...)<\/code>"}, {"h": "เปิด transaction", "k": "tx"}, {"h": "before_validation"}, {"h": "validate", "x": "รัน validator และ <code>validate :method<\/code>"}, {"h": "after_validation"}, {"h": "before_save"}, {"h": "around_save", "x": "โค้ดก่อน <code>yield<\/code>"}, {"h": "before_create"}, {"h": "around_create", "x": "โค้ดก่อน <code>yield<\/code>"}, {"h": "INSERT INTO \"roles\" …", "k": "db"}, {"h": "around_create", "x": "โค้ดหลัง <code>yield<\/code>"}, {"h": "after_create"}, {"h": "around_save", "x": "โค้ดหลัง <code>yield<\/code>"}, {"h": "after_save", "k": "halt", "x": "raise exception"}, {"h": "ROLLBACK: แถวถูกยกเลิก", "k": "tx"}, {"h": "after_rollback"}], "ret": "exception ส่งต่อไปยังผู้เรียก", "bad": true}, "update|ok": {"steps": [{"h": "after_find", "x": "<code>Role.find(id)<\/code>"}, {"h": "after_initialize"}, {"h": "เปิด transaction", "k": "tx"}, {"h": "before_validation"}, {"h": "validate", "x": "รัน validator และ <code>validate :method<\/code>"}, {"h": "after_validation"}, {"h": "before_save"}, {"h": "around_save", "x": "โค้ดก่อน <code>yield<\/code>"}, {"h": "before_update"}, {"h": "around_update", "x": "โค้ดก่อน <code>yield<\/code>"}, {"h": "UPDATE \"roles\" SET …", "k": "db"}, {"h": "around_update", "x": "โค้ดหลัง <code>yield<\/code>"}, {"h": "after_update"}, {"h": "around_save", "x": "โค้ดหลัง <code>yield<\/code>"}, {"h": "after_save"}, {"h": "COMMIT", "k": "tx"}, {"h": "after_commit", "x": "รวมถึง <code>after_update_commit<\/code> / <code>after_save_commit<\/code>"}], "ret": "save → true · save! → true"}, "update|invalid": {"steps": [{"h": "after_find", "x": "<code>Role.find(id)<\/code>"}, {"h": "after_initialize"}, {"h": "เปิด transaction", "k": "tx"}, {"h": "before_validation"}, {"h": "validate", "k": "halt", "x": "มี error → หยุด"}, {"h": "after_validation"}, {"h": "ROLLBACK: ไม่มีอะไรถูกเขียน", "k": "tx"}], "ret": "save → false · save! → raise RecordInvalid (API ของเรา: 400)", "bad": true}, "update|abort": {"steps": [{"h": "after_find", "x": "<code>Role.find(id)<\/code>"}, {"h": "after_initialize"}, {"h": "เปิด transaction", "k": "tx"}, {"h": "before_validation"}, {"h": "validate", "x": "รัน validator และ <code>validate :method<\/code>"}, {"h": "after_validation"}, {"h": "before_save", "k": "halt", "x": "<code>throw :abort<\/code>"}, {"h": "ROLLBACK", "k": "tx"}], "ret": "save → false · save! → raise RecordNotSaved", "bad": true}, "update|raise": {"steps": [{"h": "after_find", "x": "<code>Role.find(id)<\/code>"}, {"h": "after_initialize"}, {"h": "เปิด transaction", "k": "tx"}, {"h": "before_validation"}, {"h": "validate", "x": "รัน validator และ <code>validate :method<\/code>"}, {"h": "after_validation"}, {"h": "before_save"}, {"h": "around_save", "x": "โค้ดก่อน <code>yield<\/code>"}, {"h": "before_update"}, {"h": "around_update", "x": "โค้ดก่อน <code>yield<\/code>"}, {"h": "UPDATE \"roles\" SET …", "k": "db"}, {"h": "around_update", "x": "โค้ดหลัง <code>yield<\/code>"}, {"h": "after_update"}, {"h": "around_save", "x": "โค้ดหลัง <code>yield<\/code>"}, {"h": "after_save", "k": "halt", "x": "raise exception"}, {"h": "ROLLBACK: แถวถูกยกเลิก", "k": "tx"}, {"h": "after_rollback"}], "ret": "exception ส่งต่อไปยังผู้เรียก", "bad": true}, "destroy|ok": {"steps": [{"h": "เปิด transaction", "k": "tx"}, {"h": "before_destroy"}, {"h": "around_destroy", "x": "ก่อน <code>yield<\/code>"}, {"h": "DELETE FROM \"roles\" …", "k": "db"}, {"h": "around_destroy", "x": "หลัง <code>yield<\/code>"}, {"h": "after_destroy"}, {"h": "COMMIT", "k": "tx"}, {"h": "after_commit", "x": "รวมถึง <code>after_destroy_commit<\/code>"}], "ret": "destroy → self (ในแอปเราทำได้ผ่าน hard_destroy! เท่านั้น)"}, "destroy|abort": {"steps": [{"h": "เปิด transaction", "k": "tx"}, {"h": "before_destroy", "k": "halt", "x": "<code>throw :abort<\/code>"}, {"h": "ROLLBACK", "k": "tx"}], "ret": "destroy → false · destroy! → raise RecordNotDestroyed (API ของเรา: 400)", "bad": true}, "soft|ok": {"steps": [{"h": "before_soft_delete", "x": "callback ที่นิยามเองจาก <code>define_model_callbacks<\/code>"}, {"h": "UPDATE … SET deleted_at (update_columns: ไม่มี validation ไม่มี save callback)", "k": "db"}, {"h": "after_soft_delete", "x": "ของเรา: <code>cascade_soft_delete<\/code>"}, {"h": "after_commit", "k": "skip", "x": "<b>ไม่ทำงาน<\/b>: update_columns ข้ามไป"}], "ret": "soft_delete! → true"}, "columns|ok": {"steps": [{"h": "UPDATE … SET … (ไม่มี callback ไม่มี validation และไม่อัปเดต updated_at ถ้าไม่ส่งไปเอง)", "k": "db"}], "ret": "update_columns → true"}, "touch|ok": {"steps": [{"h": "UPDATE … SET updated_at", "k": "db"}, {"h": "after_touch"}, {"h": "after_commit"}], "ret": "touch → true"}}, "ex": {"after_initialize": "ของเรา: <code>SoftDeletable<\/code> ตรวจว่าตารางมี <code>deleted_at<\/code> (เฉพาะ dev/test)", "before_validation": "ของเรา: <code>ClientApplication#generate_credentials<\/code>, <code>User#initialize_authentication_token<\/code> (ทั้งคู่ <code>on: :create<\/code>)", "after_commit": "ของเรา: <code>Role#broadcast_webhook_event<\/code> ส่ง webhook job เข้าคิว", "after_rollback": "transaction ล้มเหลว ให้เก็บกวาดสิ่งที่เริ่มไว้"}, "l_op": "operation", "l_sc": "สถานการณ์"}</script></div></div></div><p>สิ่งที่ควรสังเกต: การเขียนฐานข้อมูลอยู่<i>ตรงกลาง</i> <code>after_save</code> ทำงาน<i>ก่อน</i> commit ถ้าล้มเหลวที่ใดก็ตามก่อน <code>COMMIT</code> ทุกอย่างจะถูกยกเลิก และ <code>soft_delete!</code> / <code>update_columns</code> ข้ามเกือบทั้งหมด</p><h2>callback ในโค้ดของเรา</h2><h3>before_validation, on: :create</h3><div class="code" data-label="ruby"><pre>class ClientApplication &lt; ApplicationRecord
+  before_validation :generate_credentials, on: :create
+
+  validates :name, :app_key, :api_secret, presence: true
+  validates :app_key, uniqueness: true
+  ...</pre></div><p>ทำไมใช้ <code>before_validation</code> ไม่ใช่ <code>before_create</code>? เพราะ <code>before_create</code> ทำงาน<i>หลัง</i> validation ทำให้การตรวจ presence ของ <code>app_key</code> ล้มเหลวก่อน ค่าที่ validation ต้องใช้ ให้สร้างใน <code>before_validation</code></p><h3>after_commit</h3><div class="code" data-label="ruby · app/models/role.rb"><pre>class Role &lt; ApplicationRecord
+  after_commit :broadcast_webhook_event
+
+  def broadcast_webhook_event
+    return if client_application.nil?
+
+    event_type = determine_event_type          <span class="c"># created / updated / destroyed</span>
+    return if event_type.nil?
+    <span class="c"># ignore saves where only updated_at changed</span>
+    return if event_type == "role.updated" &amp;&amp; previous_changes.except("updated_at").empty?
+
+    client_application.notify_webhook(event_type, role_payload)   <span class="c"># -&gt; perform_later</span>
+  end
+
+  def determine_event_type
+    if destroyed? || deleted_at.present? then "role.destroyed"
+    elsif previously_new_record? then "role.created"
+    else "role.updated"
+    end
+  end
+end</pre></div><p>side effect ที่ออกนอกฐานข้อมูล (job, webhook, email) ต้องอยู่ใน <code>after_commit</code> เพราะใน <code>after_save</code> transaction ยังเปิดอยู่: job อาจเริ่มก่อนที่แถวจะมองเห็นได้ หรือ transaction อาจ rollback หลังจากส่ง webhook ไปแล้ว <code>previous_changes</code> และ <code>previously_new_record?</code> บอกว่าเพิ่งเกิดอะไรขึ้น</p><div class="warn">ข้อควรระวัง: <code>soft_delete!</code> เขียนข้อมูลด้วย <code>update_columns</code> ซึ่งข้าม <code>after_commit</code> ดังนั้น branch <code>"role.destroyed"</code> ข้างบนจะไม่ทำงานเมื่อ soft delete ถ้า client ต้องได้รับแจ้งการลบ ให้เรียก <code>broadcast_webhook_event</code> จาก <code>after_soft_delete</code> ลองเลือก <code>role.soft_delete!</code> ใน explorer ข้างบน</div><h3>callback ที่นิยามเอง: define_model_callbacks</h3><div class="code" data-label="ruby · app/models/concerns/soft_deletable.rb"><pre>module SoftDeletable
+  included do
+    define_model_callbacks :soft_delete, :restore    <span class="c"># creates before_/around_/after_soft_delete etc.</span>
+    after_soft_delete :execute_cascade_soft_delete
+    after_restore :execute_cascade_restore
+    validate :ensure_unique_attributes_on_restore, on: :restore   <span class="c"># custom validation context</span>
+  end
+
+  def soft_delete!
+    return false if soft_deleted?
+    run_callbacks :soft_delete do                     <span class="c"># before_* ... block ... after_*</span>
+      update_columns(deleted_at: Time.current, updated_at: Time.current)
+    end
+    true
+  end
+
+  def restore(context: :restore)
+    self.deleted_at = nil
+    return false unless valid?(context)               <span class="c"># runs validations tagged on: :restore</span>
+    run_callbacks(:restore) { update_columns(deleted_at: nil, updated_at: Time.current) }
+    true
+  end
+end</pre></div><p><code>define_model_callbacks</code> ทำให้ operation ที่เราเขียนเองมี hook <code>before_/around_/after_</code> เหมือน <code>save</code> ส่วน validation context (<code>valid?(:restore)</code>) ทำให้ validation หนึ่งทำงานเฉพาะ operation เดียว ในที่นี้ การ restore user ที่ username ถูกคนอื่นใช้ไปแล้วระหว่างที่ถูกลบ จะล้มเหลวอย่างเรียบร้อย</p><h3>การจัดรูปข้อมูล: ใช้ writer ไม่ใช่ callback</h3><div class="code" data-label="ruby · app/models/role.rb"><pre>def permissions=(values)
+  super(Array(values).compact.map(&amp;:to_s).sort)   <span class="c"># always a sorted array of strings</span>
+end</pre></div><p>การ override writer ของ attribute ทำให้ค่าถูกจัดรูปทันทีที่กำหนด validation และ <code>changed?</code> จึงเห็นค่าที่สะอาดแล้ว Rails 7.1 ขึ้นไปยังมี <code>normalizes :email, with: -> { _1.strip.downcase }</code> สำหรับงานเดียวกัน</p><h2>การหยุดและการข้าม</h2><div class="code" data-label="ruby"><pre>before_destroy :ensure_not_last_admin
+
+def ensure_not_last_admin
+  return unless is_admin? &amp;&amp; User.where(is_admin: true).count == 1
+  errors.add(:base, "Cannot remove the last admin")
+  throw :abort                     <span class="c"># stops the chain; destroy returns false / destroy! raises</span>
+end</pre></div><p>method เหล่านี้<b>ข้าม callback และ validation</b> ทั้งหมด ให้ใช้อย่างตั้งใจ อย่าใช้โดยไม่รู้ตัว:</p><p><code>update_column</code> · <code>update_columns</code> · <code>update_all</code> · <code>delete</code> · <code>delete_all</code> · <code>delete_by</code> · <code>insert</code> / <code>insert_all</code> · <code>upsert</code> / <code>upsert_all</code> · <code>increment!</code> · <code>decrement!</code> · <code>touch_all</code> · <code>update_counters</code></p><h2>หลักการทั่วไป</h2><ul><li>callback ควรเกี่ยวกับ<b>record นี้</b>: ค่า default, key ที่สร้างอัตโนมัติ, การจัดรูปค่า, การ cascade soft delete</li><li>อะไรก็ตามที่ออกนอก process (HTTP, email, webhook) ให้อยู่ใน <code>after_commit</code> และปกติแค่ส่ง job เข้าคิว</li><li>ห้ามเรียก service ภายนอกที่ช้าใน <code>before_*</code> หรือ <code>after_save</code> เพราะจะทำให้ transaction ของฐานข้อมูลเปิดค้าง</li><li>ถ้า callback ต้องรู้ว่า<i>ใคร</i>ทำ หรือ endpoint <i>ไหน</i>ถูกเรียก แปลว่าควรอยู่ใน controller หรือ service แทน</li></ul><div class="quiz" data-a="2"><p>ต้องส่งอีเมลหาผู้ใช้หลังจากสร้างบัญชี ใช้ callback ไหน?</p><div class="opts"><button type="button">before_create</button><button type="button">after_save</button><button type="button">after_create_commit</button><button type="button">after_initialize</button></div><p class="explain">หลัง commit แถวของ user มีอยู่จริงแน่นอนสำหรับ mail job ให้ส่งเข้าคิวด้วย <code>deliver_later</code></p></div><div class="quiz" data-a="0"><p><code>before_create :set_code</code> ตั้งค่าที่ <code>validates :code, presence: true</code> ตรวจอยู่ แต่ save แล้วล้มเหลวด้วย "Code can't be blank" ทำไม?</p><div class="opts"><button type="button">before_create ทำงานหลัง validation</button><button type="button">before_create ไม่ทำงานตอน save</button><button type="button">presence ใช้กับ string ไม่ได้</button><button type="button">ต้องใช้ throw :abort</button></div><p class="explain">ย้ายไปไว้ที่ <code>before_validation :set_code, on: :create</code> แบบเดียวกับ <code>generate_credentials</code></p></div></div>
+
+<div class="col"><label class="readmark"><input type="checkbox" id="read-r05-model-callbacks"> ทำเครื่องหมายว่าอ่านบท r05 แล้ว</label><div class="pager"><a href="r04-models.html">◀ r04 Model และ ApplicationRecord</a><a href="r06-controllers.html">r06 Controller และลำดับชั้นของ API ▶</a></div></div>
+  </main>
+  <footer class="site">อ้างอิงจาก <a href="https://guides.rubyonrails.org/">Ruby on Rails Guides</a> (CC BY-SA 4.0) เฉพาะส่วนที่ใช้กับแอปแบบ API-only และแนวทางการเขียนโค้ดในโปรเจกต์ของเรา ตัวอย่างโค้ดดัดแปลงจากโค้ดจริงเพื่อใช้สอน</footer>
+</div>
+<script src="../assets/site.js?v=92ac7aa3f8"></script>
+<script>
+
+
+</script>
+<script src="../assets/widgets.js?v=b9f4e038ea"></script>
+</body>
+</html>

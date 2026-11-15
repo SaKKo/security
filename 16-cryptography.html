@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en" data-lang="rails">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>16 Cryptography and Data Protection · Web Security</title>
+
+<link rel="icon" href="favicon.ico" sizes="32x32">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="site.webmanifest">
+<meta name="theme-color" content="#000000">
+<link rel="stylesheet" href="assets/site.css?v=8f1e007517">
+<script src="assets/consent.js?v=9320b4a322"></script>
+</head>
+<body data-slug="16-cryptography">
+<div class="win">
+  <div class="titlebar"><span class="dots"><i></i><i></i><i></i></span><span class="t">guest@websec: ~/websec/16-cryptography — zsh — 100×40</span>
+    <a class="by" href="about.html" title="About the author"><span class="w0">by </span>SaKKo</a>
+    <span class="lsw" role="group" aria-label="Language"><a href="16-cryptography.html" aria-current="true" data-setlang="en">EN</a><a href="th/16-cryptography.html" data-setlang="th">TH</a></span>
+    <span class="langsw" role="group" aria-label="Code examples language"><span class="d">code:</span><button type="button" data-l="rails">rails</button><button type="button" data-l="node">node</button></span></div>
+  <nav class="top" aria-label="Sections"><a href="index.html" title="Web Security Field Guide">~/</a>
+<a class="trk on" href="index.html#security">#1 security</a>
+<a class="trk" href="r01-rails-api-app.html">#2 rails</a>
+<span class="grp">|</span>
+<a href="01-introduction.html" title="Introduction">01·introduction</a>
+<a href="02-sql-injection.html" title="SQL Injection">02·sql-injection</a>
+<a href="03-unsafe-query-generation.html" title="Unsafe Query Generation">03·query-shape</a>
+<a href="04-xss-and-other-injection.html" title="XSS and Other Injection">04·xss</a>
+<span class="grp">| accounts:</span>
+<a href="05-authentication.html" title="Authentication">05·auth</a>
+<a href="05b-mfa.html" title="Multi-Factor Authentication">05b·mfa</a>
+<a href="06-sessions.html" title="Sessions">06·sessions</a>
+<a href="07-csrf.html" title="Cross-Site Request Forgery">07·csrf</a>
+<a href="08-user-management.html" title="User Management">08·accounts</a>
+<a href="09-mass-assignment-and-authorization.html" title="Mass Assignment and Authorization">09·authz</a>
+<span class="grp">| browser:</span>
+<a href="10-redirection-and-files.html" title="Redirection and Files">10·files</a>
+<a href="11-http-security-headers.html" title="HTTP Security Headers">11·headers</a>
+<a href="12-transport-cookies-third-party.html" title="Transport, Cookies and Third-Party Scripts">12·cookies-tls</a>
+<span class="grp">| server:</span>
+<a href="13-ssrf.html" title="Server-Side Request Forgery">13·ssrf</a>
+<a href="14-deserialization-and-xxe.html" title="Deserialization and XXE">14·deserialize</a>
+<a href="15-environmental-security.html" title="Environmental Security">15·secrets</a>
+<a href="16-cryptography.html" aria-current="page" title="Cryptography and Data Protection">16·crypto</a>
+<a href="17-dependencies-and-cves.html" title="Dependencies and CVEs">17·dependencies</a>
+<span class="grp">| ops:</span>
+<a href="18-intranet-and-admin.html" title="Intranet and Admin Security">18·admin</a>
+<a href="19-misconfiguration-and-errors.html" title="Misconfiguration and Error Handling">19·misconfig</a>
+<a href="20-insecure-design.html" title="Insecure Design and Business Logic">20·design</a>
+<a href="21-logging-and-incident-response.html" title="Logging, Alerting and Incident Response">21·logging</a>
+<a href="22-additional-resources.html" title="Additional Resources">22·resources</a>
+<span class="grp">| questionnaires:</span>
+<a href="q1-developer-survey.html" title="Developer Security Survey">Q1·developer</a>
+<a href="q2-awareness-survey.html" title="Cyber Threat Awareness Survey">Q2·cyber</a></nav>
+  <main>
+<div class="col">
+<p class="prompt">guest@websec ~ % <b>man 16-cryptography</b></p>
+<h1>16 · Cryptography and Data Protection</h1>
+<p class="lede">Crypto bugs are rarely broken math. They're mix-ups: encoding mistaken for encryption, fast hashes for passwords, guessable random numbers, keys sitting next to the data.</p>
+<h2>16.1 Four different tools</h2>
+<div class="tablewrap"><table><thead><tr><th>tool</th><th>reversible?</th><th>needs a key?</th><th>use it for</th></tr></thead><tbody>
+<tr><td><b>Encoding</b> (Base64, hex, URL-encoding)</td><td>yes, by anyone</td><td>no</td><td>making bytes safe to transport. <span class="r">Not secrecy.</span></td></tr>
+<tr><td><b>Hashing</b> (SHA-256; bcrypt/Argon2 for passwords)</td><td>no</td><td>no (salt for passwords)</td><td>fingerprints, integrity checks, password storage (slow hashes only)</td></tr>
+<tr><td><b>Encryption</b> (AES-256-GCM, ChaCha20-Poly1305)</td><td>yes, with the key</td><td>yes</td><td>keeping data secret at rest or in transit</td></tr>
+<tr><td><b>Signing / MAC</b> (HMAC-SHA256, Ed25519)</td><td>data stays readable</td><td>yes</td><td>proving data wasn't changed and came from you (tokens, cookies, webhooks)</td></tr>
+</tbody></table></div>
+<div class="demo"><header><b>sim: the same secret, four ways</b><span>real Web Crypto in your browser</span></header><div class="body">
+<label for="cr4-in">sensitive value</label><input id="cr4-in" type="text" value="SSN 123-45-6789"/>
+<div class="grid2" style="margin-top:10px">
+<div class="box"><p class="cap r">Base64 "encryption"</p><div class="out" id="cr4-b64"></div></div>
+<div class="box"><p class="cap y">SHA-256 hash</p><div class="out" id="cr4-sha"></div></div>
+<div class="box"><p class="cap g">AES-256-GCM encryption</p><div class="out" id="cr4-aes"></div></div>
+<div class="box"><p class="cap k">HMAC-SHA256 signature</p><div class="out" id="cr4-hmac"></div></div>
+</div></div></div>
+<h2>16.2 Protecting data at rest</h2>
+<p>First, don't keep what you don't need. For the rest, disk encryption stops stolen disks, but anyone with SQL access still sees plain text. <b>Field encryption</b> means dumps, backups and nosy queries only see gibberish.</p>
+<div class="anim" data-actors="Attacker with DB access|Database|Rails app (holds keys)" data-title="What a database dump reveals"><script type="application/json">[{"f": 0, "t": 1, "l": "SELECT ssn, email FROM users", "k": "a", "c": "A leaked backup, an injection bug or an over-privileged analytics account."}, {"f": 1, "t": 0, "l": "ssn: {\"p\":\"q8Zx…\",\"h\":{\"iv\":…}}", "k": "k", "c": "With Active Record Encryption the column holds ciphertext. Without the key it's noise."}, {"f": 2, "t": 1, "l": "SELECT … (normal app query)", "c": "The app reads the same row."}, {"n": 2, "l": "decrypts with key from credentials", "k": "k", "c": "Decryption happens in the app, using keys from Rails credentials. The database never sees them."}, {"n": 0, "l": "deterministic mode: equal values → equal ciphertext", "c": "Deterministic encryption lets you search, but shows which rows match."}]</script></div><div class="rp partial">Rails has <b>Active Record Encryption</b>, but you switch it on: <code>bin/rails db:encryption:init</code>, then <code>encrypts :ssn</code>. Use <code>deterministic: true</code> only when you need to search the column.</div><div class="code">
+<pre data-lang="rails">class Patient &lt; ApplicationRecord
+  encrypts :ssn                                   <span class="c"># non-deterministic (default, strongest)</span>
+  encrypts :email, deterministic: true, downcase: true   <span class="c"># queryable: where(email: …)</span>
+end
+
+<span class="c"># bin/rails db:encryption:init → add the output to credentials:</span>
+<span class="c"># active_record_encryption:</span>
+<span class="c">#   primary_key: …   deterministic_key: …   key_derivation_salt: …</span></pre>
+</div>
+<h2>16.3 Keys</h2>
+<ul>
+<li>Keep keys <b>away from the data</b>: credentials or a secret manager.</li>
+<li><b>One key per job</b>, so one leak doesn't open everything.</li>
+<li>Plan <b>rotation</b> before you need it.</li>
+</ul>
+<h2>16.4 Randomness</h2>
+<p>Tokens must be unguessable. <code>rand</code> and <code>Math.random()</code> are for games; with enough samples, attackers predict the next one. Use the crypto generator.</p>
+<div class="tablewrap"><table><thead><tr><th></th><th>predictable (don't)</th><th>cryptographic (do)</th></tr></thead><tbody>
+<tr><td>Ruby</td><td><code>rand</code>, <code>Random.new</code>, <code>Array#sample</code></td><td><code>SecureRandom.urlsafe_base64(32)</code>, <code>SecureRandom.uuid</code></td></tr>
+<tr><td>JavaScript</td><td><code>Math.random()</code></td><td><code>crypto.getRandomValues()</code>, <code>crypto.randomUUID()</code></td></tr>
+</tbody></table></div>
+<p>Make tokens long (128+ bits). A 6-digit code needs strict rate limits.</p>
+<h2>16.5 Timing attacks and constant-time comparison</h2>
+<p>Normal string compare stops at the first wrong character, so a closer guess takes a tiny bit longer. Measure enough and you can recover a secret letter by letter. Use a <b>constant-time compare</b> for secrets.</p>
+<div class="demo"><header><b>sim: leaking a token through timing</b><span>secret token: 6 hex characters</span></header><div class="body">
+<div class="row"><span>comparison:</span><label><input checked="" name="tm-mode" type="radio" value="eq"/> a == b (stops early)</label><label><input name="tm-mode" type="radio" value="ct"/> secure_compare (constant time)</label>
+<button class="btn red" id="tm-go" type="button">attack next character ▶</button><button class="btn" id="tm-reset" type="button">reset</button></div>
+<div class="out" id="tm-known" style="margin-top:10px"></div>
+<div id="tm-bars" style="margin-top:10px"></div>
+</div></div>
+<div class="rp yes">Rails has what you need: <code>SecureRandom</code>, <code>secure_compare</code>, <code>has_secure_token</code>, <code>generates_token_for</code>, <code>MessageVerifier</code>. Use these instead of raw OpenSSL.</div><div class="code">
+<pre data-lang="rails">token = SecureRandom.urlsafe_base64(32)               <span class="c"># 256 bits</span>
+class ApiKey &lt; ApplicationRecord
+  has_secure_token :token, length: 36                 <span class="c"># random, unique</span>
+end
+
+ActiveSupport::SecurityUtils.secure_compare(provided, expected)   <span class="ok"># constant time</span>
+<span class="bad">provided == expected                                # leaks timing</span>
+
+<span class="c"># verify a webhook signature</span>
+expected = OpenSSL::HMAC.hexdigest("SHA256", webhook_secret, request.raw_post)
+head :unauthorized unless ActiveSupport::SecurityUtils.secure_compare(expected, request.headers["X-Signature"].to_s)
+
+<span class="c"># sign/encrypt your own data instead of rolling crypto</span>
+verifier = Rails.application.message_verifier(:unsubscribe)
+link_token = verifier.generate(user.id, expires_in: 7.days, purpose: :unsubscribe)</pre>
+<pre data-lang="node">import crypto from "node:crypto";
+const token = crypto.randomBytes(32).toString("base64url");
+const a = Buffer.from(provided), b = Buffer.from(expected);
+const ok = a.length === b.length &amp;&amp; crypto.timingSafeEqual(a, b);   <span class="ok">// constant time</span></pre>
+</div>
+<h2>16.6 Don't roll your own</h2>
+<ul>
+<li>Use AES-GCM through a good library. Never ECB, never reuse an IV.</li>
+<li>MD5 and SHA-1 are fine for cache keys, not for security.</li>
+<li>Don't invent token formats. If you use JWT, reject <code>alg: none</code>.</li>
+</ul>
+</div>
+
+<div class="col"><label class="readmark"><input type="checkbox" id="read-16-cryptography"> mark section 16 as read</label><div class="pager"><a href="15-environmental-security.html">◀ 15 Environmental Security</a><a href="17-dependencies-and-cves.html">17 Dependencies and CVEs ▶</a></div></div>
+  </main>
+  <footer class="site">Based on the <a href="https://guides.rubyonrails.org/security.html">Ruby on Rails Security Guide</a> (CC BY-SA 4.0), the <a href="https://cheatsheetseries.owasp.org/">OWASP Cheat Sheet Series</a>, the <a href="https://owasp.org/Top10/2025/">OWASP Top 10:2025</a> and <a href="https://infosec.mozilla.org/guidelines/web_security.html">Mozilla's Web Security Guidelines</a>. Written for our dev team; code samples are illustrative.</footer>
+</div>
+<script src="assets/site.js?v=92ac7aa3f8"></script>
+<script>
+
+const enc = new TextEncoder(), hx = b => Array.from(new Uint8Array(b)).map(x => x.toString(16).padStart(2, "0")).join("");
+let aesKey, hmacKey;
+(async () => { aesKey = await crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, false, ["encrypt"]); hmacKey = await crypto.subtle.generateKey({ name: "HMAC", hash: "SHA-256" }, false, ["sign"]); cr4(); })();
+async function cr4() {
+  if (!aesKey) return; const v = $("#cr4-in").value;
+  const b64 = btoa(unescape(encodeURIComponent(v)));
+  $("#cr4-b64").innerHTML = `${esc(b64)}\n<span class="r">anyone decodes it: atob("${esc(b64.slice(0, 12))}…") → "${esc(v)}"</span>`;
+  const sha = hx(await crypto.subtle.digest("SHA-256", enc.encode(v)));
+  $("#cr4-sha").innerHTML = `${sha.slice(0, 32)}…\n<span class="y">one-way, but "123-45-6789" style values have few possibilities: an attacker hashes all billion SSNs and looks yours up</span>`;
+  const iv = crypto.getRandomValues(new Uint8Array(12)), ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, aesKey, enc.encode(v));
+  $("#cr4-aes").innerHTML = `${hx(ct).slice(0, 32)}…  iv=${hx(iv).slice(0, 8)}…\n<span class="g">unreadable without the key; changes every time (random IV)</span>`;
+  const mac = hx(await crypto.subtle.sign("HMAC", hmacKey, enc.encode(v)));
+  $("#cr4-hmac").innerHTML = `${esc(v)}--${mac.slice(0, 24)}…\n<span class="k">value stays readable; the tag proves it wasn't altered</span>`;
+}
+$("#cr4-in").addEventListener("input", cr4);
+const SECRET = "8f2c91", HEX = "0123456789abcdef"; let known = "";
+function tmRender(times) {
+  $("#tm-known").innerHTML = `recovered so far: <b>${known.padEnd(6, "_")}</b>${known === SECRET ? '  <span class="r">token fully recovered!</span>' : ""}`;
+  if (!times) { $("#tm-bars").innerHTML = ""; return; }
+  const max = Math.max(...times.map(t => t[1]));
+  $("#tm-bars").innerHTML = times.map(([c, t, best]) => `<div class="bar" style="grid-template-columns:120px 1fr 80px"><span>${known.slice(0, -1) || ""}<b>${c}</b>${"_".repeat(6 - known.length)}</span><div class="track"><span style="width:${(t / max * 100).toFixed(1)}%;background:${best ? "var(--red)" : "var(--fg)"}"></span></div><span>${t.toFixed(1)} µs</span></div>`).join("");
+}
+$("#tm-go").onclick = () => {
+  if (known.length >= 6) return;
+  const ct = $("input[name=tm-mode]:checked").value === "ct";
+  const times = HEX.split("").map(c => {
+    const guess = (known + c).padEnd(6, "0"); let match = 0; while (match < 6 && guess[match] === SECRET[match]) match++;
+    const base = 20 + Math.random() * 1.2;
+    return [c, ct ? 20 + 6 * 1.5 + Math.random() * 1.2 : base + match * 1.5, false];
+  });
+  if (ct) { $("#tm-known").innerHTML = `recovered so far: <b>${known.padEnd(6, "_")}</b>  <span class="g">every guess takes the same time: nothing to learn</span>`; $("#tm-bars").innerHTML = times.map(([c, t]) => `<div class="bar" style="grid-template-columns:120px 1fr 80px"><span>${known}<b>${c}</b></span><div class="track"><span style="width:${(t / 32 * 100).toFixed(1)}%"></span></div><span>${t.toFixed(1)} µs</span></div>`).join(""); return; }
+  const best = times.reduce((a, b) => b[1] > a[1] ? b : a); best[2] = true; known += best[0];
+  tmRender(times);
+};
+$("#tm-reset").onclick = () => { known = ""; tmRender(null); };
+$$("input[name=tm-mode]").forEach(r => r.addEventListener("change", () => { known = ""; tmRender(null); }));
+tmRender(null);
+
+</script>
+</body>
+</html>

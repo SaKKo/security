@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en" data-lang="rails">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A Rails API App · Rails Guide</title>
+
+<link rel="icon" href="favicon.ico" sizes="32x32">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="site.webmanifest">
+<meta name="theme-color" content="#000000">
+<link rel="stylesheet" href="assets/site.css?v=8f1e007517">
+<script src="assets/consent.js?v=9320b4a322"></script>
+</head>
+<body data-slug="r01-rails-api-app">
+<div class="win">
+  <div class="titlebar"><span class="dots"><i></i><i></i><i></i></span><span class="t">guest@websec: ~/websec/r01-rails-api-app — zsh — 100×40</span>
+    <a class="by" href="about.html" title="About the author"><span class="w0">by </span>SaKKo</a>
+    <span class="lsw" role="group" aria-label="Language"><a href="r01-rails-api-app.html" aria-current="true" data-setlang="en">EN</a><a href="th/r01-rails-api-app.html" data-setlang="th">TH</a></span></div>
+  <nav class="top" aria-label="Lessons"><a href="index.html#rails" title="Home">~/</a>
+<a class="trk" href="index.html#security">#1 security</a>
+<a class="trk on" href="r01-rails-api-app.html">#2 rails</a>
+<span class="grp">| basics:</span>
+<a href="r01-rails-api-app.html" aria-current="page" title="A Rails API App">r01·api-app</a>
+<a href="r02-rails-commands.html" title="Rails Commands">r02·commands</a>
+<a href="r03-migrations.html" title="Migrations">r03·migrations</a>
+<span class="grp">| models:</span>
+<a href="r04-models.html" title="Models and ApplicationRecord">r04·models</a>
+<a href="r05-model-callbacks.html" title="Model Callbacks">r05·model-hooks</a>
+<span class="grp">| controllers:</span>
+<a href="r06-controllers.html" title="Controllers and the API Hierarchy">r06·controllers</a>
+<a href="r07-controller-callbacks.html" title="Controller Callbacks">r07·controller-hooks</a>
+<a href="r08-where-code-goes.html" title="Controllers, Models or Services?">r08·services</a>
+<span class="grp">| api:</span>
+<a href="r09-rest-routes.html" title="RESTful and Resourceful Routes">r09·rest-routes</a>
+<a href="r10-testing.html" title="Testing the API">r10·testing</a></nav>
+  <main>
+<div class="col">
+<p class="prompt">guest@websec ~ % <b>man r01-rails-api-app</b></p>
+<h1>A Rails API App</h1>
+<p class="lede">Our backends are Rails in API-only mode: no HTML views, just JSON in and JSON out. This lesson shows what that mode keeps, what it drops, and where everything lives in our projects.</p>
+<div class="tldr"><code>rails new myapp --api</code> gives you a lighter Rails: controllers inherit from <code>ActionController::API</code>, and there are no views, assets, sessions or flash. Everything else (routing, Active Record, jobs, mailers, tests) works the same.</div><h2>Creating an API-only app</h2><p>One flag changes the generator. We always use PostgreSQL, because we rely on <code>uuid</code> keys, <code>jsonb</code> and array columns.</p><div class="term" data-title="zsh — ~"><script type="application/json">[{"p": "~ %", "c": "rails new myapp --api -d postgresql", "o": "      create  \n      create  README.md\n      create  Gemfile\n      create  config/routes.rb\n      create  app/controllers/application_controller.rb\n      create  app/models/application_record.rb\n      create  app/jobs/application_job.rb\n      create  app/mailers/application_mailer.rb\n      create  config/initializers/cors.rb\n      create  test/test_helper.rb\n         run  bundle install\nBundle complete! 24 Gemfile dependencies, 102 gems now installed.", "n": "Notice what is <b>not<\/b> created: no <code>app/views<\/code> for pages, no <code>app/assets<\/code>, no <code>app/helpers<\/code>. A <code>cors.rb<\/code> initializer appears instead, because browsers on other origins will call us."}, {"p": "~ %", "c": "cd myapp && grep -n api_only config/application.rb", "o": "    config.api_only = true", "n": "This one setting slims the middleware stack and makes generators skip views."}, {"c": "cat app/controllers/application_controller.rb", "o": "class ApplicationController < ActionController::API\nend", "n": "<code>ActionController::API<\/code> instead of <code>ActionController::Base<\/code>. That is the whole difference at controller level."}]</script></div><h3>What API mode keeps and drops</h3><div class="tablewrap"><table><thead><tr><th>kept</th><th>dropped (add back only if you need it)</th></tr></thead><tbody><tr><td>routing, <code>params</code>, strong parameters</td><td>views, layouts, helpers, asset pipeline</td></tr><tr><td><code>render json:</code>, <code>head</code>, status codes</td><td>cookies (<code>ActionController::Cookies</code>)</td></tr><tr><td><code>before_action</code>, <code>rescue_from</code></td><td>session store and flash messages</td></tr><tr><td>Active Record, Active Job, Action Mailer</td><td>CSRF protection (<code>protect_from_forgery</code>)</td></tr><tr><td>caching, logging, instrumentation</td><td>browser-only middleware (method override, flash)</td></tr></tbody></table></div><div class="rs">Our admin API logs in with an encrypted cookie, so <code>Api::AppController</code> adds one module back: <code>include ActionController::Cookies</code>. Add modules back one at a time, only where they are needed. Don't switch to <code>ActionController::Base</code>.</div><h2>One request, start to finish</h2><p>Every lesson in this track zooms in on one box in this picture.</p><div class="anim" data-actors="Client|Rack|Router|Controller|Model|PostgreSQL" data-title="request lifecycle"><script type="application/json">[{"f": 0, "t": 1, "l": "POST /api/v1/admin/client_applications/42/roles", "c": "The client sends JSON. Rack middleware parses it, logs it and handles CORS."}, {"f": 1, "t": 2, "l": "match → api/v1/admin/roles#create", "c": "The router matches verb + path to <code>controller#action<\/code> (lesson r09)."}, {"n": 3, "l": "before_action: auth, permissions, set_client_application", "k": "k", "c": "Controller callbacks run first: who are you, are you allowed, which parent record (r07)."}, {"f": 3, "t": 4, "l": "Role.new(role_params).save!", "c": "The controller hands whitelisted params to the model (r06)."}, {"n": 4, "l": "validations + callbacks", "k": "k", "c": "The model validates and runs its callbacks (r04, r05)."}, {"f": 4, "t": 5, "l": "INSERT INTO roles … COMMIT", "c": "Active Record writes inside a transaction."}, {"f": 3, "t": 0, "l": "201 { role: role.as_admin_json }", "c": "The controller renders the model's JSON shape. Errors raised anywhere become JSON via <code>rescue_from<\/code>."}]</script></div><h2>Tour of our project</h2><p>Click a folder to see what belongs in it, and what doesn’t.</p><div class="demo"><header><b>project tour</b><span>click a path</span></header><div class="body"><div class="pick"><script type="application/json">[{"k": "app/controllers/", "dir": true, "d": "All controllers. Only <code>ApplicationController<\/code> and <code>application_controller.rb<\/code> live at the top. Everything that serves the API lives under <code>api/<\/code>."}, {"k": "app/controllers/api/v1/admin/", "dir": true, "d": "Endpoints for our admin web app. Every controller here inherits <code>Api::V1::Admin::AppController<\/code>, which checks the login cookie and permissions before any action runs."}, {"k": "app/controllers/api/v1/client/", "dir": true, "d": "Endpoints called server-to-server by other applications. Authenticated with <code>X-App-Key<\/code> + a signed <code>X-App-Secret<\/code> JWT."}, {"k": "app/controllers/api/v1/public/", "dir": true, "d": "Endpoints that need no login (for example 2FA enrolment). Still inherit the shared error handling."}, {"k": "app/models/", "dir": true, "d": "One class per table, all inheriting <code>ApplicationRecord<\/code>. Business rules, validations, callbacks, and the JSON shape of each record (<code>as_admin_json<\/code>)."}, {"k": "app/models/concerns/", "dir": true, "d": "Shared model behaviour as modules, like <code>SoftDeletable<\/code>. Include them in <code>ApplicationRecord<\/code> or in one model."}, {"k": "app/services/", "dir": true, "d": "Plain Ruby classes that talk to the outside world or wrap an algorithm: <code>DirectoryService<\/code>, <code>TokenService<\/code>. No database table (lesson r08)."}, {"k": "app/jobs/", "dir": true, "d": "Background work with retries, like sending webhooks (<code>ClientApplicationWebhookJob<\/code>). Anything slow or that can fail on the network."}, {"k": "config/routes.rb", "dir": false, "d": "Maps HTTP verb + path to controller#action. Namespaced as <code>api/v1/admin<\/code>, <code>api/v1/client<\/code>, <code>api/v1/public<\/code> (lesson r09)."}, {"k": "config/initializers/", "dir": true, "d": "Code that runs at boot: UUID generator settings, our error classes, small core extensions like <code>String#to_bool<\/code>, CORS, Rack::Attack."}, {"k": "db/migrate/", "dir": true, "d": "Timestamped files that change the schema, one step at a time (lesson r03)."}, {"k": "db/schema.rb", "dir": false, "d": "Generated snapshot of the current schema. Committed, never edited by hand."}, {"k": "test/", "dir": true, "d": "Minitest: <code>models/<\/code>, <code>controllers/<\/code> (integration tests), <code>services/<\/code>, <code>fixtures/<\/code> and <code>support/<\/code> helpers (lesson r10)."}]</script></div></div></div><h2>Conventions set at boot</h2><p>A few initializers shape the whole codebase. You will see their effects in every later lesson.</p><h3>UUID primary keys</h3><div class="code" data-label="ruby · config/initializers/generator.rb"><pre><span class="c"># config/initializers/generator.rb</span>
+Rails.application.config.generators do |g|
+  g.orm :active_record, primary_key_type: :uuid
+end
+
+<span class="c"># every create_table(id: :uuid) defaults to uuidv7(), which sorts by time</span>
+ActiveSupport.on_load(:active_record) do
+  require "active_record/connection_adapters/postgresql_adapter"
+
+  module PostgresUUIDv7Default
+    def create_table(table_name, **options, &amp;block)
+      if options[:id] == :uuid &amp;&amp; !options.key?(:default)
+        options[:default] = -&gt; { "uuidv7()" }
+      end
+      super(table_name, **options, &amp;block)
+    end
+  end
+
+  ActiveRecord::ConnectionAdapters::PostgreSQLAdapter.prepend(PostgresUUIDv7Default)
+end</pre></div><p>IDs cannot be guessed by counting (<code>/users/2</code>, <code>/users/3</code>…), and v7 UUIDs still sort roughly by creation time, which keeps indexes efficient.</p><h3>Our error classes</h3><div class="code" data-label="ruby · config/initializers/app_error.rb"><pre><span class="c"># config/initializers/app_error.rb</span>
+Rails.configuration.to_prepare do
+  class AppError &lt; StandardError; end                <span class="c"># 400 bad request</span>
+  class AppAuthenticationError &lt; StandardError; end  <span class="c"># 401 not logged in</span>
+  class AppPermissionDenied &lt; StandardError; end     <span class="c"># 403 logged in, not allowed</span>
+  class AppSoftDeleteError &lt; StandardError; end      <span class="c"># misuse of soft delete</span>
+end</pre></div><p>Models and services <code>raise</code> these; one place in <code>Api::AppController</code> turns each class into an HTTP status (lesson r06). <code>to_prepare</code> re-runs the block after code reloads in development, so the classes never go stale.</p><div class="note">In our real projects these classes carry a short project prefix instead of <code>App</code>. The pattern is what matters: a few named exceptions, mapped to statuses in one place.</div><h3>Small core extensions</h3><div class="code" data-label="ruby"><pre>params[:info].to_bool       <span class="c"># "true" / "yes" =&gt; true, "false" / "no" =&gt; false, nil =&gt; false</span>
+"some text".mask            # "so***ext"
+ENV.fetch("DEBUG", false).to_bool</pre></div><p>Query strings are always strings. <code>to_bool</code> (defined on <code>String</code>, <code>NilClass</code>, <code>TrueClass</code>, <code>FalseClass</code>) lets controllers read flags without <code>== "true"</code> everywhere.</p><div class="rs">Every Ruby file starts with <code># frozen_string_literal: true</code>. String literals become immutable, which saves allocations and catches accidental mutation.</div><h2>Check yourself</h2><div class="quiz" data-a="1"><p>Which of these is <b>not</b> available in <code>ActionController::API</code> out of the box?</p><div class="opts"><button type="button"><code>rescue_from</code></button><button type="button"><code>cookies</code></button><button type="button"><code>params.require(...).permit(...)</code></button><button type="button"><code>render json:</code></button></div><p class="explain">Cookies are a browser concern, so API mode leaves them out. We add <code>ActionController::Cookies</code> back in <code>Api::AppController</code> for the admin login cookie.</p></div><div class="quiz" data-a="2"><p>A new integration needs a class that talks to the company directory. Where does it go?</p><div class="opts"><button type="button">app/models/</button><button type="button">app/controllers/concerns/</button><button type="button">app/services/</button><button type="button">config/initializers/</button></div><p class="explain">It talks to an external system and has no table: that is a service.</p></div></div>
+
+<div class="col"><label class="readmark"><input type="checkbox" id="read-r01-rails-api-app"> Mark lesson r01 as read</label><div class="pager"><a href="index.html#rails">◀ ~/</a><a href="r02-rails-commands.html">r02 Rails Commands ▶</a></div></div>
+  </main>
+  <footer class="site">Based on the <a href="https://guides.rubyonrails.org/">Ruby on Rails Guides</a> (CC BY-SA 4.0), API-only parts, and the conventions in our own codebase. Code samples are adapted from our real code for teaching.</footer>
+</div>
+<script src="assets/site.js?v=92ac7aa3f8"></script>
+<script>
+
+
+</script>
+<script src="assets/widgets.js?v=b9f4e038ea"></script>
+</body>
+</html>

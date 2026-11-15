@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en" data-lang="rails">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>19 Misconfiguration and Error Handling · Web Security</title>
+
+<link rel="icon" href="favicon.ico" sizes="32x32">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="site.webmanifest">
+<meta name="theme-color" content="#000000">
+<link rel="stylesheet" href="assets/site.css?v=8f1e007517">
+<script src="assets/consent.js?v=9320b4a322"></script>
+</head>
+<body data-slug="19-misconfiguration-and-errors">
+<div class="win">
+  <div class="titlebar"><span class="dots"><i></i><i></i><i></i></span><span class="t">guest@websec: ~/websec/19-misconfiguration-and-errors — zsh — 100×40</span>
+    <a class="by" href="about.html" title="About the author"><span class="w0">by </span>SaKKo</a>
+    <span class="lsw" role="group" aria-label="Language"><a href="19-misconfiguration-and-errors.html" aria-current="true" data-setlang="en">EN</a><a href="th/19-misconfiguration-and-errors.html" data-setlang="th">TH</a></span>
+    <span class="langsw" role="group" aria-label="Code examples language"><span class="d">code:</span><button type="button" data-l="rails">rails</button><button type="button" data-l="node">node</button></span></div>
+  <nav class="top" aria-label="Sections"><a href="index.html" title="Web Security Field Guide">~/</a>
+<a class="trk on" href="index.html#security">#1 security</a>
+<a class="trk" href="r01-rails-api-app.html">#2 rails</a>
+<span class="grp">|</span>
+<a href="01-introduction.html" title="Introduction">01·introduction</a>
+<a href="02-sql-injection.html" title="SQL Injection">02·sql-injection</a>
+<a href="03-unsafe-query-generation.html" title="Unsafe Query Generation">03·query-shape</a>
+<a href="04-xss-and-other-injection.html" title="XSS and Other Injection">04·xss</a>
+<span class="grp">| accounts:</span>
+<a href="05-authentication.html" title="Authentication">05·auth</a>
+<a href="05b-mfa.html" title="Multi-Factor Authentication">05b·mfa</a>
+<a href="06-sessions.html" title="Sessions">06·sessions</a>
+<a href="07-csrf.html" title="Cross-Site Request Forgery">07·csrf</a>
+<a href="08-user-management.html" title="User Management">08·accounts</a>
+<a href="09-mass-assignment-and-authorization.html" title="Mass Assignment and Authorization">09·authz</a>
+<span class="grp">| browser:</span>
+<a href="10-redirection-and-files.html" title="Redirection and Files">10·files</a>
+<a href="11-http-security-headers.html" title="HTTP Security Headers">11·headers</a>
+<a href="12-transport-cookies-third-party.html" title="Transport, Cookies and Third-Party Scripts">12·cookies-tls</a>
+<span class="grp">| server:</span>
+<a href="13-ssrf.html" title="Server-Side Request Forgery">13·ssrf</a>
+<a href="14-deserialization-and-xxe.html" title="Deserialization and XXE">14·deserialize</a>
+<a href="15-environmental-security.html" title="Environmental Security">15·secrets</a>
+<a href="16-cryptography.html" title="Cryptography and Data Protection">16·crypto</a>
+<a href="17-dependencies-and-cves.html" title="Dependencies and CVEs">17·dependencies</a>
+<span class="grp">| ops:</span>
+<a href="18-intranet-and-admin.html" title="Intranet and Admin Security">18·admin</a>
+<a href="19-misconfiguration-and-errors.html" aria-current="page" title="Misconfiguration and Error Handling">19·misconfig</a>
+<a href="20-insecure-design.html" title="Insecure Design and Business Logic">20·design</a>
+<a href="21-logging-and-incident-response.html" title="Logging, Alerting and Incident Response">21·logging</a>
+<a href="22-additional-resources.html" title="Additional Resources">22·resources</a>
+<span class="grp">| questionnaires:</span>
+<a href="q1-developer-survey.html" title="Developer Security Survey">Q1·developer</a>
+<a href="q2-awareness-survey.html" title="Cyber Threat Awareness Survey">Q2·cyber</a></nav>
+  <main>
+<div class="col">
+<p class="prompt">guest@websec ~ % <b>man 19-misconfiguration-and-errors</b></p>
+<h1>19 · Misconfiguration and Error Handling</h1>
+<p class="lede">Misconfiguration is now #2 on the OWASP list, and "mishandling errors" is new. Both are about stuff around the code: what's left on, what's exposed, what happens when things fail.</p>
+<h2>19.1 Security misconfiguration</h2>
+<p>What auditors usually find:</p>
+<ul>
+<li>Debug mode in production, showing stack traces to anyone.</li>
+<li>Dashboards (jobs, feature flags, DB tools) with no login.</li>
+<li>Default or shared credentials on databases, admin panels and third-party tools.</li>
+<li>Files that shouldn't be public: <code>/.git/</code>, <code>.env</code>, backups (<code>db.sql.gz</code>), editor swap files, source maps with secrets.</li>
+<li>Cloud storage buckets readable (or writable) by everyone.</li>
+
+
+</ul>
+<div class="anim" data-actors="Attacker's scanner|app.example.com" data-title="Reconnaissance in five requests"><script type="application/json">[{"f": 0, "t": 1, "l": "GET /.git/config", "k": "a", "c": "Automated scanners request well-known paths on every site they find."}, {"f": 1, "t": 0, "l": "200: [remote \"origin\"] url = git@github…", "k": "a", "c": "An exposed .git directory lets an attacker download the source code, and often secrets in history."}, {"f": 0, "t": 1, "l": "GET /sidekiq", "k": "a", "c": "Job dashboard mounted without auth: retry, delete or inspect jobs and their arguments."}, {"f": 0, "t": 1, "l": "GET /nonexistent'\"", "k": "a", "c": "Trigger an error to see how the app fails."}, {"f": 1, "t": 0, "l": "500 page with stack trace + gem versions", "k": "a", "c": "A debug error page reveals file paths, versions and sometimes data. That's free reconnaissance."}, {"n": 1, "l": "prod config: generic 500 page, dashboards behind auth, deny dotfiles", "k": "k", "c": "Every one of these is a configuration fix, not a code change."}]</script></div>
+<div class="demo"><header><b>sim: production config audit</b><span>fix the findings, watch the exposure drop</span></header><div class="body">
+<div id="mc-list" style="display:grid;gap:6px"></div>
+<div class="row" style="margin-top:10px"><span>exposure:</span><div class="meter" style="flex:1"><span id="mc-bar"></span></div><b id="mc-n"></b></div>
+</div></div>
+<div class="rp partial">Rails' production defaults are good: no debug pages, no web console. <b>The usual gaps are ours:</b> mounting Sidekiq, Mission Control or Flipper without auth, or running in development mode on a public server.</div><div class="code">
+<pre data-lang="rails"><span class="c"># config/routes.rb: every dashboard behind an admin constraint</span>
+authenticate_admin = -&gt;(req) { Session.find_by(id: req.cookie_jar.signed[:session_id])&amp;.user&amp;.admin? }
+constraints(authenticate_admin) do
+  mount Sidekiq::Web =&gt; "/sidekiq"
+  mount MissionControl::Jobs::Engine =&gt; "/jobs"
+  mount Flipper::UI.app(Flipper) =&gt; "/flipper"
+end
+
+<span class="c"># config/environments/production.rb (verify these)</span>
+config.consider_all_requests_local = false     <span class="c"># generic error pages</span>
+config.force_ssl = true
+config.hosts = ["app.example.com"]
+config.log_level = :info                       <span class="c"># :debug can log SQL with values</span></pre>
+</div>
+<h2>19.2 Mishandling exceptional conditions</h2>
+<p>This is about what happens when things go wrong. Three patterns do most of the damage:</p>
+<h3>Failing open</h3>
+<p>If a security check errors, <b>deny</b>. Classic bug: the permission service times out, a broad <code>rescue</code> swallows it, and the code carries on as if allowed.</p>
+<div class="demo"><header><b>sim: the permission service is down</b><span>fail open vs fail closed</span></header><div class="body">
+<div class="row"><label><input checked="" id="fo-down" type="checkbox"/> permission service times out</label><span>error handling:</span><label><input checked="" name="fo-mode" type="radio" value="open"/> rescue → allow</label><label><input name="fo-mode" type="radio" value="closed"/> rescue → deny</label></div>
+<div class="row" style="margin-top:8px"><button class="btn red" data-fo="intern" type="button">intern requests DELETE /customers/88</button><button class="btn" data-fo="admin" type="button">admin requests DELETE /customers/88</button></div>
+<div class="out" id="fo-out" style="margin-top:10px"></div>
+</div></div>
+<h3>Half-finished operations</h3>
+<p>A crash halfway can leave money debited but not credited. Wrap related writes in a <b>transaction</b>.</p>
+<h3>Leaky or missing error handling</h3>
+<ul>
+<li>Show users a <b>simple message with a reference ID</b>. Keep the details in your logs.</li>
+
+<li>Put <b>limits</b> on anything that can grow: uploads, page sizes, timeouts.</li>
+<li>A bare <code>rescue =&gt; e</code> around security code is a red flag.</li>
+</ul>
+<div class="rp partial">Transactions roll back on errors, and <code>Rails.error.report</code> sends errors to your tracker. Failing closed, and timeouts on outbound calls (default 60 s!), are on us.</div><div class="code">
+<pre data-lang="rails">def destroy
+  customer = Customer.find(params[:id])
+  return head :forbidden unless allowed_to_delete?(customer)
+  customer.destroy!
+end
+
+private
+
+def allowed_to_delete?(customer)
+  PermissionService.allowed?(Current.user, :delete, customer)
+rescue PermissionService::Timeout =&gt; e
+  Rails.error.report(e, context: { customer_id: customer.id })
+  <span class="ok">false                                       # fail CLOSED</span>
+end
+
+<span class="bad">rescue StandardError then true                  # fail OPEN: any error grants access</span>
+
+<span class="c"># all-or-nothing writes</span>
+ActiveRecord::Base.transaction do
+  from.lock!.update!(balance: from.balance - amount)
+  to.lock!.update!(balance: to.balance + amount)
+end
+
+Net::HTTP.start(host, 443, use_ssl: true, open_timeout: 2, read_timeout: 5) { … }</pre>
+</div>
+</div>
+
+<div class="col"><label class="readmark"><input type="checkbox" id="read-19-misconfiguration-and-errors"> mark section 19 as read</label><div class="pager"><a href="18-intranet-and-admin.html">◀ 18 Intranet and Admin Security</a><a href="20-insecure-design.html">20 Insecure Design and Business Logic ▶</a></div></div>
+  </main>
+  <footer class="site">Based on the <a href="https://guides.rubyonrails.org/security.html">Ruby on Rails Security Guide</a> (CC BY-SA 4.0), the <a href="https://cheatsheetseries.owasp.org/">OWASP Cheat Sheet Series</a>, the <a href="https://owasp.org/Top10/2025/">OWASP Top 10:2025</a> and <a href="https://infosec.mozilla.org/guidelines/web_security.html">Mozilla's Web Security Guidelines</a>. Written for our dev team; code samples are illustrative.</footer>
+</div>
+<script src="assets/site.js?v=92ac7aa3f8"></script>
+<script>
+
+const items = [
+  ["RAILS_ENV=production (not development) on public servers", 18],
+  ["generic error pages (consider_all_requests_local = false)", 12],
+  ["Sidekiq / jobs / feature-flag dashboards behind admin auth", 16],
+  ["no default credentials on DB, Redis, admin tools", 16],
+  ["web server denies /.git, .env, backups", 12],
+  ["S3 bucket private; uploads via signed URLs", 10],
+  ["config.hosts set; CORS limited to known origins", 8],
+  ["log_level :info; filter_parameters reviewed", 8]];
+$("#mc-list").innerHTML = items.map((it, i) => `<label><input type="checkbox" id="mc${i}"> ${it[0]}</label>`).join("");
+function mc() { let e = 100; items.forEach((it, i) => { if ($("#mc" + i).checked) e -= it[1]; }); $("#mc-bar").style.width = e + "%"; $("#mc-bar").style.background = e > 50 ? "var(--red)" : e > 20 ? "var(--yellow)" : "var(--fg)"; $("#mc-n").textContent = e === 0 ? "hardened" : e + "% exposed"; }
+$$("#mc-list input").forEach(i => i.addEventListener("change", mc)); mc();
+$$("[data-fo]").forEach(b => b.onclick = () => {
+  const who = b.dataset.fo, down = $("#fo-down").checked, open = $("input[name=fo-mode]:checked").value === "open";
+  const should = who === "admin";
+  let out = `PermissionService.allowed?(${who}, :delete)…\n`;
+  if (!down) out += `→ ${should ? "true" : "false"}\n` + (should ? '<span class="g">200: customer deleted (authorized)</span>' : '<span class="g">403 Forbidden</span>');
+  else { out += '<span class="y">→ Timeout after 5s</span>\n'; out += open ? (should ? '<span class="y">rescue → allow: deleted (correct by luck)</span>' : '<span class="r">rescue → allow: an intern just deleted a customer. The outage became a security hole.</span>') : (should ? '<span class="y">rescue → deny: 403, admin retries later (safe, slightly annoying)</span>' : '<span class="g">rescue → deny: 403 Forbidden</span>'); }
+  $("#fo-out").innerHTML = out;
+});
+
+</script>
+</body>
+</html>

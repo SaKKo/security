@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="th" data-lang="rails">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>05 Authentication · Web Security</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600&display=swap" rel="stylesheet">
+<link rel="icon" href="../favicon.ico" sizes="32x32">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<link rel="manifest" href="../site.webmanifest">
+<meta name="theme-color" content="#000000">
+<link rel="stylesheet" href="../assets/site.css?v=8f1e007517">
+<script src="../assets/consent.js?v=9320b4a322"></script>
+</head>
+<body data-slug="05-authentication">
+<div class="win">
+  <div class="titlebar"><span class="dots"><i></i><i></i><i></i></span><span class="t">guest@websec: ~/websec/05-authentication/th — zsh — 100×40</span>
+    <a class="by" href="about.html" title="เกี่ยวกับผู้เขียน"><span class="w0">เขียนโดย </span>SaKKo</a>
+    <span class="lsw" role="group" aria-label="ภาษา"><a href="../05-authentication.html" data-setlang="en">EN</a><a href="05-authentication.html" aria-current="true" data-setlang="th">TH</a></span>
+    <span class="langsw" role="group" aria-label="Code examples language"><span class="d">โค้ด:</span><button type="button" data-l="rails">rails</button><button type="button" data-l="node">node</button></span></div>
+  <nav class="top" aria-label="Sections"><a href="index.html" title="คู่มือความปลอดภัยเว็บแอปพลิเคชัน">~/</a>
+<a class="trk on" href="index.html#security">#1 ความปลอดภัย</a>
+<a class="trk" href="r01-rails-api-app.html">#2 rails</a>
+<span class="grp">|</span>
+<a href="01-introduction.html" title="บทนำ">01·บทนำ</a>
+<a href="02-sql-injection.html" title="SQL Injection">02·sql</a>
+<a href="03-unsafe-query-generation.html" title="การสร้าง query ที่ไม่ปลอดภัย">03·query</a>
+<a href="04-xss-and-other-injection.html" title="XSS และ injection แบบอื่น">04·xss</a>
+<span class="grp">| บัญชี:</span>
+<a href="05-authentication.html" aria-current="page" title="การยืนยันตัวตน">05·auth</a>
+<a href="05b-mfa.html" title="การยืนยันตัวตนหลายปัจจัย">05b·mfa</a>
+<a href="06-sessions.html" title="Session">06·session</a>
+<a href="07-csrf.html" title="Cross-Site Request Forgery">07·csrf</a>
+<a href="08-user-management.html" title="การจัดการผู้ใช้">08·ผู้ใช้</a>
+<a href="09-mass-assignment-and-authorization.html" title="Mass Assignment และ Authorization">09·authz</a>
+<span class="grp">| เบราว์เซอร์:</span>
+<a href="10-redirection-and-files.html" title="Redirect และไฟล์">10·ไฟล์</a>
+<a href="11-http-security-headers.html" title="HTTP Security Header">11·header</a>
+<a href="12-transport-cookies-third-party.html" title="การรับส่งข้อมูล คุกกี้ และสคริปต์บุคคลที่สาม">12·คุกกี้</a>
+<span class="grp">| เซิร์ฟเวอร์:</span>
+<a href="13-ssrf.html" title="Server-Side Request Forgery">13·ssrf</a>
+<a href="14-deserialization-and-xxe.html" title="Deserialization และ XXE">14·deserialize</a>
+<a href="15-environmental-security.html" title="ความปลอดภัยของสภาพแวดล้อม">15·secret</a>
+<a href="16-cryptography.html" title="การเข้ารหัสและการปกป้องข้อมูล">16·crypto</a>
+<a href="17-dependencies-and-cves.html" title="Dependency และ CVE">17·dependency</a>
+<span class="grp">| ดูแลระบบ:</span>
+<a href="18-intranet-and-admin.html" title="ความปลอดภัยของ intranet และ admin">18·admin</a>
+<a href="19-misconfiguration-and-errors.html" title="การตั้งค่าผิดพลาดและการจัดการ error">19·config</a>
+<a href="20-insecure-design.html" title="การออกแบบที่ไม่ปลอดภัยและ business logic">20·design</a>
+<a href="21-logging-and-incident-response.html" title="Logging การแจ้งเตือน และการรับมือเหตุการณ์">21·logging</a>
+<a href="22-additional-resources.html" title="แหล่งข้อมูลเพิ่มเติม">22·แหล่งข้อมูล</a>
+<span class="grp">| แบบสอบถาม:</span>
+<a href="q1-developer-survey.html" title="แบบสำรวจความปลอดภัยสำหรับนักพัฒนา">Q1·dev</a>
+<a href="q2-awareness-survey.html" title="แบบสำรวจความตระหนักรู้ภัยไซเบอร์">Q2·ทุกคน</a></nav>
+  <main>
+<div class="col">
+<p class="prompt">guest@websec ~ % <b>man 05-authentication</b></p>
+<h1>05 · การยืนยันตัวตน (Authentication)</h1>
+<p class="lede">Authentication ถามเรื่องเดียว: คุณคือคนนั้นจริงไหม ถ้าทำถูก ฐานข้อมูลที่ถูกขโมยก็ไร้ค่า หน้าล็อกอินไม่หลุดอะไร และการรีเซ็ตรหัสไม่กลายเป็นประตูหลัง</p>
+<div class="rp partial"><code>bin/rails generate authentication</code> (Rails 8) ให้รหัสผ่านที่ hash แล้ว, session ในฐานข้อมูล, ล็อกอินที่จำกัดอัตรา และลิงก์รีเซ็ตที่ปลอดภัย ที่ต้องเพิ่มเอง: ความยาวขั้นต่ำ, ตรวจรหัสที่เคยรั่ว, MFA</div>
+<h2>5.1 ห้ามเก็บรหัสผ่านตรงๆ</h2>
+<p>ฐานข้อมูลรั่วได้ และถ้ารหัสผ่านเก็บแบบตรงๆ ก็รั่วตาม คนชอบใช้รหัสซ้ำด้วย เราจึงเก็บ <b>hash</b> คือการแปลงทางเดียว ตอนล็อกอินก็ hash ที่พิมพ์มาแล้วเทียบ</p>
+<p>แต่ไม่ใช่ hash อะไรก็ได้ MD5 กับ SHA-256 <em>เร็ว</em> เกินไป GPU เดาได้เป็นพันล้านครั้งต่อวินาที password hash ต้อง <em>ช้า</em> และ <em>มี salt</em>:</p>
+<ul>
+<li><b>ช้า</b>: bcrypt หรือ Argon2 ทำให้การเดาแต่ละครั้งใช้เวลาเป็นมิลลิวินาที</li>
+<li><b>มี salt</b>: รหัสเดียวกัน แต่ hash ต่างกันในแต่ละคน ตารางที่คำนวณไว้ล่วงหน้าจึงใช้ไม่ได้</li>
+</ul>
+<div class="anim" data-actors="Browser|Rails app|Database" data-title="ล็อกอินด้วย password hash"><script type="application/json">[{"f": 0, "t": 1, "l": "POST /session  email + password", "c": "รหัสผ่านเดินทางผ่าน HTTPS และอยู่ในหน่วยความจำเฉพาะระหว่าง request นี้"}, {"f": 1, "t": 2, "l": "SELECT … WHERE email_address = $1", "c": "ค้นผู้ใช้ด้วยอีเมล (แบบ parameterize)"}, {"f": 2, "t": 1, "l": "password_digest: $2a$12$Qx…", "k": "k", "c": "ฐานข้อมูลเก็บแค่ bcrypt hash ค่า cost 12 หมายถึง 2<sup>12<\/sup> รอบ ประมาณ 250 ms ต่อการเดาหนึ่งครั้ง"}, {"n": 1, "l": "bcrypt(typed password, salt) → compare", "c": "hash สิ่งที่ผู้ใช้พิมพ์ด้วย salt ที่เก็บไว้ แล้วเปรียบเทียบแบบใช้เวลาคงที่"}, {"f": 1, "t": 0, "l": "Set-Cookie: new session id", "c": "ตรงกัน → เริ่ม session <b>ใหม่<\/b> (หัวข้อ 06) ไม่ตรง → error แบบกลางๆ ข้อความเดียว"}]</script></div>
+<div class="demo"><header><b>sim: สิ่งที่โจรขโมยฐานข้อมูลเห็น</b><span>คำนวณ hash จริงในเบราว์เซอร์ของคุณ</span></header><div class="body">
+<p class="hint">สองคนใช้รหัสเดียวกัน ลองดูว่าแต่ละวิธีเก็บ โจรจะเห็นอะไร</p>
+<div class="grid2">
+<div><label for="pw1">รหัสผ่านของ alice</label><input id="pw1" type="text" value="sunshine123"/></div>
+<div><label for="pw2">รหัสผ่านของ bob</label><input id="pw2" type="text" value="sunshine123"/></div>
+</div>
+<div class="row" style="margin-top:10px"><button class="btn on" id="hashgo" type="button">hash ทั้งคู่ ▶</button><span class="d" id="hashtime"></span></div>
+<div class="tablewrap" style="margin-top:10px"><table id="hashtbl"><thead><tr><th>วิธี</th><th>alice</th><th>bob</th><th>ผลลัพธ์</th></tr></thead><tbody></tbody></table></div>
+</div></div>
+<div class="code">
+<pre data-lang="rails"><span class="c"># Gemfile: gem "bcrypt"</span>
+class User &lt; ApplicationRecord
+  has_secure_password                       <span class="c"># bcrypt hash in password_digest</span>
+  validates :password, length: { minimum: 12 }, allow_nil: true   <span class="c"># you add this</span>
+end
+
+User.create!(email_address: "ana@x.test", password: "correct horse battery staple")
+user.authenticate("typed password")         <span class="c"># =&gt; user, or false</span></pre>
+<pre data-lang="node"><span class="c">// npm install bcrypt   (or argon2)</span>
+const bcrypt = require("bcrypt");
+
+<span class="c">// sign-up: store only the hash (salt is embedded in it)</span>
+const hash = await bcrypt.hash(password, 12);   <span class="c">// 12 = cost factor</span>
+await db.users.insert({ email, password_hash: hash });
+
+<span class="c">// login</span>
+const ok = await bcrypt.compare(typedPassword, user.password_hash);</pre>
+</div>
+<h3>กฎรหัสผ่านที่ไลบรารีไม่ได้เพิ่มให้</h3>
+<p>ระวัง: bcrypt ดูแค่ 72 ไบต์แรกของรหัสผ่าน และไม่มีอะไรบังคับความยาวขั้นต่ำ ให้เน้นความยาวมากกว่าความซับซ้อน: อย่างน้อย 12 ตัว (NIST แนะนำ 15 ตัวถ้าใช้รหัสผ่านอย่างเดียวโดยไม่มี MFA) รับ passphrase ยาวๆ ได้ และบล็อกรหัสที่เคยหลุดในเหตุข้อมูลรั่ว</p>
+<div class="demo"><header><b>sim: ตัวตรวจนโยบายรหัสผ่าน</b><span>พิมพ์รหัสผ่าน</span></header><div class="body">
+<label for="pol">รหัสผ่านที่จะทดสอบ</label><input id="pol" type="text" value="correct horse battery staple"/>
+<div class="out" id="polout" style="margin-top:10px"></div>
+</div></div>
+<div class="rp partial"><code>has_secure_password</code> ให้ bcrypt และปฏิเสธรหัสผ่านที่ยาวเกิน 72 ไบต์ ส่วนที่เราต้องเพิ่ม: <code>validates :password, length: { minimum: 12 }</code> และอาจใช้ gem <code>pwned</code></div>
+<h2>5.2 ล็อกอินโดยไม่หลุดข้อมูล</h2>
+<p>อย่าบอกว่าผิดที่ <i>ตรงไหน</i> "ไม่พบอีเมลนี้" เท่ากับบอกผู้โจมตีว่าใครเป็นผู้ใช้ของเรา ใช้ข้อความเดียวกับทุกกรณีที่ล้มเหลว</p>
+<p>เวลาก็รั่วได้: ถ้าอีเมลที่ไม่มีตอบทันที แต่รหัสผิดใช้ 200 ms นาฬิกาก็บอกความลับได้เหมือนกัน</p>
+<div class="demo"><header><b>sim: user enumeration</b><span>คุณคือผู้โจมตี</span></header><div class="body">
+<p class="hint">ลองใช้รายชื่ออีเมลของผู้โจมตีกับทั้งสองฟอร์ม แบบไหนเผยความลับ?</p>
+<div class="row"><label for="enumsel">ลองอีเมล:</label>
+<select id="enumsel" style="width:auto"><option>ceo@acme.test</option><option>intern@acme.test</option><option>admin@acme.test</option><option>nobody@acme.test</option></select>
+<span>password: <code>wrong-guess</code></span></div>
+<div class="grid2" style="margin-top:10px">
+<div class="box"><p class="cap r">ล็อกอินที่รั่ว</p><button class="btn" id="leaky" type="button">ส่ง</button><div class="out" id="leakyout" style="margin-top:8px"></div></div>
+<div class="box"><p class="cap g">ล็อกอินแบบข้อความกลาง</p><button class="btn" id="generic" type="button">ส่ง</button><div class="out" id="genout" style="margin-top:8px"></div></div>
+</div>
+<div class="out" id="enumlist" style="margin-top:10px">attacker's notes: (empty)</div>
+</div></div>
+<div class="code">
+<pre data-lang="rails">class SessionsController &lt; ApplicationController
+  rate_limit to: 10, within: 3.minutes, only: :create   <span class="c"># Rails 7.2+</span>
+
+  def create
+    <span class="c"># authenticate_by hashes even when the email is unknown (timing-safe)</span>
+    if user = User.authenticate_by(params.permit(:email_address, :password))
+      start_new_session_for user            <span class="c"># generator helper: fresh Session record</span>
+      redirect_to after_authentication_url
+    else
+      <span class="ok">redirect_to new_session_path, alert: "Try another email address or password."</span>
+    end
+  end
+end</pre>
+<pre data-lang="node">app.post("/login", async (req, res) =&gt; {
+  const user = await db.users.findOne({ email: req.body.email });
+  <span class="c">// compare against a dummy hash when the user doesn't exist,
+  // so both paths take the same time</span>
+  const hash = user ? user.password_hash : DUMMY_BCRYPT_HASH;
+  const ok = await bcrypt.compare(req.body.password, hash);
+  if (!user || !ok) return res.status(401).render("login",
+      { error: "Invalid email or password." });       <span class="ok">// one message</span>
+  await startNewSession(req, user);                   <span class="c">// see section 06</span>
+  res.redirect("/");
+});</pre>
+</div>
+<div class="rp yes"><code>User.authenticate_by</code> คำนวณ hash แม้ไม่มีอีเมลนั้น เวลาจึงเท่ากัน ถ้าเขียนค้นหาเอง จะเสียตรงนี้ไป</div>
+<h2>5.3 การรีเซ็ตรหัสผ่าน</h2>
+<p>"ลืมรหัสผ่าน" คือทางล็อกอินทางที่สอง จึงต้องแข็งแรงเท่าทางแรก ขั้นตอนรีเซ็ตที่ปลอดภัย:</p>
+<ol>
+<li>แสดงข้อความเดียวกันไม่ว่าอีเมลจะมีอยู่หรือไม่: "ถ้าอีเมลนี้มีบัญชี เราได้ส่งลิงก์ไปให้แล้ว"</li>
+<li>ใช้ token สุ่มยาวๆ เก็บแค่ hash ของมัน หรือลงนามไว้</li>
+<li>อายุสั้น (15 นาที) ใช้ได้ครั้งเดียว เปลี่ยนรหัสแล้วใช้ไม่ได้อีก</li>
+<li>จำกัดอัตราการเรียก endpoint นี้ (ดูหัวข้อ 08)</li>
+</ol>
+<div class="demo"><header><b>sim: วงจรชีวิตของ reset token</b><span>token 15 นาที ย่อเหลือ 15 วินาที</span></header><div class="body">
+<div class="row"><button class="btn on" id="rtnew" type="button">ขอลิงก์รีเซ็ต</button><button class="btn" id="rtuse" type="button">ใช้ลิงก์</button><button class="btn" id="rtold" type="button">เปลี่ยนรหัสผ่าน แล้วใช้ลิงก์เก่าซ้ำ</button></div>
+<div class="out" id="rtout" style="margin-top:10px">No token yet.</div>
+</div></div>
+<div class="rp yes">reset token ของ Rails 8 ลงนามแล้ว หมดอายุใน 15 นาที และใช้ไม่ได้ทันทีเมื่อเปลี่ยนรหัส</div>
+<h2>5.4 การยืนยันตัวตนหลายปัจจัย (MFA)</h2>
+<p>รหัสผ่านโดนหลอก โดนเดา และถูกใช้ซ้ำ ปัจจัยที่สองทำให้รหัสที่ถูกขโมยอย่างเดียวไม่พอ เรียงคร่าวๆ จากอ่อนไปแข็ง:</p>
+<ul>
+<li><b>รหัสทาง SMS</b>: ดีกว่าไม่มี แต่เสี่ยงต่อการโจมตีแบบ SIM swap และ phishing</li>
+<li><b>รหัสจากแอป authenticator</b>: ดี แต่เว็บปลอมส่งต่อรหัสได้ภายใน 30 วินาที</li>
+<li><b>กดอนุมัติแบบ push</b>: ผู้โจมตีส่งรัวๆ จนมีคนเผลอกดอนุมัติ ให้ใช้แบบจับคู่ตัวเลข</li>
+<li><b>Passkey</b>: ผูกกับโดเมนจริง เว็บปลอมจึงไม่ได้อะไร เป็นตัวเลือกที่ดีที่สุด</li>
+</ul>
+<p>ให้ recovery code บังคับ MFA สำหรับพนักงาน และถือว่า "ปิด MFA" เป็นเรื่องละเอียดอ่อน</p>
+<div class="anim" data-actors="User|bank-login.evil.test (proxy)|bank.test" data-title="ทำไม passkey ต้านทาน phishing ได้"><script type="application/json">[{"f": 0, "t": 1, "l": "password + TOTP code 492817", "k": "a", "c": "ผู้ใช้อยู่บนเว็บปลอมที่ส่งต่อทุกอย่างไปยังธนาคารจริงแบบเรียลไทม์"}, {"f": 1, "t": 2, "l": "relays password + 492817", "k": "a", "c": "รหัสยังใช้ได้อีกไม่กี่วินาที ธนาคารจึงยอมรับ"}, {"f": 2, "t": 1, "l": "Set-Cookie: session", "k": "a", "c": "<b>TOTP ถูก phishing<\/b> ตอนนี้ผู้โจมตีได้ session ที่ล็อกอินแล้ว"}, {"n": 0, "l": "same attack, but with a passkey", "k": "k", "c": "คราวนี้บัญชีของผู้ใช้ใช้ passkey แทน"}, {"f": 1, "t": 0, "l": "WebAuthn challenge", "c": "proxy ขอให้เบราว์เซอร์ลงนาม challenge ของธนาคาร"}, {"n": 0, "l": "browser signs for origin bank-login.evil.test", "k": "k", "c": "เบราว์เซอร์ฝัง <b>origin จริง<\/b> ไว้ในลายเซ็น และไม่มีวันลงนามในนาม bank.test บนโดเมนอื่น"}, {"f": 1, "t": 2, "l": "relays signature", "k": "b", "c": "bank.test ตรวจ origin ในข้อมูลที่ลงนาม เห็นว่าเป็น evil.test จึงปฏิเสธ <b>phishing ล้มเหลว<\/b>"}]</script></div><div class="rp no">ไม่มี MFA ในตัว ใช้ <code>rotp</code> (แอป authenticator) หรือ <code>webauthn</code> (passkey) หรือ <code>devise-two-factor</code> ถ้าใช้ Devise</div>
+<h2>5.5 หลังล็อกอิน: session</h2>
+<p>หลังล็อกอิน เบราว์เซอร์จะถือคุกกี้ที่บอกว่า "ยังเป็น Alice อยู่" หัวข้อถัดไปคือการกันไม่ให้คุกกี้นี้ตกไปอยู่ในมือคนอื่น</p>
+</div>
+
+<div class="col"><label class="readmark"><input type="checkbox" id="read-05-authentication"> ทำเครื่องหมายว่าอ่านหัวข้อ 05 แล้ว</label><div class="pager"><a href="04-xss-and-other-injection.html">◀ 04 XSS และ injection แบบอื่น</a><a href="05b-mfa.html">05b การยืนยันตัวตนหลายปัจจัย ▶</a></div></div>
+  </main>
+  <footer class="site">อ้างอิงจาก <a href="https://guides.rubyonrails.org/security.html">Ruby on Rails Security Guide</a> (CC BY-SA 4.0), <a href="https://cheatsheetseries.owasp.org/">OWASP Cheat Sheet Series</a>, <a href="https://owasp.org/Top10/2025/">OWASP Top 10:2025</a> และ <a href="https://infosec.mozilla.org/guidelines/web_security.html">Mozilla Web Security Guidelines</a> เขียนสำหรับทีมพัฒนาของเรา ตัวอย่างโค้ดเพื่อการอธิบาย ข้อความในผลการจำลองบางส่วนยังเป็นภาษาอังกฤษ</footer>
+</div>
+<script src="../assets/site.js?v=92ac7aa3f8"></script>
+<script>
+
+const hex = b => Array.from(new Uint8Array(b)).map(x => x.toString(16).padStart(2, "0")).join("");
+async function sha(s) { return hex(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s))); }
+async function pbkdf(s, salt) { const k = await crypto.subtle.importKey("raw", new TextEncoder().encode(s), "PBKDF2", false, ["deriveBits"]); return hex(await crypto.subtle.deriveBits({ name: "PBKDF2", hash: "SHA-256", salt, iterations: 200000 }, k, 256)); }
+async function runHash() {
+  const a = $("#pw1").value, b = $("#pw2").value;
+  const t0 = performance.now(); const sa = crypto.getRandomValues(new Uint8Array(16)), sb = crypto.getRandomValues(new Uint8Array(16));
+  const [ha, hb] = [await sha(a), await sha(b)];
+  const t1 = performance.now(); const [pa, pb] = [await pbkdf(a, sa), await pbkdf(b, sb)]; const t2 = performance.now();
+  const same = ha === hb;
+  const per = ((t2 - t1) / 2).toFixed(0);
+  const rows = [
+    ["plain text", esc(a), esc(b), '<span class="pill bad">game over</span> passwords readable'],
+    ["SHA-256, no salt", ha.slice(0, 20) + "…", hb.slice(0, 20) + "…", same ? '<span class="pill bad">weak</span> identical hashes reveal shared passwords; lookup tables crack them instantly' : '<span class="pill meh">weak</span> fast to brute-force'],
+    ["PBKDF2 ×200k + salt", `<span class="d">${hex(sa).slice(0, 8)}$</span>${pa.slice(0, 16)}…`, `<span class="d">${hex(sb).slice(0, 8)}$</span>${pb.slice(0, 16)}…`, `<span class="pill safe">good</span> different hashes; ~${per} ms per guess here`]];
+  $("#hashtbl tbody").innerHTML = rows.map(r => `<tr><td>${r[0]}</td><td><code>${r[1]}</code></td><td><code>${r[2]}</code></td><td>${r[3]}</td></tr>`).join("");
+  const gpuFast = 1e10, slowRate = 1000 / Math.max(+per, 1);
+  $("#hashtime").textContent = `10M-word dictionary: SHA-256 ≈ ${(1e7 / gpuFast * 1000).toFixed(1)} ms on one GPU · slow hash ≈ ${Math.round(1e7 / slowRate / 3600)} hours per user on this device`;
+}
+$("#hashgo").addEventListener("click", runHash); runHash();
+
+const common = ["password", "123456", "12345678", "qwerty", "letmein", "sunshine123", "iloveyou", "admin", "welcome", "password1", "abc123", "dragon", "monkey", "football"];
+function policy() {
+  const p = $("#pol").value, bytes = new TextEncoder().encode(p).length;
+  const checks = [
+    [p.length >= 12, `length ${p.length} chars ${p.length >= 12 ? "(≥ 12 recommended)" : p.length >= 8 ? "(meets the 8-char minimum; 12+ is better)" : "(below 8: reject)"}`],
+    [!common.includes(p.toLowerCase()), common.includes(p.toLowerCase()) ? "appears in breached-password lists: reject" : "not in the sample breached list"],
+    [bytes <= 72, `${bytes} UTF-8 bytes ${bytes > 72 ? "→ bcrypt would ignore everything after byte 72" : "(within bcrypt's 72-byte limit)"}`],
+    [!/^(.)\1+$/.test(p) || !p, /^(.)\1+$/.test(p) ? "one repeated character" : "not a single repeated character"]];
+  const score = checks.filter(c => c[0]).length;
+  $("#polout").innerHTML = checks.map(c => `${c[0] ? '<span class="g">[ok]</span>' : '<span class="r">[!!]</span>'} ${c[1]}`).join("\n") + `\n\n<span class="d">note: no "must contain a symbol" rule. Length and breach checks beat composition rules.</span>`;
+}
+$("#pol").addEventListener("input", policy); policy();
+
+const accounts = ["ceo@acme.test", "admin@acme.test"]; const found = new Set();
+$("#leaky").onclick = () => { const e = $("#enumsel").value; const exists = accounts.includes(e); $("#leakyout").innerHTML = exists ? '<span class="y">Wrong password.</span>' : '<span class="y">No account found for that email.</span>'; if (exists) found.add(e); $("#enumlist").innerHTML = "attacker's notes: " + (found.size ? [...found].map(x => `<span class="r">${x} EXISTS</span>`).join(", ") : "(nothing confirmed)"); };
+$("#generic").onclick = () => { $("#genout").innerHTML = '<span class="g">Invalid email or password.</span>\n<span class="d">same text, same timing either way</span>'; };
+
+let tok = null, timer = null, used = false;
+function rtRender(msg) { $("#rtout").innerHTML = msg; }
+$("#rtnew").onclick = () => {
+  const raw = hex(crypto.getRandomValues(new Uint8Array(16))); tok = { raw, exp: Date.now() + 15000 }; used = false;
+  clearInterval(timer);
+  timer = setInterval(() => { const left = Math.max(0, Math.ceil((tok.exp - Date.now()) / 1000)); $("#rtcount") && ($("#rtcount").textContent = left ? `${left} "minutes" left` : "expired"); if (!left) clearInterval(timer); }, 250);
+  sha(raw).then(h => rtRender(`email link: https://app.test/reset?token=<span class="k">${raw}</span>\nstored in DB: sha256 = ${h.slice(0, 24)}…  (never the raw token)\nstatus: <span id="rtcount">15 "minutes" left</span>`));
+};
+$("#rtuse").onclick = () => { if (!tok) return rtRender("Request a link first."); if (Date.now() > tok.exp) return rtRender('<span class="r">410 Gone</span> token expired. Request a new link.'); if (used) return rtRender('<span class="r">410 Gone</span> token already used.'); used = true; rtRender('<span class="g">200 OK</span> password updated. Token deleted, all other sessions signed out.'); };
+$("#rtold").onclick = () => { if (!tok) return rtRender("Request a link first."); used = true; rtRender('password changed → token invalidated.\nreusing old link… <span class="r">410 Gone</span> token no longer valid.'); };
+
+</script>
+</body>
+</html>

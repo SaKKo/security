@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en" data-lang="rails">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>11 HTTP Security Headers · Web Security</title>
+
+<link rel="icon" href="favicon.ico" sizes="32x32">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="site.webmanifest">
+<meta name="theme-color" content="#000000">
+<link rel="stylesheet" href="assets/site.css?v=8f1e007517">
+<script src="assets/consent.js?v=9320b4a322"></script>
+</head>
+<body data-slug="11-http-security-headers">
+<div class="win">
+  <div class="titlebar"><span class="dots"><i></i><i></i><i></i></span><span class="t">guest@websec: ~/websec/11-http-security-headers — zsh — 100×40</span>
+    <a class="by" href="about.html" title="About the author"><span class="w0">by </span>SaKKo</a>
+    <span class="lsw" role="group" aria-label="Language"><a href="11-http-security-headers.html" aria-current="true" data-setlang="en">EN</a><a href="th/11-http-security-headers.html" data-setlang="th">TH</a></span>
+    <span class="langsw" role="group" aria-label="Code examples language"><span class="d">code:</span><button type="button" data-l="rails">rails</button><button type="button" data-l="node">node</button></span></div>
+  <nav class="top" aria-label="Sections"><a href="index.html" title="Web Security Field Guide">~/</a>
+<a class="trk on" href="index.html#security">#1 security</a>
+<a class="trk" href="r01-rails-api-app.html">#2 rails</a>
+<span class="grp">|</span>
+<a href="01-introduction.html" title="Introduction">01·introduction</a>
+<a href="02-sql-injection.html" title="SQL Injection">02·sql-injection</a>
+<a href="03-unsafe-query-generation.html" title="Unsafe Query Generation">03·query-shape</a>
+<a href="04-xss-and-other-injection.html" title="XSS and Other Injection">04·xss</a>
+<span class="grp">| accounts:</span>
+<a href="05-authentication.html" title="Authentication">05·auth</a>
+<a href="05b-mfa.html" title="Multi-Factor Authentication">05b·mfa</a>
+<a href="06-sessions.html" title="Sessions">06·sessions</a>
+<a href="07-csrf.html" title="Cross-Site Request Forgery">07·csrf</a>
+<a href="08-user-management.html" title="User Management">08·accounts</a>
+<a href="09-mass-assignment-and-authorization.html" title="Mass Assignment and Authorization">09·authz</a>
+<span class="grp">| browser:</span>
+<a href="10-redirection-and-files.html" title="Redirection and Files">10·files</a>
+<a href="11-http-security-headers.html" aria-current="page" title="HTTP Security Headers">11·headers</a>
+<a href="12-transport-cookies-third-party.html" title="Transport, Cookies and Third-Party Scripts">12·cookies-tls</a>
+<span class="grp">| server:</span>
+<a href="13-ssrf.html" title="Server-Side Request Forgery">13·ssrf</a>
+<a href="14-deserialization-and-xxe.html" title="Deserialization and XXE">14·deserialize</a>
+<a href="15-environmental-security.html" title="Environmental Security">15·secrets</a>
+<a href="16-cryptography.html" title="Cryptography and Data Protection">16·crypto</a>
+<a href="17-dependencies-and-cves.html" title="Dependencies and CVEs">17·dependencies</a>
+<span class="grp">| ops:</span>
+<a href="18-intranet-and-admin.html" title="Intranet and Admin Security">18·admin</a>
+<a href="19-misconfiguration-and-errors.html" title="Misconfiguration and Error Handling">19·misconfig</a>
+<a href="20-insecure-design.html" title="Insecure Design and Business Logic">20·design</a>
+<a href="21-logging-and-incident-response.html" title="Logging, Alerting and Incident Response">21·logging</a>
+<a href="22-additional-resources.html" title="Additional Resources">22·resources</a>
+<span class="grp">| questionnaires:</span>
+<a href="q1-developer-survey.html" title="Developer Security Survey">Q1·developer</a>
+<a href="q2-awareness-survey.html" title="Cyber Threat Awareness Survey">Q2·cyber</a></nav>
+  <main>
+<div class="col">
+<p class="prompt">guest@websec ~ % <b>curl -I https://app.example.com</b></p>
+<h1>11 · HTTP Security Headers</h1>
+<p class="lede">A few header lines tell the browser how strict to be with our pages. They cost nothing and block whole kinds of attack.</p>
+<div class="toc"><b>on this page</b><ol>
+<li><a href="#defaults">The baseline headers</a></li><li><a href="#hsts">Strict-Transport-Security</a></li><li><a href="#csp">Content-Security-Policy</a></li><li><a href="#perm">Permissions-Policy</a></li><li><a href="#cors">CORS</a></li><li><a href="#setup">Setting them in your stack</a></li></ol></div>
+<h2 id="defaults">11.1 The baseline headers</h2>
+<p>Rails sends most of these for free. Flip each one to see what it blocks:</p>
+<div class="demo"><header><b>sim: response header inspector</b><span>toggle headers, read the consequences</span></header><div class="body">
+<div class="grid2">
+<div id="hd-toggles" style="display:grid;gap:6px"></div>
+<div><p class="cap">response</p><div class="out" id="hd-resp"></div></div>
+</div>
+<div class="tablewrap" style="margin-top:10px"><table><thead><tr><th>attack</th><th>outcome</th></tr></thead><tbody id="hd-attacks"></tbody></table></div>
+</div></div>
+<div class="rp yes">We already get X-Frame-Options, nosniff, Referrer-Policy and friends on every response. Check what actually arrives with <code>curl -I</code>, since proxies can mess with them.</div>
+<h3>X-Frame-Options</h3>
+<p>Stops other sites putting our page in an invisible iframe and tricking users into clicking our buttons (<b>clickjacking</b>). Rails' default <code>SAMEORIGIN</code> is fine.</p>
+<div class="demo"><header><b>sim: clickjacking</b><span>reveal the hidden frame</span></header><div class="body">
+<div class="row"><label for="cj-op">hidden iframe opacity</label><input id="cj-op" max="100" min="0" style="flex:1;accent-color:var(--fg)" type="range" value="0"/><span id="cj-opv">0%</span><label><input id="cj-xfo" type="checkbox"/> bank sends X-Frame-Options: DENY</label></div>
+<div style="position:relative;height:190px;border:1px solid var(--faint);margin-top:10px;overflow:hidden">
+<div style="position:absolute;inset:0;padding:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px">
+<div class="y">FREE-PRIZE.TEST · You won a new phone!</div>
+<button class="btn on" id="cj-claim" style="font-size:16px;padding:8px 22px" type="button">CLAIM PRIZE</button>
+<div class="d" style="font-size:12px">(attacker's page)</div></div>
+<div id="cj-frame" style="position:absolute;inset:0;padding:14px;background:#000;border:2px solid var(--red);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;pointer-events:none">
+<div class="w">bank.test/settings · Close account and send balance to linked account?</div>
+<span class="btn red" style="font-size:16px;padding:8px 22px">CONFIRM CLOSE</span>
+<div class="d" style="font-size:12px">(your page, framed invisibly)</div></div>
+</div>
+<div class="out" id="cj-out" style="margin-top:10px">Click "CLAIM PRIZE".</div>
+</div></div>
+<h3>X-XSS-Protection</h3>
+<p>An old browser feature that caused more harm than good. Rails switches it off (<code>0</code>). Use CSP instead.</p>
+<h3>X-Content-Type-Options</h3>
+<p>Tells the browser not to guess file types, so an "image" full of HTML can't run as a page.</p>
+<h3>X-Permitted-Cross-Domain-Policies</h3>
+<p>Stops Adobe products (old Flash, Acrobat) from loading cross-domain policy files from our site. Mostly legacy now, but free and harmless, so keep it.</p>
+<h3>Referrer-Policy</h3>
+<p>When users click away, the browser can send our full URL to the next site, tokens and all. The default only sends <code>https://app.test</code> to other sites.</p>
+<div class="demo"><header><b>sim: what leaks in the Referer header</b><span>from https://app.test/reset?token=8f2c…&amp;email=ana%40x.test</span></header><div class="body">
+<div class="row"><label for="rp-sel">Referrer-Policy</label><select id="rp-sel" style="width:auto">
+<option>no-referrer</option><option>origin</option><option selected="">unsafe-url</option><option>same-origin</option><option>strict-origin</option><option>strict-origin-when-cross-origin</option><option>no-referrer-when-downgrade</option></select></div>
+<div class="out" id="rp-out" style="margin-top:10px"></div>
+</div></div>
+<h3>Changing the defaults</h3>
+<p>These defaults live in <code>config.action_dispatch.default_headers</code>. You rarely need to touch them; the last part of this page shows how to tighten one.</p>
+
+<h2 id="hsts">11.2 Strict-Transport-Security (HSTS)</h2>
+<p>Redirecting to HTTPS still leaves the very first request on plain HTTP, which can be hijacked. HSTS tells the browser: "always use HTTPS here" for a year.</p>
+<div class="rp partial"><code>force_ssl</code> adds HSTS for us. Only turn on <code>preload</code> once every subdomain is on HTTPS.</div>
+<h2 id="csp">11.3 Content-Security-Policy (CSP)</h2>
+<p>CSP is a list of where scripts are allowed to come from. If XSS slips through, the browser still refuses to run the injected script.</p>
+<div class="anim" data-actors="Victim's browser|app.example.com|evil.test" data-title="CSP blocking an injected script"><script type="application/json">[{"f": 0, "t": 1, "l": "GET /posts/7", "c": "A normal page view."}, {"f": 1, "t": 0, "l": "HTML + Content-Security-Policy: script-src 'self' 'nonce-r4nd'", "k": "k", "c": "The response carries a policy. Scripts must come from our origin or carry this response's nonce."}, {"n": 0, "l": "page contains injected <script src=//evil.test/x.js>", "k": "a", "c": "Suppose an XSS bug slipped through and injected a script tag."}, {"f": 0, "t": 2, "l": "GET /x.js", "k": "b", "c": "evil.test isn't in <code>script-src<\/code>, so the browser refuses to fetch or run it."}, {"f": 0, "t": 1, "l": "POST /csp-violation-report", "k": "k", "c": "The browser reports the violation, so we learn about the bug."}, {"n": 0, "l": "<script nonce=\"r4nd\">init()<\/script> runs", "c": "Our own nonce'd script runs normally."}]</script></div>
+<div class="demo"><header><b>sim: CSP evaluator</b><span>edit the policy; each test is checked live</span></header><div class="body">
+<label for="csp-in">Content-Security-Policy:</label>
+<textarea id="csp-in" rows="3">default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; img-src 'self' https: data:; object-src 'none'; frame-ancestors 'none'</textarea>
+<div class="row" style="margin-top:8px"><span class="d">presets:</span><button class="btn" data-csp="" type="button">none</button><button class="btn" data-csp="default-src * 'unsafe-inline' 'unsafe-eval'" type="button">useless</button><button class="btn" data-csp="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; img-src 'self' https: data:; object-src 'none'; frame-ancestors 'none'" type="button">allowlist</button><button class="btn" data-csp="default-src 'self'; script-src 'nonce-r4nd0m' 'strict-dynamic'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'" type="button">nonce-based (recommended)</button>
+<label><input id="csp-ro" type="checkbox"/> Report-Only mode</label></div>
+<div class="tablewrap" style="margin-top:10px"><table><thead><tr><th>what the page tries to load</th><th>directive</th><th>result</th></tr></thead><tbody id="csp-out"></tbody></table></div>
+</div></div>
+
+<div class="rp no">Rails generates a CSP file but leaves it all commented out. <b>No CSP until we switch it on.</b></div>
+<h3>Reporting violations</h3>
+<p>Start in Report-Only mode: nothing breaks, but you get reports of what <i>would</i> be blocked. Fix those, then enforce.</p>
+<h3>Nonces instead of 'unsafe-inline'</h3>
+<p><code>'unsafe-inline'</code> lets injected scripts run too, so it mostly defeats CSP. Instead, stamp our own script tags with a random <b>nonce</b> that changes every response. Attackers can't guess it.</p>
+
+<div class="code">
+<pre data-lang="rails"><span class="c"># config/initializers/content_security_policy.rb (generated commented out: enable it)</span>
+Rails.application.configure do
+  config.content_security_policy do |policy|
+    policy.default_src :self
+    policy.script_src  :self
+    policy.object_src  :none
+    policy.base_uri    :none
+    policy.frame_ancestors :none
+    policy.form_action :self
+    policy.report_uri  "/csp-violation-report"
+  end
+  config.content_security_policy_nonce_generator = -&gt;(request) { SecureRandom.base64(16) }
+  config.content_security_policy_nonce_directives = %w[script-src]
+  <span class="c"># config.content_security_policy_report_only = true     # start here</span>
+end
+&lt;%= javascript_tag nonce: true do %&gt; init() &lt;% end %&gt;</pre>
+<pre data-lang="node">import crypto from "node:crypto";
+import helmet from "helmet";
+app.use((req, res, next) =&gt; { res.locals.nonce = crypto.randomBytes(16).toString("base64"); next(); });
+app.use(helmet.contentSecurityPolicy({ directives: {
+  defaultSrc: ["'self'"],
+  scriptSrc: [(req, res) =&gt; `'nonce-${res.locals.nonce}'`, "'strict-dynamic'"],
+  objectSrc: ["'none'"], baseUri: ["'none'"], frameAncestors: ["'none'"],
+  reportUri: ["/csp-report"],
+}, reportOnly: false }));
+<span class="c">// template: &lt;script nonce="&lt;%= nonce %&gt;"&gt;…&lt;/script&gt;</span></pre>
+</div>
+<h2 id="perm">11.4 Permissions-Policy (formerly Feature-Policy)</h2>
+<p>Switch off browser features we don't use (camera, mic, location), so injected code can't ask for them.</p>
+<div class="demo"><header><b>sim: Permissions-Policy builder</b><span>allow only what you use</span></header><div class="body">
+<div class="tablewrap"><table id="pp-tbl"></table></div>
+<div class="out" id="pp-out" style="margin-top:10px"></div>
+</div></div>
+<div class="rp no">Also generated commented-out. Off until we enable it.</div>
+<h2 id="cors">11.5 Cross-Origin Resource Sharing (CORS)</h2>
+<p>By default, JS on one site can't read responses from another. CORS is how an API says "this other site may read me". For anything beyond simple requests, the browser asks first (<b>preflight</b>).</p>
+<p>CORS loosens security, so list exact origins. Never echo back any origin while allowing cookies; that lets every site read your users' data.</p>
+<div class="rp no">No CORS by default, which is the safe choice. If you add <code>rack-cors</code>, keep the list exact.</div>
+<div class="anim" data-actors="Page on app.example.com|Browser|api.example.com" data-title="CORS preflight"><script type="application/json">[{"f": 0, "t": 1, "l": "fetch(api/orders, {method:\"DELETE\", credentials:\"include\"})", "c": "Our front end wants to call the API on a different origin."}, {"f": 1, "t": 2, "l": "OPTIONS /orders  Origin: https://app.example.com", "c": "Not a \"simple\" request, so the browser asks permission first (preflight)."}, {"f": 2, "t": 1, "l": "Allow-Origin: https://app.example.com, Allow-Methods: DELETE, Allow-Credentials: true", "k": "k", "c": "rack-cors answers with the exact origin it trusts."}, {"f": 1, "t": 2, "l": "DELETE /orders/9  Cookie: …", "c": "Permission granted: the real request goes out."}, {"f": 2, "t": 0, "l": "200 (readable by the page)", "c": "The browser lets the page read the response."}, {"f": 1, "t": 2, "l": "same call from evil.test → OPTIONS", "k": "b", "c": "evil.test isn't on the list: no Allow-Origin, so the browser blocks the request before it's sent."}]</script></div>
+<div class="demo"><header><b>sim: CORS decision</b><span>configure the API, then make a request</span></header><div class="body">
+<div class="grid2">
+<div class="box"><p class="cap g">api.example.com CORS config</p>
+<label for="co-allow">allowed origins (comma-separated, or *)</label><input id="co-allow" type="text" value="https://app.example.com"/>
+<label><input id="co-reflect" type="checkbox"/> reflect any Origin back (misconfiguration)</label><br/>
+<label><input checked="" id="co-cred" type="checkbox"/> Access-Control-Allow-Credentials: true</label><br/>
+<label for="co-methods">allowed methods</label><input id="co-methods" type="text" value="GET, POST"/>
+</div>
+<div class="box"><p class="cap">request from browser</p>
+<label for="co-origin">page origin</label><select id="co-origin"><option>https://app.example.com</option><option>https://evil.test</option><option>http://app.example.com</option><option>https://app.example.com.evil.test</option></select>
+<label for="co-method">method</label><select id="co-method"><option>GET</option><option>POST</option><option>DELETE</option></select>
+<label><input checked="" id="co-withcred" type="checkbox"/> fetch(…, { credentials: "include" })</label><br/>
+<label><input checked="" id="co-json" type="checkbox"/> sends Content-Type: application/json</label>
+</div>
+</div>
+<div class="out" id="co-out" style="margin-top:10px"></div>
+</div></div>
+<div class="code">
+<pre data-lang="rails"><span class="c"># Gemfile: gem "rack-cors"    # config/initializers/cors.rb</span>
+Rails.application.config.middleware.insert_before 0, Rack::Cors do
+  allow do
+    origins "https://app.example.com"      <span class="c"># exact list; never "*" with credentials</span>
+    resource "/api/*", headers: %w[Content-Type X-CSRF-Token],
+             methods: %i[get post], credentials: true, max_age: 600
+  end
+end</pre>
+<pre data-lang="node">import cors from "cors";
+app.use("/api", cors({
+  origin: ["https://app.example.com"],   <span class="ok">// exact list; never `origin: true` with credentials</span>
+  methods: ["GET", "POST"],
+  allowedHeaders: ["Content-Type", "X-CSRF-Token"],
+  credentials: true,
+  maxAge: 600,
+}));</pre>
+</div>
+<h2 id="setup">11.6 Setting them in your stack</h2>
+<div class="code">
+<pre data-lang="rails"><span class="c"># defaults already sent (config.action_dispatch.default_headers);</span>
+<span class="c"># tighten one:</span>
+config.action_dispatch.default_headers["X-Frame-Options"] = "DENY"
+
+config.force_ssl = true                     <span class="c"># + Strict-Transport-Security</span>
+config.ssl_options = { hsts: { expires: 2.years, subdomains: true } }
+
+<span class="c"># config/initializers/permissions_policy.rb (generated commented out)</span>
+Rails.application.config.permissions_policy do |p|
+  p.camera :none
+  p.microphone :none
+  p.geolocation :none
+  p.payment :self
+end</pre>
+<pre data-lang="node"><span class="c">// npm install helmet: sets a sensible baseline in one line</span>
+import helmet from "helmet";
+app.use(helmet({
+  frameguard: { action: "sameorigin" },               <span class="c">// X-Frame-Options</span>
+  referrerPolicy: { policy: "strict-origin-when-cross-origin" },
+  hsts: { maxAge: 31536000, includeSubDomains: true },
+  <span class="c">// X-XSS-Protection: 0 is sent by default (switches the old filter off)</span>
+  <span class="c">// noSniff, permittedCrossDomainPolicies, CSP: on by default</span>
+}));
+app.use((req, res, next) =&gt; {
+  res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  next();
+});</pre>
+</div>
+<p>Then verify: run your site through Mozilla's HTTP Observatory or <code>curl -I</code> it in production.</p>
+</div>
+
+<div class="col"><label class="readmark"><input type="checkbox" id="read-11-http-security-headers"> mark section 11 as read</label><div class="pager"><a href="10-redirection-and-files.html">◀ 10 Redirection and Files</a><a href="12-transport-cookies-third-party.html">12 Transport, Cookies and Third-Party Scripts ▶</a></div></div>
+  </main>
+  <footer class="site">Based on the <a href="https://guides.rubyonrails.org/security.html">Ruby on Rails Security Guide</a> (CC BY-SA 4.0), the <a href="https://cheatsheetseries.owasp.org/">OWASP Cheat Sheet Series</a>, the <a href="https://owasp.org/Top10/2025/">OWASP Top 10:2025</a> and <a href="https://infosec.mozilla.org/guidelines/web_security.html">Mozilla's Web Security Guidelines</a>. Written for our dev team; code samples are illustrative.</footer>
+</div>
+<script src="assets/site.js?v=92ac7aa3f8"></script>
+<script>
+
+// 9.1 header inspector
+const H = [
+  ["xfo", "X-Frame-Options", "SAMEORIGIN"], ["xxss", "X-XSS-Protection", "0"], ["nosniff", "X-Content-Type-Options", "nosniff"],
+  ["xpcdp", "X-Permitted-Cross-Domain-Policies", "none"], ["ref", "Referrer-Policy", "strict-origin-when-cross-origin"], ["hsts", "Strict-Transport-Security", "max-age=31536000; includeSubDomains"]];
+$("#hd-toggles").innerHTML = H.map(h => `<label><input type="checkbox" id="hh-${h[0]}"> ${h[1]}</label>`).join("") + '<div class="row" style="margin-top:4px"><button class="btn" id="hh-all" type="button">Rails defaults + HSTS</button><button class="btn" id="hh-none" type="button">none</button></div>';
+function hh() {
+  const on = k => $("#hh-" + k).checked;
+  $("#hd-resp").innerHTML = "HTTP/2 200\ncontent-type: text/html; charset=utf-8\n" + H.filter(h => on(h[0])).map(h => `<span class="g">${h[1].toLowerCase()}: ${h[2]}</span>`).join("\n");
+  const rows = [
+    ["clickjacking: evil.test frames your settings page", on("xfo") ? "browser refuses to render the frame" : "page renders invisibly inside evil.test", on("xfo")],
+    ["upload \"avatar.jpg\" that contains &lt;script&gt;", on("nosniff") ? "served as image/jpeg, never executed" : "old/IE-style sniffing may run it as HTML", on("nosniff")],
+    ["link from /reset?token=… to a third-party site", on("ref") ? "third party sees only https://app.test" : "third party receives the full URL with token", on("ref")],
+    ["first visit typed as http:// on hostile Wi-Fi", on("hsts") ? "browser upgrades to https:// before sending (after first visit)" : "attacker can strip the HTTPS redirect", on("hsts")],
+    ["PDF reader loads crossdomain.xml to read your data", on("xpcdp") ? "policy files ignored" : "a permissive policy file could allow it", on("xpcdp")],
+    ["legacy XSS auditor abused to disable your scripts", on("xxss") ? "auditor disabled" : "possible in old browsers", on("xxss")]];
+  $("#hd-attacks").innerHTML = rows.map(r => `<tr><td>${r[0]}</td><td>${r[2] ? '<span class="pill safe">blocked</span> ' : '<span class="pill bad">works</span> '}${r[1]}</td></tr>`).join("");
+}
+$$("#hd-toggles input").forEach(i => i.addEventListener("change", hh));
+$("#hh-all").onclick = () => { $$("#hd-toggles input").forEach(i => i.checked = true); hh(); };
+$("#hh-none").onclick = () => { $$("#hd-toggles input").forEach(i => i.checked = false); hh(); }; hh();
+
+// clickjacking
+function cj() { const v = +$("#cj-op").value; $("#cj-opv").textContent = v + "%"; $("#cj-frame").style.opacity = $("#cj-xfo").checked ? 0 : v / 100; }
+$("#cj-op").addEventListener("input", cj); $("#cj-xfo").addEventListener("change", cj);
+$("#cj-claim").onclick = () => { $("#cj-out").innerHTML = $("#cj-xfo").checked ? '<span class="g">The bank page refused to load in a frame (X-Frame-Options: DENY). The click hit only the attacker\'s harmless button.</span>' : '<span class="r">Your click landed on the invisible bank frame: "CONFIRM CLOSE" was pressed. Drag the slider to see what was really under the cursor.</span>'; };
+cj();
+
+// referrer
+function rp() {
+  const pol = $("#rp-sel").value, from = "https://app.test/reset?token=8f2c91&email=ana%40x.test", origin = "https://app.test/";
+  const dests = [["https://app.test/help", "same-origin"], ["https://analytics.thirdparty.test/pixel.gif", "cross-origin HTTPS"], ["http://old-partner.test/", "cross-origin HTTP (downgrade)"]];
+  const calc = (kind) => {
+    const same = kind === "same-origin", down = kind.includes("downgrade");
+    switch (pol) {
+      case "no-referrer": return "";
+      case "origin": return origin;
+      case "unsafe-url": return from;
+      case "same-origin": return same ? from : "";
+      case "strict-origin": return down ? "" : origin;
+      case "strict-origin-when-cross-origin": return same ? from : down ? "" : origin;
+      case "no-referrer-when-downgrade": return down ? "" : from;
+    }
+  };
+  $("#rp-out").innerHTML = dests.map(([u, k]) => { const r = calc(k), leak = r.includes("token") && k !== "same-origin"; return `→ ${u}  <span class="d">(${k})</span>\n  Referer: ${r ? (leak ? '<span class="r">' + r + "  ← token leaked</span>" : '<span class="g">' + r + "</span>") : '<span class="d">(not sent)</span>'}`; }).join("\n\n");
+}
+$("#rp-sel").addEventListener("change", rp); rp();
+
+// CSP evaluator
+const tests = [
+  { what: "&lt;script src=\"/app.js\"&gt;", type: "script", src: "self" },
+  { what: "&lt;script src=\"https://cdn.jsdelivr.net/npm/lib.js\"&gt;", type: "script", src: "https://cdn.jsdelivr.net" },
+  { what: "&lt;script src=\"https://evil.test/x.js\"&gt; (injected)", type: "script", src: "https://evil.test", evil: true },
+  { what: "&lt;script nonce=\"r4nd0m\"&gt;init()&lt;/script&gt; (yours)", type: "inline", nonce: "r4nd0m" },
+  { what: "&lt;script&gt;steal()&lt;/script&gt; (injected, no nonce)", type: "inline", evil: true },
+  { what: "&lt;img onerror=\"steal()\"&gt; (injected handler)", type: "inline", evil: true, handler: true },
+  { what: "eval(userString)", type: "eval", evil: true },
+  { what: "&lt;img src=\"https://images.test/a.png\"&gt;", type: "img", src: "https://images.test" },
+  { what: "&lt;object data=\"evil.swf\"&gt;", type: "object", src: "self", evil: true },
+  { what: "evil.test puts you in an &lt;iframe&gt;", type: "frame", evil: true }];
+function parseCSP(s) { const d = {}; s.split(";").forEach(p => { const [k, ...v] = p.trim().split(/\s+/); if (k) d[k.toLowerCase()] = v; }); return d; }
+function cspEval() {
+  const raw = $("#csp-in").value.trim(), d = parseCSP(raw), ro = $("#csp-ro").checked;
+  const dirFor = t => ({ script: "script-src", inline: "script-src", eval: "script-src", img: "img-src", object: "object-src", frame: "frame-ancestors" })[t];
+  $("#csp-out").innerHTML = tests.map(t => {
+    if (!raw) return `<tr><td>${t.what}</td><td class="d">(no policy)</td><td>${t.evil ? '<span class="pill bad">runs</span>' : '<span class="pill safe">loads</span>'}</td></tr>`;
+    let dir = dirFor(t.type), list = d[dir];
+    if (!list && t.type !== "frame") { list = d["default-src"]; if (list) dir = "default-src"; }
+    let allowed;
+    if (!list) allowed = true;
+    else if (list.includes("'none'")) allowed = false;
+    else if (t.type === "frame") allowed = list.includes("*");
+    else if (t.type === "inline") { const strictDyn = list.includes("'strict-dynamic'"), hasNonce = list.some(x => x.startsWith("'nonce-")); allowed = (t.nonce && list.includes(`'nonce-${t.nonce}'`)) || (!t.nonce && list.includes("'unsafe-inline'") && !hasNonce && !strictDyn); if (t.handler && list.includes("'unsafe-inline'") && !hasNonce) allowed = true; }
+    else if (t.type === "eval") allowed = list.includes("'unsafe-eval'");
+    else { const strictDyn = t.type === "script" && list.includes("'strict-dynamic'"); allowed = !strictDyn && (list.includes("*") || (t.src === "self" && list.includes("'self'")) || list.some(x => x !== "'self'" && t.src.startsWith(x.replace(/\/$/, ""))) || (list.includes("https:") && t.src.startsWith("https://"))); if (strictDyn && t.src === "self") allowed = false; }
+    const res = allowed ? (t.evil ? '<span class="pill bad">runs</span>' : '<span class="pill safe">loads</span>') : (ro ? '<span class="pill meh">runs + report sent</span>' : (t.evil ? '<span class="pill safe">blocked</span>' : '<span class="pill meh">blocked (breaks your page)</span>'));
+    return `<tr><td>${t.what}</td><td><code>${dir || "-"}</code></td><td>${res}</td></tr>`;
+  }).join("");
+}
+$("#csp-in").addEventListener("input", cspEval); $("#csp-ro").addEventListener("change", cspEval);
+$$("[data-csp]").forEach(b => b.onclick = () => { $("#csp-in").value = b.dataset.csp; cspEval(); }); cspEval();
+
+// Permissions-Policy
+const feats = [["camera", "()", "video calls"], ["microphone", "()", "voice input"], ["geolocation", "(self)", "store locator"], ["payment", "(self \"https://checkout.stripe.com\")", "checkout"], ["usb", "()", ""], ["fullscreen", "(self)", "video player"], ["display-capture", "()", ""]];
+$("#pp-tbl").innerHTML = "<tr><th>feature</th><th>allow for</th><th>example use</th></tr>" + feats.map((f, i) => `<tr><td>${f[0]}</td><td><select id="pp-${i}" style="width:auto"><option value="()">nobody</option><option value="(self)">self only</option><option value='(self "https://partner.test")'>self + partner.test</option><option value="*">everyone</option></select></td><td class="w">${f[2] || "-"}</td></tr>`).join("");
+feats.forEach((f, i) => { const s = $("#pp-" + i); s.value = f[1].startsWith("(self \"") ? '(self "https://partner.test")' : f[1]; s.addEventListener("change", pp); });
+function pp() { const parts = feats.map((f, i) => `${f[0]}=${$("#pp-" + i).value}`); const star = feats.filter((f, i) => $("#pp-" + i).value === "*").map(f => f[0]); $("#pp-out").innerHTML = `Permissions-Policy: <span class="g">${esc(parts.join(", "))}</span>` + (star.length ? `\n<span class="y">"*" lets any embedded iframe request: ${star.join(", ")}</span>` : ""); }
+pp();
+
+// CORS
+function co() {
+  const allow = $("#co-allow").value.split(",").map(s => s.trim()).filter(Boolean), reflect = $("#co-reflect").checked, cred = $("#co-cred").checked;
+  const methods = $("#co-methods").value.split(",").map(s => s.trim().toUpperCase()), origin = $("#co-origin").value, method = $("#co-method").value, withCred = $("#co-withcred").checked, json = $("#co-json").checked;
+  const out = [], simple = (method === "GET" || method === "POST") && !json;
+  const acao = reflect ? origin : allow.includes("*") ? "*" : allow.includes(origin) ? origin : null;
+  if (!simple) {
+    out.push(`<span class="w">preflight:</span> OPTIONS /api/orders\n  Origin: ${origin}\n  Access-Control-Request-Method: ${method}${json ? "\n  Access-Control-Request-Headers: content-type" : ""}`);
+    if (!acao) { out.push(`<span class="g">  ← no Access-Control-Allow-Origin → browser blocks; the real request is never sent</span>`); return $("#co-out").innerHTML = out.join("\n"); }
+    if (!methods.includes(method)) { out.push(`<span class="g">  ← Allow-Methods: ${methods.join(", ")} → ${method} not allowed, blocked</span>`); return $("#co-out").innerHTML = out.join("\n"); }
+    out.push(`  ← 204  Allow-Origin: ${acao}, Allow-Methods: ${methods.join(", ")}`);
+  }
+  out.push(`<span class="w">request:</span> ${method} /api/orders  Origin: ${origin}${withCred ? "  Cookie: sid=…" : ""}`);
+  if (!acao) { out.push('<span class="g">  ← response arrives but has no Allow-Origin for this origin → JavaScript can\'t read it</span>'); if (simple && method === "POST") out.push('<span class="y">  note: a simple POST still reached the server and ran. CORS protects reading, not sending. CSRF defenses (section 04) cover sending.</span>'); }
+  else if (withCred && acao === "*") out.push('<span class="g">  ← Allow-Origin: * with credentials → browser refuses to expose the response</span>');
+  else if (withCred && !cred) out.push('<span class="g">  ← no Allow-Credentials → browser hides the response</span>');
+  else { const legit = origin === "https://app.example.com"; out.push(legit ? `<span class="g">  ← 200, readable by ${origin}: intended behavior</span>` : `<span class="r">  ← 200, ${origin} can read ${withCred ? "the logged-in user's" : "the"} orders${reflect ? " (Origin was reflected)" : ""}</span>`); }
+  $("#co-out").innerHTML = out.join("\n");
+}
+["#co-allow", "#co-methods"].forEach(s => $(s).addEventListener("input", co)); ["#co-reflect", "#co-cred", "#co-origin", "#co-method", "#co-withcred", "#co-json"].forEach(s => $(s).addEventListener("change", co)); co();
+
+</script>
+</body>
+</html>

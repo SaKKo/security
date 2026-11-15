@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="th" data-lang="rails">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>19 Misconfiguration and Error Handling · Web Security</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600&display=swap" rel="stylesheet">
+<link rel="icon" href="../favicon.ico" sizes="32x32">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<link rel="manifest" href="../site.webmanifest">
+<meta name="theme-color" content="#000000">
+<link rel="stylesheet" href="../assets/site.css?v=8f1e007517">
+<script src="../assets/consent.js?v=9320b4a322"></script>
+</head>
+<body data-slug="19-misconfiguration-and-errors">
+<div class="win">
+  <div class="titlebar"><span class="dots"><i></i><i></i><i></i></span><span class="t">guest@websec: ~/websec/19-misconfiguration-and-errors/th — zsh — 100×40</span>
+    <a class="by" href="about.html" title="เกี่ยวกับผู้เขียน"><span class="w0">เขียนโดย </span>SaKKo</a>
+    <span class="lsw" role="group" aria-label="ภาษา"><a href="../19-misconfiguration-and-errors.html" data-setlang="en">EN</a><a href="19-misconfiguration-and-errors.html" aria-current="true" data-setlang="th">TH</a></span>
+    <span class="langsw" role="group" aria-label="Code examples language"><span class="d">โค้ด:</span><button type="button" data-l="rails">rails</button><button type="button" data-l="node">node</button></span></div>
+  <nav class="top" aria-label="Sections"><a href="index.html" title="คู่มือความปลอดภัยเว็บแอปพลิเคชัน">~/</a>
+<a class="trk on" href="index.html#security">#1 ความปลอดภัย</a>
+<a class="trk" href="r01-rails-api-app.html">#2 rails</a>
+<span class="grp">|</span>
+<a href="01-introduction.html" title="บทนำ">01·บทนำ</a>
+<a href="02-sql-injection.html" title="SQL Injection">02·sql</a>
+<a href="03-unsafe-query-generation.html" title="การสร้าง query ที่ไม่ปลอดภัย">03·query</a>
+<a href="04-xss-and-other-injection.html" title="XSS และ injection แบบอื่น">04·xss</a>
+<span class="grp">| บัญชี:</span>
+<a href="05-authentication.html" title="การยืนยันตัวตน">05·auth</a>
+<a href="05b-mfa.html" title="การยืนยันตัวตนหลายปัจจัย">05b·mfa</a>
+<a href="06-sessions.html" title="Session">06·session</a>
+<a href="07-csrf.html" title="Cross-Site Request Forgery">07·csrf</a>
+<a href="08-user-management.html" title="การจัดการผู้ใช้">08·ผู้ใช้</a>
+<a href="09-mass-assignment-and-authorization.html" title="Mass Assignment และ Authorization">09·authz</a>
+<span class="grp">| เบราว์เซอร์:</span>
+<a href="10-redirection-and-files.html" title="Redirect และไฟล์">10·ไฟล์</a>
+<a href="11-http-security-headers.html" title="HTTP Security Header">11·header</a>
+<a href="12-transport-cookies-third-party.html" title="การรับส่งข้อมูล คุกกี้ และสคริปต์บุคคลที่สาม">12·คุกกี้</a>
+<span class="grp">| เซิร์ฟเวอร์:</span>
+<a href="13-ssrf.html" title="Server-Side Request Forgery">13·ssrf</a>
+<a href="14-deserialization-and-xxe.html" title="Deserialization และ XXE">14·deserialize</a>
+<a href="15-environmental-security.html" title="ความปลอดภัยของสภาพแวดล้อม">15·secret</a>
+<a href="16-cryptography.html" title="การเข้ารหัสและการปกป้องข้อมูล">16·crypto</a>
+<a href="17-dependencies-and-cves.html" title="Dependency และ CVE">17·dependency</a>
+<span class="grp">| ดูแลระบบ:</span>
+<a href="18-intranet-and-admin.html" title="ความปลอดภัยของ intranet และ admin">18·admin</a>
+<a href="19-misconfiguration-and-errors.html" aria-current="page" title="การตั้งค่าผิดพลาดและการจัดการ error">19·config</a>
+<a href="20-insecure-design.html" title="การออกแบบที่ไม่ปลอดภัยและ business logic">20·design</a>
+<a href="21-logging-and-incident-response.html" title="Logging การแจ้งเตือน และการรับมือเหตุการณ์">21·logging</a>
+<a href="22-additional-resources.html" title="แหล่งข้อมูลเพิ่มเติม">22·แหล่งข้อมูล</a>
+<span class="grp">| แบบสอบถาม:</span>
+<a href="q1-developer-survey.html" title="แบบสำรวจความปลอดภัยสำหรับนักพัฒนา">Q1·dev</a>
+<a href="q2-awareness-survey.html" title="แบบสำรวจความตระหนักรู้ภัยไซเบอร์">Q2·ทุกคน</a></nav>
+  <main>
+<div class="col">
+<p class="prompt">guest@websec ~ % <b>man 19-misconfiguration-and-errors</b></p>
+<h1>19 · การตั้งค่าผิดพลาดและการจัดการ error</h1>
+<p class="lede">การตั้งค่าผิดตอนนี้อยู่อันดับ 2 ของ OWASP และ "จัดการ error ผิด" เป็นหมวดใหม่ ทั้งสองเกี่ยวกับสิ่งรอบโค้ด: อะไรเปิดทิ้งไว้ อะไรถูกเปิดเผย และเกิดอะไรขึ้นเมื่อมีปัญหา</p>
+<h2>19.1 การตั้งค่าความปลอดภัยผิดพลาด</h2>
+<p>สิ่งที่ผู้ตรวจมักเจอ:</p>
+<ul>
+<li>โหมด debug ใน production แสดง stack trace ให้ทุกคนเห็น</li>
+<li>แดชบอร์ด (คิวงาน, feature flag, เครื่องมือฐานข้อมูล) ที่ไม่ต้องล็อกอิน</li>
+<li>ข้อมูลล็อกอินเริ่มต้นหรือที่ใช้ร่วมกันบนฐานข้อมูล หน้า admin และเครื่องมือของบุคคลที่สาม</li>
+<li>ไฟล์ที่ไม่ควรเป็นสาธารณะ: <code>/.git/</code>, <code>.env</code>, ไฟล์ backup (<code>db.sql.gz</code>), ไฟล์ swap ของ editor, source map ที่มี secret</li>
+<li>bucket ของ cloud storage ที่ทุกคนอ่าน (หรือเขียน) ได้</li>
+
+
+</ul>
+<div class="anim" data-actors="Attacker's scanner|app.example.com" data-title="การสอดแนมใน 5 request"><script type="application/json">[{"f": 0, "t": 1, "l": "GET /.git/config", "k": "a", "c": "ตัวสแกนอัตโนมัติขอ path ที่รู้จักกันดีจากทุกเว็บที่เจอ"}, {"f": 1, "t": 0, "l": "200: [remote \"origin\"] url = git@github…", "k": "a", "c": "โฟลเดอร์ .git ที่เปิดเผยทำให้ผู้โจมตีดาวน์โหลดซอร์สโค้ด และมักได้ secret ในประวัติด้วย"}, {"f": 0, "t": 1, "l": "GET /sidekiq", "k": "a", "c": "แดชบอร์ดคิวงานที่ไม่ต้องยืนยันตัวตน: ลองใหม่ ลบ หรือดู job และอาร์กิวเมนต์ได้"}, {"f": 0, "t": 1, "l": "GET /nonexistent'\"", "k": "a", "c": "ทำให้เกิด error เพื่อดูว่าแอปล้มเหลวอย่างไร"}, {"f": 1, "t": 0, "l": "500 page with stack trace + gem versions", "k": "a", "c": "หน้า error แบบ debug เปิดเผย path ของไฟล์ เวอร์ชัน และบางครั้งข้อมูล นี่คือการสอดแนมฟรี"}, {"n": 1, "l": "prod config: generic 500 page, dashboards behind auth, deny dotfiles", "k": "k", "c": "ทั้งหมดนี้แก้ด้วยการตั้งค่า ไม่ต้องเปลี่ยนโค้ด"}]</script></div>
+<div class="demo"><header><b>sim: ตรวจการตั้งค่า production</b><span>แก้สิ่งที่พบ แล้วดูการเปิดเผยลดลง</span></header><div class="body">
+<div id="mc-list" style="display:grid;gap:6px"></div>
+<div class="row" style="margin-top:10px"><span>exposure:</span><div class="meter" style="flex:1"><span id="mc-bar"></span></div><b id="mc-n"></b></div>
+</div></div>
+<div class="rp partial">ค่าเริ่มต้น production ของ Rails ดี: ไม่มีหน้า debug ไม่มี web console <b>ช่องโหว่ที่พบบ่อยเป็นของเรา:</b> mount Sidekiq, Mission Control หรือ Flipper โดยไม่มีการล็อกอิน หรือรันโหมด development บนเซิร์ฟเวอร์สาธารณะ</div><div class="code">
+<pre data-lang="rails"><span class="c"># config/routes.rb: every dashboard behind an admin constraint</span>
+authenticate_admin = -&gt;(req) { Session.find_by(id: req.cookie_jar.signed[:session_id])&amp;.user&amp;.admin? }
+constraints(authenticate_admin) do
+  mount Sidekiq::Web =&gt; "/sidekiq"
+  mount MissionControl::Jobs::Engine =&gt; "/jobs"
+  mount Flipper::UI.app(Flipper) =&gt; "/flipper"
+end
+
+<span class="c"># config/environments/production.rb (verify these)</span>
+config.consider_all_requests_local = false     <span class="c"># generic error pages</span>
+config.force_ssl = true
+config.hosts = ["app.example.com"]
+config.log_level = :info                       <span class="c"># :debug can log SQL with values</span></pre>
+</div>
+<h2>19.2 การจัดการสถานการณ์ผิดปกติที่ไม่ดี</h2>
+<p>เรื่องนี้ว่าด้วยสิ่งที่เกิดเมื่อมีปัญหา มีสามรูปแบบที่สร้างความเสียหายมากที่สุด:</p>
+<h3>Fail open</h3>
+<p>ถ้าการตรวจความปลอดภัย error ให้ <b>ปฏิเสธ</b> บั๊กคลาสสิก: บริการตรวจสิทธิ์ timeout, <code>rescue</code> กว้างๆ กลืน error ไป แล้วโค้ดทำต่อเหมือนได้รับอนุญาต</p>
+<div class="demo"><header><b>sim: บริการตรวจสิทธิ์ล่ม</b><span>fail open เทียบกับ fail closed</span></header><div class="body">
+<div class="row"><label><input checked="" id="fo-down" type="checkbox"/> บริการตรวจสิทธิ์ timeout</label><span>error handling:</span><label><input checked="" name="fo-mode" type="radio" value="open"/> rescue → อนุญาต</label><label><input name="fo-mode" type="radio" value="closed"/> rescue → ปฏิเสธ</label></div>
+<div class="row" style="margin-top:8px"><button class="btn red" data-fo="intern" type="button">intern requests DELETE /customers/88</button><button class="btn" data-fo="admin" type="button">admin requests DELETE /customers/88</button></div>
+<div class="out" id="fo-out" style="margin-top:10px"></div>
+</div></div>
+<h3>การทำงานที่เสร็จครึ่งๆ กลางๆ</h3>
+<p>ถ้าพังกลางทาง เงินอาจถูกหักแต่ไม่ถูกโอนเข้า ให้ห่อการเขียนที่เกี่ยวข้องไว้ใน <b>transaction</b></p>
+<h3>การจัดการ error ที่รั่วหรือไม่มี</h3>
+<ul>
+<li>แสดง <b>ข้อความง่ายๆ พร้อมรหัสอ้างอิง</b> ให้ผู้ใช้ เก็บรายละเอียดไว้ใน log</li>
+
+<li>ตั้ง <b>ขีดจำกัด</b> ให้ทุกอย่างที่โตได้: ไฟล์อัปโหลด ขนาดหน้า timeout</li>
+<li><code>rescue =&gt; e</code> เปล่าๆ รอบโค้ดความปลอดภัยคือธงแดง</li>
+</ul>
+<div class="rp partial">transaction rollback เมื่อ error และ <code>Rails.error.report</code> ส่ง error ไปยัง tracker ส่วนการ fail closed และ timeout ของการเรียกออกไปข้างนอก (ค่าเริ่มต้น 60 วินาที!) เป็นหน้าที่เรา</div><div class="code">
+<pre data-lang="rails">def destroy
+  customer = Customer.find(params[:id])
+  return head :forbidden unless allowed_to_delete?(customer)
+  customer.destroy!
+end
+
+private
+
+def allowed_to_delete?(customer)
+  PermissionService.allowed?(Current.user, :delete, customer)
+rescue PermissionService::Timeout =&gt; e
+  Rails.error.report(e, context: { customer_id: customer.id })
+  <span class="ok">false                                       # fail CLOSED</span>
+end
+
+<span class="bad">rescue StandardError then true                  # fail OPEN: any error grants access</span>
+
+<span class="c"># all-or-nothing writes</span>
+ActiveRecord::Base.transaction do
+  from.lock!.update!(balance: from.balance - amount)
+  to.lock!.update!(balance: to.balance + amount)
+end
+
+Net::HTTP.start(host, 443, use_ssl: true, open_timeout: 2, read_timeout: 5) { … }</pre>
+</div>
+</div>
+
+<div class="col"><label class="readmark"><input type="checkbox" id="read-19-misconfiguration-and-errors"> ทำเครื่องหมายว่าอ่านหัวข้อ 19 แล้ว</label><div class="pager"><a href="18-intranet-and-admin.html">◀ 18 ความปลอดภัยของ intranet และ admin</a><a href="20-insecure-design.html">20 การออกแบบที่ไม่ปลอดภัยและ business logic ▶</a></div></div>
+  </main>
+  <footer class="site">อ้างอิงจาก <a href="https://guides.rubyonrails.org/security.html">Ruby on Rails Security Guide</a> (CC BY-SA 4.0), <a href="https://cheatsheetseries.owasp.org/">OWASP Cheat Sheet Series</a>, <a href="https://owasp.org/Top10/2025/">OWASP Top 10:2025</a> และ <a href="https://infosec.mozilla.org/guidelines/web_security.html">Mozilla Web Security Guidelines</a> เขียนสำหรับทีมพัฒนาของเรา ตัวอย่างโค้ดเพื่อการอธิบาย ข้อความในผลการจำลองบางส่วนยังเป็นภาษาอังกฤษ</footer>
+</div>
+<script src="../assets/site.js?v=92ac7aa3f8"></script>
+<script>
+
+const items = [
+  ["RAILS_ENV=production (not development) on public servers", 18],
+  ["generic error pages (consider_all_requests_local = false)", 12],
+  ["Sidekiq / jobs / feature-flag dashboards behind admin auth", 16],
+  ["no default credentials on DB, Redis, admin tools", 16],
+  ["web server denies /.git, .env, backups", 12],
+  ["S3 bucket private; uploads via signed URLs", 10],
+  ["config.hosts set; CORS limited to known origins", 8],
+  ["log_level :info; filter_parameters reviewed", 8]];
+$("#mc-list").innerHTML = items.map((it, i) => `<label><input type="checkbox" id="mc${i}"> ${it[0]}</label>`).join("");
+function mc() { let e = 100; items.forEach((it, i) => { if ($("#mc" + i).checked) e -= it[1]; }); $("#mc-bar").style.width = e + "%"; $("#mc-bar").style.background = e > 50 ? "var(--red)" : e > 20 ? "var(--yellow)" : "var(--fg)"; $("#mc-n").textContent = e === 0 ? "hardened" : e + "% exposed"; }
+$$("#mc-list input").forEach(i => i.addEventListener("change", mc)); mc();
+$$("[data-fo]").forEach(b => b.onclick = () => {
+  const who = b.dataset.fo, down = $("#fo-down").checked, open = $("input[name=fo-mode]:checked").value === "open";
+  const should = who === "admin";
+  let out = `PermissionService.allowed?(${who}, :delete)…\n`;
+  if (!down) out += `→ ${should ? "true" : "false"}\n` + (should ? '<span class="g">200: customer deleted (authorized)</span>' : '<span class="g">403 Forbidden</span>');
+  else { out += '<span class="y">→ Timeout after 5s</span>\n'; out += open ? (should ? '<span class="y">rescue → allow: deleted (correct by luck)</span>' : '<span class="r">rescue → allow: an intern just deleted a customer. The outage became a security hole.</span>') : (should ? '<span class="y">rescue → deny: 403, admin retries later (safe, slightly annoying)</span>' : '<span class="g">rescue → deny: 403 Forbidden</span>'); }
+  $("#fo-out").innerHTML = out;
+});
+
+</script>
+</body>
+</html>

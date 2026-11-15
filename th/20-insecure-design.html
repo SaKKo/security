@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="th" data-lang="rails">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>20 Insecure Design and Business Logic · Web Security</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600&display=swap" rel="stylesheet">
+<link rel="icon" href="../favicon.ico" sizes="32x32">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<link rel="manifest" href="../site.webmanifest">
+<meta name="theme-color" content="#000000">
+<link rel="stylesheet" href="../assets/site.css?v=8f1e007517">
+<script src="../assets/consent.js?v=9320b4a322"></script>
+</head>
+<body data-slug="20-insecure-design">
+<div class="win">
+  <div class="titlebar"><span class="dots"><i></i><i></i><i></i></span><span class="t">guest@websec: ~/websec/20-insecure-design/th — zsh — 100×40</span>
+    <a class="by" href="about.html" title="เกี่ยวกับผู้เขียน"><span class="w0">เขียนโดย </span>SaKKo</a>
+    <span class="lsw" role="group" aria-label="ภาษา"><a href="../20-insecure-design.html" data-setlang="en">EN</a><a href="20-insecure-design.html" aria-current="true" data-setlang="th">TH</a></span>
+    <span class="langsw" role="group" aria-label="Code examples language"><span class="d">โค้ด:</span><button type="button" data-l="rails">rails</button><button type="button" data-l="node">node</button></span></div>
+  <nav class="top" aria-label="Sections"><a href="index.html" title="คู่มือความปลอดภัยเว็บแอปพลิเคชัน">~/</a>
+<a class="trk on" href="index.html#security">#1 ความปลอดภัย</a>
+<a class="trk" href="r01-rails-api-app.html">#2 rails</a>
+<span class="grp">|</span>
+<a href="01-introduction.html" title="บทนำ">01·บทนำ</a>
+<a href="02-sql-injection.html" title="SQL Injection">02·sql</a>
+<a href="03-unsafe-query-generation.html" title="การสร้าง query ที่ไม่ปลอดภัย">03·query</a>
+<a href="04-xss-and-other-injection.html" title="XSS และ injection แบบอื่น">04·xss</a>
+<span class="grp">| บัญชี:</span>
+<a href="05-authentication.html" title="การยืนยันตัวตน">05·auth</a>
+<a href="05b-mfa.html" title="การยืนยันตัวตนหลายปัจจัย">05b·mfa</a>
+<a href="06-sessions.html" title="Session">06·session</a>
+<a href="07-csrf.html" title="Cross-Site Request Forgery">07·csrf</a>
+<a href="08-user-management.html" title="การจัดการผู้ใช้">08·ผู้ใช้</a>
+<a href="09-mass-assignment-and-authorization.html" title="Mass Assignment และ Authorization">09·authz</a>
+<span class="grp">| เบราว์เซอร์:</span>
+<a href="10-redirection-and-files.html" title="Redirect และไฟล์">10·ไฟล์</a>
+<a href="11-http-security-headers.html" title="HTTP Security Header">11·header</a>
+<a href="12-transport-cookies-third-party.html" title="การรับส่งข้อมูล คุกกี้ และสคริปต์บุคคลที่สาม">12·คุกกี้</a>
+<span class="grp">| เซิร์ฟเวอร์:</span>
+<a href="13-ssrf.html" title="Server-Side Request Forgery">13·ssrf</a>
+<a href="14-deserialization-and-xxe.html" title="Deserialization และ XXE">14·deserialize</a>
+<a href="15-environmental-security.html" title="ความปลอดภัยของสภาพแวดล้อม">15·secret</a>
+<a href="16-cryptography.html" title="การเข้ารหัสและการปกป้องข้อมูล">16·crypto</a>
+<a href="17-dependencies-and-cves.html" title="Dependency และ CVE">17·dependency</a>
+<span class="grp">| ดูแลระบบ:</span>
+<a href="18-intranet-and-admin.html" title="ความปลอดภัยของ intranet และ admin">18·admin</a>
+<a href="19-misconfiguration-and-errors.html" title="การตั้งค่าผิดพลาดและการจัดการ error">19·config</a>
+<a href="20-insecure-design.html" aria-current="page" title="การออกแบบที่ไม่ปลอดภัยและ business logic">20·design</a>
+<a href="21-logging-and-incident-response.html" title="Logging การแจ้งเตือน และการรับมือเหตุการณ์">21·logging</a>
+<a href="22-additional-resources.html" title="แหล่งข้อมูลเพิ่มเติม">22·แหล่งข้อมูล</a>
+<span class="grp">| แบบสอบถาม:</span>
+<a href="q1-developer-survey.html" title="แบบสำรวจความปลอดภัยสำหรับนักพัฒนา">Q1·dev</a>
+<a href="q2-awareness-survey.html" title="แบบสำรวจความตระหนักรู้ภัยไซเบอร์">Q2·ทุกคน</a></nav>
+  <main>
+<div class="col">
+<p class="prompt">guest@websec ~ % <b>man 20-insecure-design</b></p>
+<h1>20 · การออกแบบที่ไม่ปลอดภัยและ business logic</h1>
+<p class="lede">บั๊กบางตัวไม่ใช่ความผิดพลาดในการเขียนโค้ด โค้ดทำตามสเปกทุกอย่าง แต่ไม่มีใครถามว่า "ผู้โจมตีจะทำอะไร?" ไม่มีตัวสแกนไหนหาเจอ</p>
+<h2>20.1 ข้อบกพร่องในการออกแบบ เทียบกับบั๊กในการเขียนโค้ด</h2>
+<p>การออกแบบเองไม่ปลอดภัย แม้โค้ดจะสมบูรณ์แบบ:</p>
+<ul>
+<li>ตะกร้าสินค้าเชื่อราคาที่เบราว์เซอร์ส่งมา</li>
+<li>คูปองใช้ซ้อนกันได้ หรือใช้ซ้ำได้ด้วยการส่ง request เดียวกันสองครั้งพร้อมกัน</li>
+<li>จำนวนติดลบได้ ทำให้การซื้อกลายเป็นการคืนเงิน</li>
+<li>การชำระเงินหลายขั้นตอนให้เรียก "ยืนยัน" ได้โดยไม่ "ชำระเงิน"</li>
+
+
+<li>การทำงานที่มีต้นทุนสูง (export รายงาน, ส่ง SMS) ไม่มีขีดจำกัดต่อผู้ใช้</li>
+</ul>
+<h2>20.2 Threat modeling ใน 20 นาที</h2>
+<p>ฟังดูหนัก แต่จริงๆ คือสี่คำถามที่ถามได้ตอนเริ่มทุกฟีเจอร์:</p>
+<ol><li><b>เรากำลังสร้างอะไร?</b> ร่างการไหลของข้อมูล: ใครส่งอะไร เก็บที่ไหน เกี่ยวข้องกับบริการไหน</li><li><b>อะไรผิดพลาดได้บ้าง?</b> ไล่ STRIDE (ด้านล่าง) กับทุกลูกศรและทุกกล่อง</li><li><b>เราจะทำอะไรกับมัน?</b> ตัดสินใจว่าจะลดความเสี่ยง ยอมรับความเสี่ยง หรือเปลี่ยนการออกแบบ</li><li><b>เราทำได้ดีไหม?</b> ทบทวนหลังเปิดตัวและหลังเกิดเหตุ</li></ol>
+<div class="demo"><header><b>sim: STRIDE กับฟีเจอร์</b><span>เลือกฟีเจอร์ แล้วดูภัยคุกคาม</span></header><div class="body">
+<div class="row"><label for="st-f">ฟีเจอร์</label><select id="st-f" style="width:auto"><option value="gift">gift-card redemption</option><option value="invite">team invitations</option><option value="export">CSV export of customers</option></select></div>
+<div class="tablewrap" style="margin-top:10px"><table id="st-tbl"></table></div>
+</div></div>
+<p>เขียน <b>abuse case</b> คู่กับ user story: "ในฐานะผู้โจมตี ฉันอยากใช้คูปองเดิม 50 ครั้ง" แต่ละข้อกลายเป็นเทสต์</p>
+<h2>20.3 Race condition</h2>
+<p>"คูปองยังไม่ถูกใช้ใช่ไหม? ถ้าใช่ก็ใช้" มีช่องว่างระหว่างตรวจกับลงมือ ยิง 20 request พร้อมกัน หลายอันจะหลุดผ่าน บัตรของขวัญถูกใช้สองครั้ง ยอดเงินติดลบ</p>
+<div class="anim" data-actors="Attacker|Request A|Request B|Database" data-title="ใช้คูปองซ้ำสองครั้ง"><script type="application/json">[{"f": 0, "t": 1, "l": "POST /redeem  code=SAVE50", "k": "a", "c": "ผู้โจมตียิง request เหมือนกันสองอันในเวลาเดียวกัน"}, {"f": 0, "t": 2, "l": "POST /redeem  code=SAVE50", "k": "a", "c": "ทั้งคู่มาถึงห่างกันไม่กี่มิลลิวินาที และทำงานบนคนละ thread หรือคนละเซิร์ฟเวอร์"}, {"f": 1, "t": 3, "l": "SELECT used FROM coupons → false", "c": "request A ตรวจ: ยังไม่ถูกใช้"}, {"f": 2, "t": 3, "l": "SELECT used FROM coupons → false", "k": "a", "c": "request B ตรวจก่อนที่ A จะเขียนอะไร: ยังไม่ถูกใช้เช่นกัน"}, {"f": 1, "t": 3, "l": "UPDATE used=true; credit $50", "c": "A ให้ส่วนลด"}, {"f": 2, "t": 3, "l": "UPDATE used=true; credit $50", "k": "a", "c": "B ก็ให้ด้วย <b>คูปองเดียว ได้เครดิตสองครั้ง<\/b>"}, {"n": 3, "l": "fix: row lock / atomic UPDATE … WHERE used=false / unique index", "k": "k", "c": "ทำให้การตรวจและการเขียนเป็นขั้นตอน atomic เดียว เพื่อให้มีแค่ request เดียวที่ชนะ"}]</script></div>
+<div class="demo"><header><b>sim: การแลกพร้อมกันหลาย request</b><span>ยิง N request พร้อมกัน</span></header><div class="body">
+<div class="row"><label for="rc-n">request ขนาน</label><input id="rc-n" max="50" min="2" style="width:90px" type="number" value="10"/>
+<span>protection:</span><label><input checked="" name="rc-mode" type="radio" value="none"/> ตรวจแล้วค่อยอัปเดต</label><label><input name="rc-mode" type="radio" value="lock"/> with_lock</label><label><input name="rc-mode" type="radio" value="atomic"/> UPDATE … WHERE แบบ atomic</label><label><input name="rc-mode" type="radio" value="unique"/> unique index บน redemptions</label>
+<button class="btn red" id="rc-go" type="button">ยิง ▶</button></div>
+<div class="log" id="rc-out" style="margin-top:10px"></div>
+</div></div>
+<h2>20.4 อย่าให้ client เป็นผู้ถือกฎทางธุรกิจ</h2>
+<div class="demo"><header><b>sim: request ชำระเงิน</b><span>แก้สิ่งที่เบราว์เซอร์ส่ง</span></header><div class="body">
+<div class="grid2"><div><label for="bz-in">POST /orders</label><textarea id="bz-in" rows="5">{"items": [{"sku": "LAPTOP-15", "qty": 1, "price": 0.01}, {"sku": "MOUSE", "qty": -3, "price": 25}]}</textarea>
+<div style="margin-top:8px"><label><input id="bz-price" type="checkbox"/> เซิร์ฟเวอร์ค้นราคาจากแคตตาล็อก</label><br/><label><input id="bz-qty" type="checkbox"/> เซิร์ฟเวอร์ตรวจว่า qty อยู่ระหว่าง 1–10</label></div></div>
+<div><p class="cap">คำสั่งซื้อที่เซิร์ฟเวอร์สร้าง</p><div class="out" id="bz-out"></div></div></div>
+</div></div>
+<div class="rp no">เป็นหน้าที่เราทั้งหมด ใช้การล็อกแถว (<code>with_lock</code>) การอัปเดตแบบ atomic unique index และ check constraint ของฐานข้อมูล validation ในโมเดลอย่างเดียวยังเกิด race ได้</div><div class="code">
+<pre data-lang="rails"><span class="c"># atomic: only one request can flip used from false to true</span>
+claimed = Coupon.where(code: params[:code], used: false).update_all(used: true, used_by_id: Current.user.id)
+return render(status: :conflict, plain: "Already used") if claimed.zero?
+
+<span class="c"># or lock the row for the whole check-and-act</span>
+coupon.with_lock do
+  raise AlreadyUsed if coupon.used?
+  coupon.update!(used: true)
+  Current.user.credit!(coupon.amount)
+end
+
+<span class="c"># database as the final guard</span>
+add_index :redemptions, [:coupon_id], unique: true
+add_check_constraint :order_items, "qty BETWEEN 1 AND 10", name: "qty_range"
+
+<span class="c"># never take prices from the request</span>
+item.price = Product.find_by!(sku: line[:sku]).price</pre>
+</div>
+</div>
+
+<div class="col"><label class="readmark"><input type="checkbox" id="read-20-insecure-design"> ทำเครื่องหมายว่าอ่านหัวข้อ 20 แล้ว</label><div class="pager"><a href="19-misconfiguration-and-errors.html">◀ 19 การตั้งค่าผิดพลาดและการจัดการ error</a><a href="21-logging-and-incident-response.html">21 Logging การแจ้งเตือน และการรับมือเหตุการณ์ ▶</a></div></div>
+  </main>
+  <footer class="site">อ้างอิงจาก <a href="https://guides.rubyonrails.org/security.html">Ruby on Rails Security Guide</a> (CC BY-SA 4.0), <a href="https://cheatsheetseries.owasp.org/">OWASP Cheat Sheet Series</a>, <a href="https://owasp.org/Top10/2025/">OWASP Top 10:2025</a> และ <a href="https://infosec.mozilla.org/guidelines/web_security.html">Mozilla Web Security Guidelines</a> เขียนสำหรับทีมพัฒนาของเรา ตัวอย่างโค้ดเพื่อการอธิบาย ข้อความในผลการจำลองบางส่วนยังเป็นภาษาอังกฤษ</footer>
+</div>
+<script src="../assets/site.js?v=92ac7aa3f8"></script>
+<script>
+
+const stride = {
+  gift: [["Spoofing", "Redeem a card on another user's account by changing account_id", "derive account from session"], ["Tampering", "Change the card value in the request", "look up value server-side"], ["Repudiation", "\"I never redeemed it\"", "audit log with user, IP, time"], ["Information disclosure", "Error says \"card already used by bob@…\"", "generic errors"], ["Denial of service", "Brute-force card codes until valid ones are found", "long random codes + rate limit + lockout"], ["Elevation of privilege", "Redeem the same card twice concurrently", "atomic claim / unique index"]],
+  invite: [["Spoofing", "Accept an invite meant for someone else's email", "bind invite to email, verify on accept"], ["Tampering", "Change role=member to role=owner in the accept link", "store role server-side, signed token"], ["Repudiation", "Who invited this external user?", "log inviter and acceptor"], ["Information disclosure", "Invite form reveals whether an email already has an account", "same response either way"], ["Denial of service", "Send thousands of invite emails (spam via your domain)", "per-team rate limit"], ["Elevation of privilege", "A member invites someone as admin", "policy: only admins grant admin"]],
+  export: [["Spoofing", "Export link works for anyone who has the URL", "require login + signed, expiring URL"], ["Tampering", "Change ?account_id= to export another tenant", "scope to current tenant"], ["Repudiation", "Who exported all customers last night?", "audit log + alert on large exports"], ["Information disclosure", "CSV includes fields the role shouldn't see; formula injection (=HYPERLINK) in cells", "per-role columns; escape leading = + - @"], ["Denial of service", "Export 5 million rows synchronously", "background job, row limits"], ["Elevation of privilege", "Support role triggers admin-only export endpoint", "function-level authorization"]]};
+function st() { const f = $("#st-f").value; $("#st-tbl").innerHTML = "<tr><th>STRIDE</th><th>what could go wrong</th><th>mitigation</th></tr>" + stride[f].map(r => `<tr><td><b>${r[0][0]}</b>${r[0].slice(1)}</td><td>${esc(r[1])}</td><td class="w">${esc(r[2])}</td></tr>`).join(""); }
+$("#st-f").addEventListener("change", st); st();
+$("#rc-go").onclick = () => {
+  const n = Math.min(50, Math.max(2, +$("#rc-n").value || 10)), mode = $("input[name=rc-mode]:checked").value;
+  const log = []; let used = false, credits = 0;
+  if (mode === "none") {
+    const passed = Math.min(n, 2 + Math.floor(Math.random() * Math.max(1, n * 0.6)));
+    for (let i = 1; i <= n; i++) { if (i <= passed) { log.push(`req ${String(i).padStart(2)}: SELECT used → false … UPDATE … <span class="r">+$50</span>`); credits += 50; } else log.push(`req ${String(i).padStart(2)}: SELECT used → true → 409`); }
+  } else {
+    for (let i = 1; i <= n; i++) {
+      const how = { lock: "SELECT … FOR UPDATE (waits for lock)", atomic: "UPDATE coupons SET used=true WHERE code=… AND used=false", unique: "INSERT INTO redemptions (coupon_id) …" }[mode];
+      if (!used) { used = true; credits += 50; log.push(`req ${String(i).padStart(2)}: ${how} → <span class="g">wins, +$50</span>`); }
+      else log.push(`req ${String(i).padStart(2)}: ${how} → ${mode === "atomic" ? "0 rows updated" : mode === "unique" ? "UniqueViolation" : "sees used=true"} → 409`);
+    }
+  }
+  log.sort(() => Math.random() - .5);
+  $("#rc-out").innerHTML = log.join("\n") + `\n\n<b>total credited: $${credits}</b> ${credits > 50 ? '<span class="r">(coupon worth $50 redeemed ' + credits / 50 + " times)</span>" : '<span class="g">(exactly once)</span>'}`;
+};
+const catalog = { "LAPTOP-15": 1299, "MOUSE": 25 };
+function bz() {
+  let b; try { b = JSON.parse($("#bz-in").value); } catch (e) { $("#bz-out").innerHTML = '<span class="y">invalid JSON</span>'; return; }
+  const usePrice = $("#bz-price").checked, checkQty = $("#bz-qty").checked; let total = 0; const lines = [], errs = [];
+  (b.items || []).forEach(it => {
+    const real = catalog[it.sku]; if (real === undefined) { errs.push(`unknown sku ${esc(it.sku)}`); return; }
+    if (checkQty && !(Number.isInteger(it.qty) && it.qty >= 1 && it.qty <= 10)) { errs.push(`${esc(it.sku)}: qty must be 1–10`); return; }
+    const price = usePrice ? real : Number(it.price), line = price * it.qty; total += line;
+    lines.push(`${esc(it.sku).padEnd(10)} ${String(it.qty).padStart(3)} × $${price.toFixed(2)} = ${line < 0 ? '<span class="r">' : price < real ? '<span class="r">' : ""}$${line.toFixed(2)}${line < 0 || price < real ? "</span>" : ""}`);
+  });
+  $("#bz-out").innerHTML = (errs.length ? errs.map(e => '<span class="g">422 ' + e + "</span>").join("\n") + "\n\n" : "") + lines.join("\n") + `\n\ntotal charged: ${total < 1299 && lines.length ? '<span class="r">$' + total.toFixed(2) + "</span>" : "$" + total.toFixed(2)}` + (total < 0 ? '\n<span class="r">negative total: the store pays the attacker</span>' : "");
+}
+$("#bz-in").addEventListener("input", bz); ["#bz-price", "#bz-qty"].forEach(s => $(s).addEventListener("change", bz)); bz();
+
+</script>
+</body>
+</html>

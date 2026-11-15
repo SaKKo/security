@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="th" data-lang="rails">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>การทดสอบ API · Rails Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600&display=swap" rel="stylesheet">
+<link rel="icon" href="../favicon.ico" sizes="32x32">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<link rel="manifest" href="../site.webmanifest">
+<meta name="theme-color" content="#000000">
+<link rel="stylesheet" href="../assets/site.css?v=8f1e007517">
+<script src="../assets/consent.js?v=9320b4a322"></script>
+</head>
+<body data-slug="r10-testing">
+<div class="win">
+  <div class="titlebar"><span class="dots"><i></i><i></i><i></i></span><span class="t">guest@websec: ~/websec/r10-testing/th — zsh — 100×40</span>
+    <a class="by" href="about.html" title="เกี่ยวกับผู้เขียน"><span class="w0">เขียนโดย </span>SaKKo</a>
+    <span class="lsw" role="group" aria-label="ภาษา"><a href="../r10-testing.html" data-setlang="en">EN</a><a href="r10-testing.html" aria-current="true" data-setlang="th">TH</a></span></div>
+  <nav class="top" aria-label="บทเรียน"><a href="index.html#rails" title="หน้าแรก">~/</a>
+<a class="trk" href="index.html#security">#1 ความปลอดภัย</a>
+<a class="trk on" href="r01-rails-api-app.html">#2 rails</a>
+<span class="grp">| พื้นฐาน:</span>
+<a href="r01-rails-api-app.html" title="แอป Rails แบบ API">r01·api-app</a>
+<a href="r02-rails-commands.html" title="คำสั่ง Rails">r02·commands</a>
+<a href="r03-migrations.html" title="Migration">r03·migrations</a>
+<span class="grp">| model:</span>
+<a href="r04-models.html" title="Model และ ApplicationRecord">r04·models</a>
+<a href="r05-model-callbacks.html" title="Model Callback">r05·model-hooks</a>
+<span class="grp">| controller:</span>
+<a href="r06-controllers.html" title="Controller และลำดับชั้นของ API">r06·controllers</a>
+<a href="r07-controller-callbacks.html" title="Controller Callback">r07·controller-hooks</a>
+<a href="r08-where-code-goes.html" title="Controller, Model หรือ Service?">r08·services</a>
+<span class="grp">| api:</span>
+<a href="r09-rest-routes.html" title="Route แบบ RESTful และ Resourceful">r09·rest-routes</a>
+<a href="r10-testing.html" aria-current="page" title="การทดสอบ API">r10·testing</a></nav>
+  <main>
+<div class="col">
+<p class="prompt">guest@websec ~ % <b>man r10-testing</b></p>
+<h1>การทดสอบ API</h1>
+<p class="lede">เราทดสอบด้วย Minitest ซึ่งเป็นค่าเริ่มต้นของ Rails model test ตรวจกฎ ส่วน integration test เรียก endpoint จริงผ่าน named route helper แล้วตรวจ status และ JSON</p>
+<h2>โครงสร้าง</h2><div class="code" data-label="text"><pre>test/
+├── test_helper.rb                     <span class="c"># loads Rails, fixtures :all, parallel workers</span>
+├── support/admin_integration_test.rb  <span class="c"># base class for admin endpoint tests</span>
+├── fixtures/*.yml                     <span class="c"># sample rows, one file per table</span>
+├── models/role_test.rb                <span class="c"># ActiveSupport::TestCase</span>
+├── services/token_service_test.rb
+└── controllers/api/v1/admin/roles_controller_test.rb   <span class="c"># ActionDispatch::IntegrationTest</span></pre></div><div class="code" data-label="ruby · test/test_helper.rb"><pre>ENV["RAILS_ENV"] ||= "test"
+require_relative "../config/environment"
+require "rails/test_help"
+require_relative "support/admin_integration_test"
+
+module ActiveSupport
+  class TestCase
+    parallelize(workers: :number_of_processors)
+    fixtures :all
+  end
+end</pre></div><h2>Fixture</h2><div class="code" data-label="yaml"><pre><span class="c"># test/fixtures/client_applications.yml</span>
+one:
+  name: HR Portal
+  app_key: key_one
+  api_secret: secret_one
+
+<span class="c"># test/fixtures/roles.yml</span>
+one:
+  client_application: one          <span class="c"># refer to another fixture by label; Rails fills the uuid</span>
+  name: MyString1
+  status: active</pre></div><p>ทุก test เริ่มต้นด้วยแถวเหล่านี้ที่โหลดไว้ใน transaction ซึ่งจะถูก rollback เมื่อจบ อ่านค่าด้วย <code>roles(:one)</code>, <code>client_applications(:one)</code></p><h2>model test</h2><div class="code" data-label="ruby · test/models/role_test.rb"><pre>require "test_helper"
+
+class RoleTest &lt; ActiveSupport::TestCase
+  def setup
+    @client_app = client_applications(:one)
+    @client_app.permissions.create!(name: "reports:view")
+  end
+
+  test "is invalid when permissions contain strings not in client_application.permissions" do
+    role = @client_app.roles.new(name: "intruder", permissions: ["reports:view", "admin:destroy"])
+
+    assert_not role.valid?
+    assert_includes role.errors[:permissions], "contains invalid permissions: admin:destroy"
+  end
+end</pre></div><h2>integration test</h2><div class="code" data-label="ruby · test/controllers/api/v1/admin/roles_controller_test.rb"><pre>require "test_helper"
+
+class Api::V1::Admin::RolesControllerTest &lt; AdminIntegrationTest
+  setup do
+    @admin_user = users(:one)
+    @client_application = client_applications(:one)
+    @role_one = roles(:one)
+  end
+
+  <span class="c"># ============================================================================</span>
+  <span class="c"># POST #create</span>
+  <span class="c"># ============================================================================</span>
+
+  test "POST #create creates a role and sets client_application_id from the URL" do
+    sign_in_as_admin(@admin_user) do
+      assert_difference -&gt; { @client_application.roles.count }, 1 do
+        post api_v1_admin_client_application_roles_url(client_application_id: @client_application.id),
+             params: { role: { name: "Content Manager", permissions: [] } }
+      end
+
+      assert_response :created
+      json_response = JSON.parse(response.body)
+      created_role = Role.find(json_response["role"]["id"])
+      assert_equal @client_application.id, created_role.client_application_id
+      assert_equal created_role.as_admin_json.as_json, json_response["role"]
+    end
+  end
+
+  test "POST #create returns 400 when the role key is missing" do
+    sign_in_as_admin(@admin_user) do
+      post api_v1_admin_client_application_roles_url(client_application_id: @client_application.id),
+           params: { name: "Direct Param" }
+
+      assert_response :bad_request
+      assert_equal "ActionController::ParameterMissing", response.parsed_body["type"]
+    end
+  end
+end</pre></div><div class="tablewrap"><table><thead><tr><th>ส่วน</th><th>ทำอะไร</th></tr></thead><tbody><tr><td><code>post …_url(…), params:, headers:</code></td><td>ส่ง request จริงผ่าน routing, middleware, filter และ action</td></tr><tr><td><code>assert_response :created</code></td><td>ตรวจ status (<code>:ok</code>, <code>:not_found</code>, <code>:bad_request</code>…)</td></tr><tr><td><code>JSON.parse(response.body) / response.parsed_body</code></td><td>JSON ในรูป Hash ที่ key เป็น string</td></tr><tr><td><code>assert_difference -&gt; { … }, 1 do</code></td><td>พิสูจน์ว่ามีแถวถูกสร้าง (หรือไม่ถูกสร้าง ด้วย <code>assert_no_difference</code>)</td></tr><tr><td><code>record.reload</code></td><td>อ่านใหม่หลัง update เพื่อตรวจสิ่งที่ถูกบันทึก</td></tr><tr><td><code>x.as_admin_json.as_json</code></td><td>เทียบกับ serializer ของ model เอง test จะได้ไม่ต้อง hard-code ทุก field</td></tr></tbody></table></div><h2>named path ใน test</h2><p>integration test มี route helper ให้ใช้ ให้ใช้มันแทนการพิมพ์ URL เอง เลือก route ใดก็ได้ด้านล่างเพื่อดูการเรียก helper และบรรทัด test โดย id ที่จำเป็นถูกเติมจาก path ให้แล้ว:</p><div class="demo"><header><b>route → helper → test</b><span>คลิกที่แถว</span></header><div class="body"><div class="rfind"><script type="application/json">{"rows": [{"name": "health", "verb": "GET", "path": "/health(.:format)", "ca": "application#health"}, {"name": "api_v1_admin_sessions", "verb": "POST", "path": "/api/v1/admin/sessions(.:format)", "ca": "api/v1/admin/sessions#create", "params": "{ user: { username: \"alice\", password: \"secret\", otp: \"123456\" } }", "expect": "created"}, {"name": "api_v1_admin_sessions_me", "verb": "GET", "path": "/api/v1/admin/sessions/me(.:format)", "ca": "api/v1/admin/sessions#me"}, {"name": "api_v1_admin_sessions", "verb": "DELETE", "path": "/api/v1/admin/sessions(.:format)", "ca": "api/v1/admin/sessions#destroy", "hide": true}, {"name": "toggle_admin_api_v1_admin_user", "verb": "POST", "path": "/api/v1/admin/users/:id/toggle_admin(.:format)", "ca": "api/v1/admin/users#toggle_admin"}, {"name": "activate_api_v1_admin_user_user_role", "verb": "POST", "path": "/api/v1/admin/users/:user_id/user_roles/:id/activate(.:format)", "ca": "api/v1/admin/user_roles#activate"}, {"name": "inactivate_api_v1_admin_user_user_role", "verb": "POST", "path": "/api/v1/admin/users/:user_id/user_roles/:id/inactivate(.:format)", "ca": "api/v1/admin/user_roles#inactivate"}, {"name": "api_v1_admin_user_user_roles", "verb": "GET", "path": "/api/v1/admin/users/:user_id/user_roles(.:format)", "ca": "api/v1/admin/user_roles#index"}, {"name": "api_v1_admin_user_user_roles", "verb": "POST", "path": "/api/v1/admin/users/:user_id/user_roles(.:format)", "ca": "api/v1/admin/user_roles#create", "params": "{ user_role: { role_id: @role.id } }", "expect": "created"}, {"name": "api_v1_admin_users", "verb": "GET", "path": "/api/v1/admin/users(.:format)", "ca": "api/v1/admin/users#index"}, {"name": "api_v1_admin_user", "verb": "GET", "path": "/api/v1/admin/users/:id(.:format)", "ca": "api/v1/admin/users#show"}, {"name": "api_v1_admin_client_application_roles", "verb": "GET", "path": "/api/v1/admin/client_applications/:client_application_id/roles(.:format)", "ca": "api/v1/admin/roles#index"}, {"name": "api_v1_admin_client_application_roles", "verb": "POST", "path": "/api/v1/admin/client_applications/:client_application_id/roles(.:format)", "ca": "api/v1/admin/roles#create", "params": "{ role: { name: \"Content Manager\", permissions: [\"read_articles\"] } }", "expect": "created"}, {"name": "api_v1_admin_client_application_role", "verb": "GET", "path": "/api/v1/admin/client_applications/:client_application_id/roles/:id(.:format)", "ca": "api/v1/admin/roles#show"}, {"name": "api_v1_admin_client_application_role", "verb": "PATCH", "path": "/api/v1/admin/client_applications/:client_application_id/roles/:id(.:format)", "ca": "api/v1/admin/roles#update", "params": "{ role: { name: \"Content Manager\", permissions: [\"read_articles\"] } }"}, {"name": "api_v1_admin_client_application_role", "verb": "PUT", "path": "/api/v1/admin/client_applications/:client_application_id/roles/:id(.:format)", "ca": "api/v1/admin/roles#update", "params": "{ role: { name: \"Content Manager\", permissions: [\"read_articles\"] } }"}, {"name": "api_v1_admin_client_application_permissions", "verb": "GET", "path": "/api/v1/admin/client_applications/:client_application_id/permissions(.:format)", "ca": "api/v1/admin/permissions#index"}, {"name": "api_v1_admin_client_applications", "verb": "GET", "path": "/api/v1/admin/client_applications(.:format)", "ca": "api/v1/admin/client_applications#index"}, {"name": "api_v1_admin_client_applications", "verb": "POST", "path": "/api/v1/admin/client_applications(.:format)", "ca": "api/v1/admin/client_applications#create", "params": "{ client_application: { name: \"HR Portal\", allowed_hosts: [\"hr.example.com\"] } }", "expect": "created"}, {"name": "api_v1_admin_client_application", "verb": "GET", "path": "/api/v1/admin/client_applications/:id(.:format)", "ca": "api/v1/admin/client_applications#show"}, {"name": "api_v1_admin_client_application", "verb": "PATCH", "path": "/api/v1/admin/client_applications/:id(.:format)", "ca": "api/v1/admin/client_applications#update", "params": "{ client_application: { webhook_url: \"https://hr.example.com/hooks\" } }"}, {"name": "api_v1_admin_client_application", "verb": "PUT", "path": "/api/v1/admin/client_applications/:id(.:format)", "ca": "api/v1/admin/client_applications#update", "params": "{ client_application: { webhook_url: \"https://hr.example.com/hooks\" } }"}, {"name": "api_v1_client_auth_login", "verb": "POST", "path": "/api/v1/client/auth/login(.:format)", "ca": "api/v1/client/auth#login", "params": "{ username: \"alice\", password: \"secret\", otp: \"123456\" }"}, {"name": "api_v1_client_auth_verify", "verb": "GET", "path": "/api/v1/client/auth/verify(.:format)", "ca": "api/v1/client/auth#verify"}, {"name": "api_v1_client_roles", "verb": "GET", "path": "/api/v1/client/roles(.:format)", "ca": "api/v1/client/roles#index"}, {"name": "api_v1_client_permissions", "verb": "GET", "path": "/api/v1/client/permissions(.:format)", "ca": "api/v1/client/permissions#index"}, {"name": "api_v1_public_two_factors_enroll", "verb": "POST", "path": "/api/v1/public/two_factors/enroll(.:format)", "ca": "api/v1/public/two_factors#enroll"}, {"name": "api_v1_public_two_factors_confirm", "verb": "POST", "path": "/api/v1/public/two_factors/confirm(.:format)", "ca": "api/v1/public/two_factors#confirm"}, {"name": "api_v1_public_two_factors_disable", "verb": "POST", "path": "/api/v1/public/two_factors/disable(.:format)", "ca": "api/v1/public/two_factors#disable"}], "l_click": "คลิกที่แถว route ด้านบน", "helper": "named helper", "test": "ใน integration test"}</script></div></div></div><ul><li><b>เปลี่ยนชื่อได้อย่างปลอดภัย</b>: เปลี่ยน path ใน <code>routes.rb</code> แล้วทุก test ตามไปเอง ถ้าลบ route ออก test จะล้มเหลวอย่างชัดเจนด้วย <code>NoMethodError</code> แทนที่จะได้ 404 เงียบๆ</li><li><b>อธิบายตัวเองได้</b>: ส่วนที่จำเป็นเป็น keyword argument การเห็น <code>client_application_id:</code> ในการเรียกจึงบอกได้ว่ามีการซ้อนกัน</li><li><b>ใช้ <code>_url</code></b> ใน test (ข้อตกลงของเรา) แต่ <code>_path</code> ก็ใช้ได้ query param ใส่ใน helper (<code>api_v1_admin_users_url(page: 2)</code>) หรือใน <code>params:</code> สำหรับ GET</li></ul><h2>test helper ของเรา</h2><h3>AdminIntegrationTest</h3><div class="code" data-label="ruby · test/support/admin_integration_test.rb"><pre>class AdminIntegrationTest &lt; ActionDispatch::IntegrationTest
+  DEFAULT_CUSTOM_HEADER = "XMLHttpRequest"
+
+  <span class="c"># every write request gets X-Requested-With automatically...</span>
+  [:post, :put, :patch, :delete].each do |method_name|
+    define_method(method_name) do |url, **args|
+      args[:headers] ||= {}
+      unless args.delete(:skip_custom_header)          <span class="c"># ...unless a test opts out</span>
+        args[:headers]["X-Requested-With"] ||= DEFAULT_CUSTOM_HEADER
+      end
+      super(url, **args)
+    end
+  end
+end
+
+<span class="c"># negative test:</span>
+post api_v1_admin_client_applications_url, params: {...}, skip_custom_header: true
+assert_response :forbidden</pre></div><h3>login โดยไม่ใช้ระบบ login จริง</h3><div class="code" data-label="ruby"><pre>def sign_in_as_admin(user)
+  Api::AppController.define_method(:fetch_cookies) { |_type| "mock_jwt_token" }   # any cookie
+  User.stub :find_by_jwt, user do                                                 <span class="c"># resolves to this user</span>
+    user.stub :is_admin?, true do
+      user.stub :jwt, "refreshed_mock_jwt_token" do
+        yield
+      end
+    end
+  end
+ensure
+  Api::AppController.remove_method(:fetch_cookies) if Api::AppController.instance_methods(false).include?(:fetch_cookies)
+end</pre></div><p><code>stub</code> ของ Minitest แทนที่ method เฉพาะภายใน block ส่วน <code>set_current_user</code> และ <code>check_permissions</code> ตัวจริงยังทำงาน ตรรกะการตรวจสิทธิ์จึงถูกทดสอบจริง</p><h3>test ของ client API</h3><div class="code" data-label="ruby · test/controllers/api/v1/client/roles_controller_test.rb"><pre>setup do
+  @client_application = client_applications(:one)
+  @headers = {
+    "X-App-Key" =&gt; @client_application.app_key,
+    "X-App-Secret" =&gt; JWT.encode({ sub: @client_application.app_key }, @client_application.api_secret, "HS256"),
+  }
+end
+
+test "GET #index returns unauthorized when authentication headers are missing" do
+  get api_v1_client_roles_url
+  assert_response :unauthorized
+end</pre></div><h2>การรัน test</h2><div class="term" data-title="zsh — ~/myapp"><script type="application/json">[{"c": "bin/rails test test/controllers/api/v1/admin/roles_controller_test.rb", "o": "Running 12 tests in a single process (parallelization threshold is 50)\nRun options: --seed 52011\n\n# Running:\n\n............\n\nFinished in 0.912s, 13.16 runs/s, 57.02 assertions/s.\n12 runs, 52 assertions, 0 failures, 0 errors, 0 skips"}, {"c": "bin/rails test test/controllers/api/v1/admin/roles_controller_test.rb -n \"/404/\"", "o": "Run options: -n /404/ --seed 1209\n\n# Running:\n\n...\n\n3 runs, 11 assertions, 0 failures, 0 errors, 0 skips", "n": "<code>-n<\/code> กรองตามชื่อ test ชื่อ test ของเราบอก verb, action และผลลัพธ์ จึงใช้กรองได้ดี"}, {"c": "bin/rails test test/models/role_test.rb:24", "o": "# Running:\n\nF\n\nFailure:\nRoleTest#test_is_invalid_when_permissions_contain_strings_not_in_client_application.permissions [test/models/role_test.rb:29]:\nExpected [\"contains invalid permissions: admin:destroy, users:delete\"] to include \"contains invalid permissions: admin:destroy\".\n\nbin/rails test test/models/role_test.rb:24\n\n1 runs, 2 assertions, 1 failures, 0 errors, 0 skips", "n": "เมื่อล้มเหลวจะพิมพ์ file:line และคำสั่งที่ใช้รัน test นั้นซ้ำ"}]</script></div><h2>สิ่งที่ต้องทดสอบในทุก endpoint</h2><ul><li>กรณีปกติ: status, JSON ตรงกับ <code>as_*_json</code>, ฐานข้อมูลเปลี่ยนจริง</li><li>validation ไม่ผ่าน → 400 พร้อม <code>details</code> และ <code>assert_no_difference</code></li><li>ไม่มี key ที่ห่อข้อมูล → 400 <code>ParameterMissing</code></li><li>ไม่พบ id → 404; <b>id ของ parent อื่น → 404</b> (IDOR)</li><li>ไม่ได้ login → 401; login แล้วแต่ไม่มีสิทธิ์ → 403</li><li>เปลี่ยนสถานะไม่ได้ → 400 <code>AASM::InvalidTransition</code></li></ul><div class="quiz" data-a="1"><p>ทำไม controller test ของเราถึงเรียก <code>api_v1_admin_client_application_roles_url(client_application_id: id)</code> แทน <code>"/api/v1/admin/client_applications/#{id}/roles"</code>?</p><div class="opts"><button type="button">string ใช้ใน integration test ไม่ได้</button><button type="button">helper จะล้มเหลวอย่างชัดเจนถ้า route เปลี่ยนหรือขาดส่วนที่จำเป็น</button><button type="button">helper เร็วกว่า</button><button type="button">string ข้าม router</button></div><p class="explain">พิมพ์ผิดใน string จะได้ 404 เงียบๆ แต่ helper จะ raise <code>NoMethodError</code> หรือ <code>UrlGenerationError</code></p></div><div class="quiz" data-a="1"><p>จะทดสอบว่า POST ที่ไม่มี <code>X-Requested-With</code> ถูกปฏิเสธได้อย่างไร โดยใช้ <code>AdminIntegrationTest</code>?</p><div class="opts"><button type="button">ส่ง <code>headers: {}</code></button><button type="button">ส่ง <code>skip_custom_header: true</code></button><button type="button">ใช้ <code>get</code> แทน</button><button type="button">ทดสอบไม่ได้</button></div><p class="explain"><code>post</code> ที่ถูก override จะเพิ่ม header ให้ เว้นแต่จะเลือกไม่ใช้ด้วย <code>skip_custom_header: true</code></p></div></div>
+
+<div class="col"><label class="readmark"><input type="checkbox" id="read-r10-testing"> ทำเครื่องหมายว่าอ่านบท r10 แล้ว</label><div class="pager"><a href="r09-rest-routes.html">◀ r09 Route แบบ RESTful และ Resourceful</a><a href="index.html#rails">~/ ▶</a></div></div>
+  </main>
+  <footer class="site">อ้างอิงจาก <a href="https://guides.rubyonrails.org/">Ruby on Rails Guides</a> (CC BY-SA 4.0) เฉพาะส่วนที่ใช้กับแอปแบบ API-only และแนวทางการเขียนโค้ดในโปรเจกต์ของเรา ตัวอย่างโค้ดดัดแปลงจากโค้ดจริงเพื่อใช้สอน</footer>
+</div>
+<script src="../assets/site.js?v=92ac7aa3f8"></script>
+<script>
+
+
+</script>
+<script src="../assets/widgets.js?v=b9f4e038ea"></script>
+</body>
+</html>

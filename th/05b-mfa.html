@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="th" data-lang="rails">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>05b การยืนยันตัวตนหลายปัจจัย · Web Security</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600&display=swap" rel="stylesheet">
+<link rel="icon" href="../favicon.ico" sizes="32x32">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<link rel="manifest" href="../site.webmanifest">
+<meta name="theme-color" content="#000000">
+<link rel="stylesheet" href="../assets/site.css?v=8f1e007517">
+<script src="../assets/consent.js?v=9320b4a322"></script>
+</head>
+<body data-slug="05b-mfa">
+<div class="win">
+  <div class="titlebar"><span class="dots"><i></i><i></i><i></i></span><span class="t">guest@websec: ~/websec/05b-mfa/th — zsh — 100×40</span>
+    <a class="by" href="about.html" title="เกี่ยวกับผู้เขียน"><span class="w0">เขียนโดย </span>SaKKo</a>
+    <span class="lsw" role="group" aria-label="ภาษา"><a href="../05b-mfa.html" data-setlang="en">EN</a><a href="05b-mfa.html" aria-current="true" data-setlang="th">TH</a></span>
+    <span class="langsw" role="group" aria-label="Code examples language"><span class="d">โค้ด:</span><button type="button" data-l="rails">rails</button><button type="button" data-l="node">node</button></span></div>
+  <nav class="top" aria-label="Sections"><a href="index.html" title="คู่มือความปลอดภัยเว็บแอปพลิเคชัน">~/</a>
+<a class="trk on" href="index.html#security">#1 ความปลอดภัย</a>
+<a class="trk" href="r01-rails-api-app.html">#2 rails</a>
+<span class="grp">|</span>
+<a href="01-introduction.html" title="บทนำ">01·บทนำ</a>
+<a href="02-sql-injection.html" title="SQL Injection">02·sql</a>
+<a href="03-unsafe-query-generation.html" title="การสร้าง query ที่ไม่ปลอดภัย">03·query</a>
+<a href="04-xss-and-other-injection.html" title="XSS และ injection แบบอื่น">04·xss</a>
+<span class="grp">| บัญชี:</span>
+<a href="05-authentication.html" title="การยืนยันตัวตน">05·auth</a>
+<a href="05b-mfa.html" aria-current="page" title="การยืนยันตัวตนหลายปัจจัย">05b·mfa</a>
+<a href="06-sessions.html" title="Session">06·session</a>
+<a href="07-csrf.html" title="Cross-Site Request Forgery">07·csrf</a>
+<a href="08-user-management.html" title="การจัดการผู้ใช้">08·ผู้ใช้</a>
+<a href="09-mass-assignment-and-authorization.html" title="Mass Assignment และ Authorization">09·authz</a>
+<span class="grp">| เบราว์เซอร์:</span>
+<a href="10-redirection-and-files.html" title="Redirect และไฟล์">10·ไฟล์</a>
+<a href="11-http-security-headers.html" title="HTTP Security Header">11·header</a>
+<a href="12-transport-cookies-third-party.html" title="การรับส่งข้อมูล คุกกี้ และสคริปต์บุคคลที่สาม">12·คุกกี้</a>
+<span class="grp">| เซิร์ฟเวอร์:</span>
+<a href="13-ssrf.html" title="Server-Side Request Forgery">13·ssrf</a>
+<a href="14-deserialization-and-xxe.html" title="Deserialization และ XXE">14·deserialize</a>
+<a href="15-environmental-security.html" title="ความปลอดภัยของสภาพแวดล้อม">15·secret</a>
+<a href="16-cryptography.html" title="การเข้ารหัสและการปกป้องข้อมูล">16·crypto</a>
+<a href="17-dependencies-and-cves.html" title="Dependency และ CVE">17·dependency</a>
+<span class="grp">| ดูแลระบบ:</span>
+<a href="18-intranet-and-admin.html" title="ความปลอดภัยของ intranet และ admin">18·admin</a>
+<a href="19-misconfiguration-and-errors.html" title="การตั้งค่าผิดพลาดและการจัดการ error">19·config</a>
+<a href="20-insecure-design.html" title="การออกแบบที่ไม่ปลอดภัยและ business logic">20·design</a>
+<a href="21-logging-and-incident-response.html" title="Logging การแจ้งเตือน และการรับมือเหตุการณ์">21·logging</a>
+<a href="22-additional-resources.html" title="แหล่งข้อมูลเพิ่มเติม">22·แหล่งข้อมูล</a>
+<span class="grp">| แบบสอบถาม:</span>
+<a href="q1-developer-survey.html" title="แบบสำรวจความปลอดภัยสำหรับนักพัฒนา">Q1·dev</a>
+<a href="q2-awareness-survey.html" title="แบบสำรวจความตระหนักรู้ภัยไซเบอร์">Q2·ทุกคน</a></nav>
+  <main>
+<div class="col">
+<p class="prompt">guest@websec ~ % <b>man 05b-mfa</b></p>
+<h1>05b · การยืนยันตัวตนหลายปัจจัย (MFA)</h1>
+<p class="lede">ปัจจัยที่สองทำให้รหัสผ่านที่ถูกขโมยไปไม่พอสำหรับการเข้าระบบอีกต่อไป แต่จะได้ผลก็ต่อเมื่อปัจจัยนั้นแยกจากรหัสผ่านจริง เดาไม่ได้ และทุกเส้นทาง login ตรวจมันเสมอ</p>
+<div class="rp no">Rails ไม่มี MFA ในตัว คุณต้องเลือกส่วนประกอบเอง: <code>rotp</code> สำหรับ TOTP, <code>encrypts</code> สำหรับเก็บ secret, Rack::Attack สำหรับจำกัดจำนวนครั้ง และ <code>webauthn</code> สำหรับ passkey</div><div class="tldr">ใช้แอป authenticator (TOTP) หรือ passkey เก็บ TOTP secret แบบเข้ารหัส ตรวจที่ server ด้วยช่วงเวลาคลาดเคลื่อนเล็กๆ ปฏิเสธรหัสที่ใช้ไปแล้ว จำกัดจำนวนครั้งที่ลอง ยืนยันการลงทะเบียนด้วยรหัสแรก และบังคับตรวจในที่เดียวที่ทุกเส้นทาง login ต้องผ่าน อย่าคิดระบบ "รหัสสุ่ม" ขึ้นมาเอง</div><h2>อะไรนับเป็นปัจจัยที่สอง</h2><p>ปัจจัยคือสิ่งที่คุณ<b>รู้</b> (รหัสผ่าน) สิ่งที่คุณ<b>มี</b> (โทรศัพท์, security key) หรือสิ่งที่คุณ<b>เป็น</b> (ลายนิ้วมือ) รหัสผ่านสองตัวก็ยังเป็นปัจจัยเดียว เป้าหมายคือ ผู้โจมตีที่ได้รหัสผ่านของคุณจากการ phishing หรือซื้อมา ก็ยัง login ไม่ได้</p><div class="tablewrap"><table><thead><tr><th>วิธี</th><th>ความแข็งแรง</th><th>จุดอ่อน</th></tr></thead><tbody><tr><td>Passkey / security key (WebAuthn)</td><td><span class="pill safe">ดีที่สุด</span></td><td>ผูกกับโดเมนจริง เว็บ phishing จึงไม่ได้อะไรเลย</td></tr><tr><td>แอป authenticator (TOTP)</td><td><span class="pill safe">ดี</span></td><td>หน้า phishing ที่ทำงานแบบ real-time ส่งต่อตัวเลข 6 หลักได้ภายใน 30 วินาที</td></tr><tr><td>การกดอนุมัติแบบ push</td><td><span class="pill meh">พอใช้</span></td><td>"MFA fatigue": ส่งคำขอรัวๆ จนมีคนกดยอมรับ</td></tr><tr><td>รหัสทาง SMS / email</td><td><span class="pill bad">อ่อน</span></td><td>SIM swap, การดักจับ SS7 หรือบัญชีอีเมลเป็นบัญชีเดียวกับที่ถูกโจมตี</td></tr></tbody></table></div><h2>ทำไมไม่เก็บตัวเลขสุ่มแล้วเทียบใน controller ไปเลย?</h2><p>มันดูเหมือน MFA และเป็นแบบทำเองที่เราเจอบ่อยที่สุดตอนรีวิวโค้ด:</p><div class="code" data-label="ruby · ✗ don&#x27;t"><pre><span class="c"># ✗ home-made "2FA"</span>
+class Api::V1::SessionsController &lt; Api::V1::AppController
+  def create
+    user = User.find_by!(username: params[:username])
+    raise AppAuthenticationError unless user.authenticate(params[:password])
+    code = rand(100000..999999).to_s
+    user.update!(otp_code: code)                      <span class="c"># plaintext, no expiry</span>
+    update_cookies(:bearer, user.jwt("bearer"))       # session issued already!
+    render json: { success: true, otp: code }         <span class="c"># "the app shows it to the user"</span>
+  end
+
+  def verify_otp
+    if params[:code] == current_user.otp_code         <span class="c"># unlimited tries, reusable</span>
+      current_user.update!(otp_verified: true)        <span class="c"># one flag for all sessions</span>
+      render json: { success: true }
+    else
+      render json: { success: false }, status: :unauthorized
+    end
+  end
+end</pre></div><p>ลองนับปัญหาดู แล้วแก้ทีละข้อใน lab ด้านล่าง และดูว่าการโจมตีไหนยังได้ผลอยู่:</p><div class="demo"><header><b>lab: โจมตี 2FA แบบทำเอง</b><span>เปิดปิดการแก้ไขแล้วดูผล</span></header><div class="body"><div class="naive"><script type="application/json">{"toggles": [{"id": "channel", "label": "ส่งรหัสทาง SMS/email <b>ไม่ใช่<\/b>ใน API response", "totp": "รหัสมาจากแอป authenticator ของผู้ใช้ server ไม่เคยส่งรหัสออกไป"}, {"id": "random", "label": "<code>SecureRandom.random_number<\/code> ไม่ใช่ <code>rand<\/code>", "totp": "secret คือ 160 bit สุ่มจาก <code>ROTP::Base32.random<\/code>"}, {"id": "hash", "label": "เก็บ digest ของรหัส ไม่ใช่ตัวรหัส", "totp": "ไม่มีการเก็บรหัสเลย ส่วน secret ถูกเข้ารหัส (<code>encrypts :otp_secret<\/code>)"}, {"id": "expire", "label": "รหัสหมดอายุใน 5 นาที", "totp": "รหัสเปลี่ยนทุก 30 วินาทีโดยการออกแบบ"}, {"id": "once", "label": "ใช้ได้ครั้งเดียว: ลบทิ้งหลังใช้สำเร็จ"}, {"id": "limit", "label": "ล็อกหลังลองผิด 5 ครั้ง (ต่อบัญชี)"}, {"id": "gate", "label": "ไม่ออก session จนกว่าจะตรวจรหัสผ่าน และมีจุดตรวจเดียวที่ทุกเส้นทาง login ใช้"}], "attacks": [{"label": "ผู้โจมตีมีรหัสผ่านและอ่าน response ของการ login", "rules": [{"if": ["totp"], "v": "ok", "t": "ไม่มีอะไรให้อ่าน: รหัสอยู่ในโทรศัพท์ของผู้ใช้"}, {"if": ["channel"], "v": "ok", "t": "รหัสไม่ได้อยู่ใน response"}, {"if": [], "v": "no", "t": "รหัสอยู่ใน JSON ตรงนั้นเลย นี่คือรหัสผ่านตัวที่สองที่ยื่นให้คนที่มีรหัสผ่านตัวแรก"}]}, {"label": "ข้ามขั้นที่สอง: เรียก endpoint อื่นทันทีหลังขั้นรหัสผ่าน", "rules": [{"if": ["gate"], "v": "ok", "t": "ยังไม่มี session จนกว่าจะตรวจรหัสผ่าน"}, {"if": [], "v": "no", "t": "cookie ถูกออกให้ตั้งแต่ขั้นแรก endpoint ไหนที่ลืมตรวจ <code>otp_verified<\/code> ก็เปิดอยู่"}]}, {"label": "brute-force ตัวเลข 6 หลัก", "rules": [{"if": ["limit"], "v": "ok", "t": "เดา 5 ครั้งจาก 1,000,000: 0.0005%"}, {"if": ["totp"], "v": "meh", "t": "รหัสหมุนเวียน แต่ถ้าลองได้ 10 ครั้ง/วินาที ผู้โจมตีก็ยังชนะได้ภายในไม่กี่วัน การจำกัดจำนวนครั้งยังเป็นหน้าที่ของคุณ"}, {"if": ["expire"], "v": "meh", "t": "ประมาณ 3,000 ครั้งต่อรหัส 5 นาที (10 ครั้ง/วินาที): ~0.3% ต่อรหัส และขอรหัสใหม่ได้เรื่อยๆ"}, {"if": [], "v": "no", "t": "รหัสไม่เคยเปลี่ยน ยิง 1,000,000 request ชนะแน่นอน"}]}, {"label": "อ่านรหัสจาก backup ฐานข้อมูลที่รั่ว", "rules": [{"if": ["totp"], "v": "ok", "t": "secret ถูกเข้ารหัส และ key ไม่ได้อยู่ใน backup"}, {"if": ["hash"], "v": "ok", "t": "รั่วแค่ digest (แต่ตัวเลข 6 หลัก hash ได้เร็ว จึงควรให้อายุสั้นด้วย)"}, {"if": ["expire"], "v": "meh", "t": "รหัสใน 5 นาทีล่าสุดยังใช้ได้"}, {"if": [], "v": "no", "t": "รหัสปัจจุบันของผู้ใช้ทุกคน เป็น plain text และใช้ได้ตลอดไป"}]}, {"label": "ใช้รหัสซ้ำที่เห็นจาก log, screenshot หรือแอบมอง", "rules": [{"if": ["totp", "once"], "v": "ok", "t": "time step นี้ถูกใช้ไปแล้ว (ตรวจด้วย <code>after:<\/code>)"}, {"if": ["totp"], "v": "meh", "t": "ใช้ได้นานสุดประมาณ 60 วินาที ถ้าไม่ปฏิเสธ time step ที่ใช้ไปแล้ว"}, {"if": ["once"], "v": "ok", "t": "ถูกลบหลังใช้ครั้งแรก"}, {"if": ["expire"], "v": "meh", "t": "ใช้ได้จนกว่าจะหมดอายุ"}, {"if": [], "v": "no", "t": "ใช้ได้ตลอดไป"}]}, {"label": "ทำนายรหัสถัดไปจากรหัสก่อนหน้า", "rules": [{"if": ["totp"], "v": "ok", "t": "HMAC-SHA1 ของ secret ที่คุณไม่มี"}, {"if": ["random"], "v": "ok", "t": "ค่าสุ่มที่ปลอดภัยทางการเข้ารหัส"}, {"if": [], "v": "meh", "t": "<code>rand<\/code> คือ Mersenne Twister ซึ่งไม่ได้ออกแบบให้เดาไม่ได้ เมื่อมีคนเห็นผลลัพธ์มากพอ"}]}], "presets": [{"id": "naive", "label": "ตามโค้ดข้างบน", "on": []}, {"id": "fixed", "label": "แก้ทุกข้อ", "on": ["channel", "random", "hash", "expire", "once", "limit", "gate"]}, {"id": "totp", "label": "TOTP ไม่ตรวจซ้ำ / ไม่จำกัดครั้ง", "on": ["gate"]}, {"id": "totp2", "label": "TOTP แบบทำครบ", "on": ["channel", "random", "hash", "expire", "once", "limit", "gate"]}], "l_design": "การออกแบบ", "l_attack": "การโจมตี", "l_result": "ผลลัพธ์", "l_blocked": "การโจมตีที่ถูกกัน", "l_totpnote": "เมื่อใช้ TOTP server ไม่เก็บรหัสเลย แต่การกันการใช้ซ้ำ การจำกัดจำนวนครั้ง และจุดตรวจเดียว ยังเป็นโค้ดที่คุณต้องเขียนเอง"}</script></div></div></div><p>แม้ติ๊กครบทุกข้อ แบบทำเองก็ยังเป็นแค่ SMS code เวอร์ชันที่อ่อนกว่า: คุณต้องดูแลการส่ง การหมดอายุ การ hash การล็อก และจุดตรวจ session เอง TOTP ตัดการเก็บรหัสออกไปทั้งหมด bug ทั้งกลุ่มจึงหายไป</p><div class="warn"><b>"ใน controller" คือส่วนหนึ่งของ bug</b> เรามีเส้นทาง login สองทาง (<code>Admin::SessionsController#create</code> และ <code>Client::AuthController#login</code>) การตรวจที่ copy ไปวางใน controller หนึ่ง คือการตรวจที่หายไปจากอีก controller หนึ่ง ให้เก็บการตรวจไว้ใน model (<code>user.verify_otp</code>) และให้ทุกเส้นทาง login เรียกมัน<i>ก่อน</i>ออก session หรือ token ใดๆ</div><div class="anim" data-actors="ผู้โจมตี (มีรหัสผ่าน)|API" data-title="ข้ามขั้น: ออก session ก่อนขั้นที่สอง"><script type="application/json">[{"f": 0, "t": 1, "l": "POST /sessions  username + password", "c": "ขั้นแรกสำเร็จ"}, {"f": 1, "t": 0, "l": "Set-Cookie: bearer=…  {otp_required: true}", "k": "a", "c": "bug: cookie ของ session เต็มรูปแบบถูกออกให้<i>ก่อน<\/i>ปัจจัยที่สอง"}, {"n": 0, "l": "ignores the OTP screen", "k": "a", "c": "ผู้โจมตีไม่เปิดหน้ากรอก OTP เลย front end เป็นสิ่งเดียวที่บังคับขั้นนี้"}, {"f": 0, "t": 1, "l": "GET /admin/users  Cookie: bearer=…", "k": "a", "c": "endpoint ไหนที่ไม่ตรวจ <code>otp_verified<\/code> ก็ตอบกลับ"}, {"f": 1, "t": 0, "l": "200 OK: user list", "k": "a", "c": "ข้าม MFA ได้โดยไม่ต้องรู้ตัวเลขสักหลัก"}]</script></div><h2>brute force ขึ้นกับจำนวนครั้งที่ลอง ไม่ใช่จำนวนหลัก</h2><p>ตัวเลข 6 หลักมีความเป็นไปได้แค่หนึ่งล้านแบบ สิ่งที่ปกป้องมันคือจำนวนครั้งที่คุณยอมให้เดา ลองปรับตัวเลขดู:</p><div class="demo"><header><b>เครื่องคิด: โอกาสที่ผู้โจมตีเดารหัสถูก</b><span>ปรับค่าจำกัด</span></header><div class="body"><div class="brute"><script type="application/json">{"rates": [[6, "6 / นาที"], [60, "60 / นาที"], [600, "600 / นาที (10/วินาที)"], [6000, "6,000 / นาที (100/วินาที)"]], "locks": [[0, "ไม่มี"], [10, "10 ครั้งต่อ 15 นาที"], [5, "5 ครั้งต่อ 15 นาที"], [-10, "ล็อกบัญชีหลัง 10 ครั้ง"]], "valids": [[1, "1 (รหัสตรงตัว)"], [2, "2 (TOTP, drift_behind: 1)"], [3, "3 (TOTP, ±1)"]], "times": [[3600, "1 ชั่วโมง"], [86400, "1 วัน"], [2592000, "30 วัน"]], "l_rate": "ความเร็วผู้โจมตี", "l_lock": "การจำกัดจำนวนครั้ง", "l_valid": "จำนวนรหัสที่ยอมรับพร้อมกัน", "l_time": "ระยะเวลาโจมตี", "l_guesses": "จำนวนการเดาที่ถึงจุดตรวจ", "l_chance": "โอกาสสำเร็จ", "l_in": "ใน"}</script></div></div></div><p>ไม่จำกัดครั้งที่ 10 ครั้ง/วินาทีเป็นเวลาหนึ่งวัน: แทบแน่นอนว่าสำเร็จ ห้าครั้งต่อ 15 นาทีเป็นเวลาหนึ่งเดือน: ประมาณ 1.4% ล็อกบัญชีหลังรหัสผิด 10 ครั้งและแจ้งผู้ใช้: 0.001% ให้จำกัดทั้งต่อบัญชี<i>และ</i>ต่อ IP และนับ OTP ที่ผิดแยกจากรหัสผ่านที่ผิด</p><h2>TOTP ทำงานอย่างไร</h2><ol><li>ตอนลงทะเบียน server สร้าง<b>secret</b> แบบสุ่มแล้วแสดงครั้งเดียว ในรูป QR code ของ URI <code>otpauth://</code> โทรศัพท์จะเก็บค่านี้ไว้</li><li>ทั้งสองฝั่งคำนวณ <code>T = floor(unix_time / 30)</code></li><li>ทั้งสองฝั่งคำนวณ <code>HMAC-SHA1(secret, T)</code> แล้วตัดเหลือ 6 หลัก (RFC 6238)</li><li>หลังลงทะเบียนแล้ว server ไม่ส่งอะไรไปที่โทรศัพท์อีกเลย secret เดียวกัน + นาฬิกาเดียวกัน = รหัสเดียวกัน</li></ol><div class="demo"><header><b>ของจริง: TOTP ที่คำนวณในเบราว์เซอร์ของคุณ</b><span>พิมพ์รหัสจากโทรศัพท์ใส่ฝั่ง server</span></header><div class="body"><div class="totp"><script type="application/json">{"issuer": "FieldGuide", "l_secret": "secret ที่ใช้ร่วมกัน (Base32) แสดงครั้งเดียวตอนลงทะเบียน", "l_new": "secret ใหม่", "l_phone": "โทรศัพท์ (แอป authenticator)", "l_skew": "นาฬิกาโทรศัพท์คลาดเคลื่อน", "l_server": "server (verify_otp)", "l_verify": "ตรวจ", "l_paste": "ใช้รหัสจากโทรศัพท์", "l_window": "ยอมรับ", "l_w0": "เฉพาะ step ปัจจุบัน", "l_w1": "ปัจจุบัน + ก่อนหน้า (drift_behind: 1)", "l_w2": "±1 step", "l_replay": "ปฏิเสธ time step ที่ถูกใช้ไปแล้ว", "l_ok": "ยอมรับ", "l_reject": "ปฏิเสธ: ไม่ตรงกับรหัสในช่วงที่ยอมรับ", "l_replayed": "ปฏิเสธ: รหัสถูกใช้ไปแล้ว", "l_six": "ใส่ตัวเลข 6 หลัก", "l_nocrypto": "เบราว์เซอร์ของคุณไม่อนุญาต Web Crypto ที่นี่ เปิดหน้านี้ผ่าน https เพื่อรัน demo"}</script></div></div></div><p>ลองดู: กด <b>ใช้รหัสจากโทรศัพท์</b> สองครั้ง ครั้งที่สองจะถูกปฏิเสธเมื่อเปิดการกันใช้ซ้ำ และถูกยอมรับเมื่อปิด เลื่อนนาฬิกาโทรศัพท์ไปที่ −30 วินาที: <code>drift_behind: 1</code> ยังยอมรับ แต่ −60 วินาทีจะไม่ผ่าน คุณยังพิมพ์ secret ลงในแอป authenticator จริงแล้วดูว่ามันแสดงรหัสเดียวกันได้ด้วย</p><h2>สอง flow หลัก</h2><div class="anim" data-actors="ผู้ใช้|API|แอป authenticator" data-title="การลงทะเบียน"><script type="application/json">[{"f": 0, "t": 1, "l": "POST /two_factors/enroll", "c": "ผู้ใช้ยืนยันตัวตนด้วยรหัสผ่านแล้ว"}, {"n": 1, "l": "otp_secret = ROTP::Base32.random (encrypted)", "k": "k", "c": "secret ถูกเก็บแบบเข้ารหัส และ <code>otp_required<\/code> ยังเป็น false"}, {"f": 1, "t": 0, "l": "provisioning_uri → QR code", "c": "แสดงครั้งเดียว หลังจากนี้ห้ามส่ง secret กลับไปอีก"}, {"f": 0, "t": 2, "l": "scan", "c": "แอปเก็บ secret ไว้"}, {"f": 2, "t": 0, "l": "482 913", "c": "ผู้ใช้อ่านรหัสแรก…"}, {"f": 0, "t": 1, "l": "POST /two_factors/confirm {code}", "c": "…และพิสูจน์ว่าการสแกนสำเร็จ"}, {"n": 1, "l": "verify_otp ✓ → otp_required = true", "k": "k", "c": "ตอนนี้เท่านั้นที่ MFA ถูกเปิด ถ้าข้ามขั้นนี้ การสแกนที่ผิดพลาดจะทำให้ผู้ใช้เข้าระบบไม่ได้ตลอดไป"}, {"f": 1, "t": 0, "l": "recovery codes (shown once, stored hashed)", "c": "ใช้กรณีโทรศัพท์หาย แต่ละรหัสใช้ได้ครั้งเดียว"}]</script></div><div class="anim" data-actors="ผู้ใช้|API" data-title="การ login"><script type="application/json">[{"f": 0, "t": 1, "l": "POST /sessions {username, password, otp}", "c": "login ของ admin เราส่งทั้งสามค่าพร้อมกัน (UI แบบสองหน้าจอใช้ token \"pending\" อายุสั้นระหว่างขั้นได้ แต่ห้ามเป็น session จริง)"}, {"n": 1, "l": "Rack::Attack: ≤ 5 tries / 5 min / username", "k": "k", "c": "ถูกจำกัดก่อนเริ่มทำงานใดๆ"}, {"n": 1, "l": "password ✓", "c": "ปัจจัยที่หนึ่ง"}, {"n": 1, "l": "otp_required? else → setup_url", "c": "ยังไม่ลงทะเบียน? ปฏิเสธแล้วส่งไปหน้าลงทะเบียน"}, {"n": 1, "l": "verify_otp(otp) ✓ (unused time step)", "k": "k", "c": "ปัจจัยที่สอง พร้อมตรวจการใช้ซ้ำ"}, {"f": 1, "t": 0, "l": "Set-Cookie: bearer=… (only now)", "c": "session มีอยู่หลังจากผ่านทั้งสองปัจจัยแล้วเท่านั้น"}]</script></div><h2>ในโค้ด Rails ของเรา</h2><div class="code" data-label="ruby · app/models/user.rb"><pre>class User &lt; ApplicationRecord
+  encrypts :otp_secret                       <span class="c"># Active Record encryption at rest</span>
+  <span class="c"># ApplicationRecord: has_paper_trail skip: [:otp_secret], as_json drops "otp" columns</span>
+
+  def enable_two_factor!
+    raise AppError.new("Two-factor authentication is already enabled. Disable it first.") if otp_required?
+    self.otp_secret = ROTP::Base32.random
+    self.otp_required = false                <span class="c"># not on until confirmed</span>
+    save!
+  end
+
+  def confirm_two_factor!(code)
+    verify_otp(code) ? update!(otp_required: true) : false
+  end
+
+  def verify_otp(code)
+    return false if otp_secret.blank? || code.blank?
+    !totp.verify(code.to_s.strip, drift_behind: 1).nil?
+  end
+
+  def provisioning_uri
+    totp.provisioning_uri(email.presence || username) if otp_secret.present?
+  end
+
+  def totp
+    @totp ||= ROTP::TOTP.new(otp_secret, issuer: "MyApp")
+  end
+end</pre></div><p>ส่วนที่ดีอยู่แล้ว: secret ถูกเข้ารหัส และไม่อยู่ใน audit log และ JSON การลงทะเบียนยืนยันด้วยรหัสแรก การตรวจอยู่ใน model และทั้งสองเส้นทาง login ปฏิเสธผู้ใช้ที่ไม่มี <code>otp_required?</code> และตรวจรหัสก่อนออก cookie หรือ token สิ่งที่ควรเพิ่ม:</p><h3>1. ปฏิเสธรหัสที่ใช้ไปแล้ว</h3><div class="code" data-label="ruby"><pre><span class="c"># migration: add_column :users, :otp_last_used_at, :bigint</span>
+
+def verify_otp(code)
+  return false if otp_secret.blank? || code.blank?
+  ts = totp.verify(code.to_s.strip, drift_behind: 1, after: otp_last_used_at)  <span class="c"># nil if reused</span>
+  return false unless ts
+  update_columns(otp_last_used_at: ts)
+  true
+end</pre></div><h3>2. จำกัดจำนวนครั้งในการตรวจ OTP</h3><div class="code" data-label="ruby"><pre><span class="c"># config/initializers/rack_attack.rb</span>
+Rack::Attack.throttle("logins/username", limit: 5, period: 5.minutes) do |req|
+  if req.post? &amp;&amp; ["/api/v1/admin/sessions", "/api/v1/client/auth/login"].include?(req.path)
+    (req.params.dig("user", "username") || req.params["username"]).to_s.downcase.presence
+  end
+end</pre></div><h3>3. recovery code ที่ hash แล้วและใช้ได้ครั้งเดียว</h3><div class="code" data-label="ruby"><pre>def generate_recovery_codes!
+  codes = Array.new(10) { SecureRandom.alphanumeric(10).downcase }
+  update!(otp_recovery_digests: codes.map { BCrypt::Password.create(_1) })   <span class="c"># store hashes only</span>
+  codes                                                                       <span class="c"># show once</span>
+end
+
+def use_recovery_code!(code)
+  digest = otp_recovery_digests.find { BCrypt::Password.new(_1) == code.to_s.strip.downcase }
+  digest ? update!(otp_recovery_digests: otp_recovery_digests - [digest]) : false
+end</pre></div><h3>4. ปกป้องปุ่มปิด</h3><p><code>disable_two_factor!</code> ควรต้องใส่รหัสผ่านใหม่<i>และ</i>รหัส OTP ปัจจุบัน บันทึก audit event และแจ้งผู้ใช้ทางอีเมล ผู้โจมตีที่ขโมย session ได้จะพุ่งไปที่ปุ่มนี้ก่อน</p><h2>เช็กลิสต์</h2><ul><li>ใช้ TOTP หรือ passkey ใช้ SMS เป็นทางสำรองเท่านั้น และห้ามใช้ email อย่างเดียวกับพนักงาน</li><li>secret: <code>ROTP::Base32.random</code>, <code>encrypts</code>, ไม่อยู่ใน log, JSON และ audit trail และแสดงเฉพาะตอนลงทะเบียน</li><li>เปิดใช้การลงทะเบียนหลังจากใส่รหัสแรกถูกต้องเท่านั้น</li><li>การตรวจอยู่ใน model และทุกเส้นทาง login เรียกมันก่อนออก session หรือ token</li><li>ช่วงคลาดเคลื่อนไม่เกิน 1 step และปฏิเสธ time step ที่ใช้ไปแล้ว</li><li>จำกัดจำนวนครั้งทั้งต่อบัญชีและต่อ IP และแจ้งเตือนเมื่อผิดซ้ำหลายครั้ง</li><li>recovery code ที่ hash แล้วและใช้ได้ครั้งเดียว</li><li>การปิด MFA หรือเปลี่ยนโทรศัพท์ต้องยืนยันตัวตนใหม่และส่งการแจ้งเตือน</li></ul><div class="quiz" data-a="1"><p>endpoint login คืนค่า <code>{ otp: "482913" }</code> เพื่อให้แอปมือถือแสดงผล ขั้นที่สองนี้เพิ่มความปลอดภัยเท่าไร?</p><div class="opts"><button type="button">มาก: เพราะสุ่ม</button><button type="button">ไม่เลย: ใครที่มีรหัสผ่านก็ได้รหัสไปด้วย</button><button type="button">บ้าง ถ้ามันหมดอายุ</button><button type="button">บ้าง ถ้า hash ไว้ในฐานข้อมูล</button></div><p class="explain">ปัจจัยที่สองต้องไปถึงผู้ใช้ผ่านช่องทางที่ผู้โจมตีควบคุมไม่ได้</p></div><div class="quiz" data-a="1"><p>ทำไมการลงทะเบียนต้องขอรหัสแรกก่อนตั้งค่า <code>otp_required: true</code>?</p><div class="opts"><button type="button">เพื่อชะลอผู้โจมตี</button><button type="button">เพื่อพิสูจน์ว่าแอปเก็บ secret ถูกต้อง ผู้ใช้จะได้ไม่ถูกล็อกออกจากระบบ</button><button type="button">เพราะ ROTP บังคับ</button><button type="button">เพื่อสร้าง secret</button></div><p class="explain">ถ้าไม่ทำ การสแกนที่ล้มเหลวหรือพิมพ์ผิดตอนกรอกเอง จะทำให้บัญชีถูกล็อกในการ login ครั้งถัดไป</p></div><div class="quiz" data-a="1"><p>ผู้โจมตีเดาได้ 10 ครั้งต่อวินาทีโดยไม่มีการจำกัด TOTP 6 หลักจะถูกเจาะในเวลาประมาณเท่าไร?</p><div class="opts"><button type="button">ไม่มีทาง: เปลี่ยนทุก 30 วินาที</button><button type="button">ประมาณหนึ่งวัน</button><button type="button">ประมาณหนึ่งปี</button><button type="button">ประมาณหนึ่งศตวรรษ</button></div><p class="explain">การหมุนเวียนรหัสช่วยได้ไม่มาก การเดาแต่ละครั้งมีโอกาสประมาณ 2 ในล้าน และการเดา 864,000 ครั้งต่อวันทำให้สำเร็จได้ค่อนข้างแน่ มีแค่การจำกัดจำนวนครั้งที่แก้ได้</p></div></div>
+
+<div class="col"><label class="readmark"><input type="checkbox" id="read-05b-mfa"> ทำเครื่องหมายว่าอ่านหัวข้อ 05b แล้ว</label><div class="pager"><a href="05-authentication.html">◀ 05 การยืนยันตัวตน</a><a href="06-sessions.html">06 Session ▶</a></div></div>
+  </main>
+  <footer class="site">อ้างอิงจาก <a href="https://guides.rubyonrails.org/security.html">Ruby on Rails Security Guide</a> (CC BY-SA 4.0), <a href="https://cheatsheetseries.owasp.org/">OWASP Cheat Sheet Series</a>, <a href="https://owasp.org/Top10/2025/">OWASP Top 10:2025</a> และ <a href="https://infosec.mozilla.org/guidelines/web_security.html">Mozilla Web Security Guidelines</a> เขียนสำหรับทีมพัฒนาของเรา ตัวอย่างโค้ดเพื่อการอธิบาย ข้อความในผลการจำลองบางส่วนยังเป็นภาษาอังกฤษ</footer>
+</div>
+<script src="../assets/site.js?v=92ac7aa3f8"></script>
+<script src="../assets/widgets.js?v=b9f4e038ea"></script>
+<script>
+// ---------- 05b mfa widgets ----------
+const B32 = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+function b32encode(bytes) { let bits = "", out = ""; bytes.forEach(b => bits += b.toString(2).padStart(8, "0")); for (let i = 0; i + 5 <= bits.length; i += 5) out += B32[parseInt(bits.slice(i, i + 5), 2)]; return out; }
+function b32decode(s) { let bits = ""; for (const c of s.replace(/[\s=]/g, "").toUpperCase()) { const v = B32.indexOf(c); if (v >= 0) bits += v.toString(2).padStart(5, "0"); } const out = []; for (let i = 0; i + 8 <= bits.length; i += 8) out.push(parseInt(bits.slice(i, i + 8), 2)); return new Uint8Array(out); }
+async function hotp(keyBytes, counter) {
+  const key = await crypto.subtle.importKey("raw", keyBytes, { name: "HMAC", hash: "SHA-1" }, false, ["sign"]);
+  const msg = new ArrayBuffer(8), dv = new DataView(msg);
+  dv.setUint32(0, Math.floor(counter / 4294967296)); dv.setUint32(4, counter >>> 0);
+  const h = new Uint8Array(await crypto.subtle.sign("HMAC", key, msg)), o = h[h.length - 1] & 15;
+  const bin = ((h[o] & 127) << 24) | (h[o + 1] << 16) | (h[o + 2] << 8) | h[o + 3];
+  return String(bin % 1000000).padStart(6, "0");
+}
+$$(".totp").forEach(w => {
+  const d = JSON.parse($(":scope > script", w).textContent);
+  if (!(window.crypto && crypto.subtle)) { w.insertAdjacentHTML("afterbegin", `<p class="r">${esc(d.l_nocrypto)}</p>`); return; }
+  w.insertAdjacentHTML("afterbegin", `<div class="box"><p class="cap">${esc(d.l_secret)}</p><div class="row"><span class="secret"></span><button class="btn" type="button" data-a="new">${esc(d.l_new)}</button></div><p class="uri"></p></div>
+  <div class="grid2" style="margin-top:10px"><div class="box"><p class="cap">${esc(d.l_phone)}</p><div class="big" aria-live="off">------</div><div class="bar"><span></span></div><div class="d" style="font-size:12px"><span class="left"></span> · T = <span class="tstep"></span></div>
+  <label style="display:block;margin-top:8px">${esc(d.l_skew)}: <b class="skewv">0s</b><input type="range" min="-120" max="120" step="5" value="0" data-k="skew"></label></div>
+  <div class="box"><p class="cap">${esc(d.l_server)}</p><div class="verify"><input type="text" inputmode="numeric" maxlength="6" placeholder="123456" aria-label="code"><button class="btn on" type="button" data-a="verify">${esc(d.l_verify)}</button><button class="btn" type="button" data-a="copy">${esc(d.l_paste)}</button></div>
+  <label style="display:block">${esc(d.l_window)} <select data-k="win" style="width:auto"><option value="0">${esc(d.l_w0)}</option><option value="1" selected>${esc(d.l_w1)}</option><option value="2">${esc(d.l_w2)}</option></select></label>
+  <label style="display:flex;gap:6px;align-items:center;margin-top:6px"><input type="checkbox" data-k="replay" checked> ${esc(d.l_replay)}</label>
+  <div class="log" style="margin-top:8px;max-height:180px" aria-live="polite"></div></div></div>`);
+  let key, secret, used = new Set(), phoneCode = "";
+  const log = $(".log", w), skew = () => +$("[data-k=skew]", w).value;
+  function newSecret() {
+    const b = crypto.getRandomValues(new Uint8Array(20)); secret = b32encode(b); key = b32decode(secret); used = new Set();
+    $(".secret", w).textContent = secret.match(/.{1,4}/g).join(" ");
+    $(".uri", w).textContent = `otpauth://totp/${d.issuer}:alice?secret=${secret}&issuer=${d.issuer}`;
+    log.textContent = ""; tick();
+  }
+  async function tick() {
+    const now = Date.now() / 1000 + skew(), T = Math.floor(now / 30), left = 30 - Math.floor(now % 30);
+    phoneCode = await hotp(key, T);
+    $(".big", w).textContent = phoneCode.slice(0, 3) + " " + phoneCode.slice(3);
+    $(".tstep", w).textContent = T; $(".left", w).textContent = `${left}s`;
+    const bar = $(".bar span", w); bar.style.width = (left / 30 * 100) + "%"; bar.classList.toggle("low", left <= 5);
+    $(".skewv", w).textContent = (skew() > 0 ? "+" : "") + skew() + "s";
+  }
+  async function verify() {
+    const input = $(".verify input", w).value.replace(/\D/g, ""), win = +$("[data-k=win]", w).value, T = Math.floor(Date.now() / 1000 / 30);
+    const steps = win === 0 ? [0] : win === 1 ? [0, -1] : [0, -1, 1];
+    let hit = null;
+    for (const k of steps) if (await hotp(key, T + k) === input) { hit = T + k; break; }
+    let line;
+    if (input.length !== 6) line = `<span class="y">? ${esc(d.l_six)}</span>`;
+    else if (hit === null) line = `<span class="r">✗ ${esc(d.l_reject)}</span>`;
+    else if ($("[data-k=replay]", w).checked && [...used].some(u => u >= hit)) line = `<span class="r">✗ ${esc(d.l_replayed)} (T=${hit})</span>`;
+    else { used.add(hit); line = `<span class="g">✓ ${esc(d.l_ok)} (T=${hit}${hit !== T ? `, ${hit - T}` : ""})</span>`; }
+    log.innerHTML += `${esc(input || "—")} → ${line}\n`; log.scrollTop = log.scrollHeight;
+  }
+  w.addEventListener("click", e => {
+    const b = e.target.closest("button[data-a]"); if (!b) return;
+    if (b.dataset.a === "new") newSecret();
+    if (b.dataset.a === "verify") verify();
+    if (b.dataset.a === "copy") { $(".verify input", w).value = phoneCode; verify(); }
+  });
+  $(".verify input", w).addEventListener("keydown", e => { if (e.key === "Enter") verify(); });
+  $("[data-k=skew]", w).addEventListener("input", tick);
+  newSecret(); setInterval(tick, 1000);
+});
+
+// naive design lab
+$$(".naive").forEach(w => {
+  const d = JSON.parse($(":scope > script", w).textContent);
+  w.insertAdjacentHTML("afterbegin", `<div class="sel-row"><span class="lab">${esc(d.l_design)}</span>${d.presets.map(p => `<button class="btn" type="button" data-p="${p.id}">${esc(p.label)}</button>`).join("")}</div>
+    <div class="tg">${d.toggles.map(x => `<label data-t="${x.id}"><input type="checkbox" data-k="${x.id}"> <span>${x.label}</span></label>`).join("")}</div>
+    <div class="tablewrap"><table><thead><tr><th>${esc(d.l_attack)}</th><th>${esc(d.l_result)}</th></tr></thead><tbody></tbody></table></div><div class="sum"></div>`);
+  let mode = "naive", preset = "naive";
+  const on = k => $(`[data-k=${k}]`, w).checked;
+  function render() {
+    $$("[data-p]", w).forEach(b => b.classList.toggle("on", b.dataset.p === preset));
+    const totp = mode === "totp";
+    d.toggles.forEach(x => { const l = $(`label[data-t=${x.id}]`, w), i = $("input", l), lock = totp && x.totp; l.classList.toggle("na", lock); i.disabled = lock; if (lock) i.checked = true; $("span", l).innerHTML = totp && x.totp ? x.totp : x.label; });
+    const s = Object.fromEntries(d.toggles.map(x => [x.id, on(x.id)]));
+    let blocked = 0;
+    const rows = d.attacks.map(a => {
+      let r;
+      for (const rule of a.rules) { if (rule.if.every(k => k.startsWith("!") ? !s[k.slice(1)] : (k === "totp" ? totp : s[k]))) { r = rule; break; } }
+      if (r.v === "ok") blocked++;
+      return `<tr><td>${a.label}</td><td><span class="${r.v}">${r.v === "ok" ? "✓" : r.v === "no" ? "✗" : "~"} ${r.t}</span></td></tr>`;
+    });
+    $("tbody", w).innerHTML = rows.join("");
+    $(".sum", w).innerHTML = `${esc(d.l_blocked)}: <b>${blocked}/${d.attacks.length}</b>${totp ? " · " + d.l_totpnote : ""}`;
+  }
+  w.addEventListener("click", e => {
+    const b = e.target.closest("button[data-p]"); if (!b) return;
+    preset = b.dataset.p; mode = preset.startsWith("totp") ? "totp" : "naive";
+    const p = d.presets.find(x => x.id === b.dataset.p);
+    d.toggles.forEach(x => { $(`[data-k=${x.id}]`, w).checked = p.on.includes(x.id); });
+    render();
+  });
+  w.addEventListener("change", render);
+  render();
+});
+
+// brute-force calculator
+$$(".brute").forEach(w => {
+  const d = JSON.parse($(":scope > script", w).textContent);
+  const sel = (k, opts, def) => `<select data-k="${k}">${opts.map(o => `<option value="${o[0]}"${o[0] == def ? " selected" : ""}>${esc(o[1])}</option>`).join("")}</select>`;
+  w.insertAdjacentHTML("afterbegin", `<div class="grid3"><label>${esc(d.l_rate)}${sel("rate", d.rates, 600)}</label><label>${esc(d.l_lock)}${sel("lock", d.locks, 0)}</label><label>${esc(d.l_valid)}${sel("valid", d.valids, 1)}</label><label>${esc(d.l_time)}${sel("time", d.times, 86400)}</label></div>
+    <div class="grid2" style="margin-top:12px"><div class="box"><p class="cap">${esc(d.l_guesses)}</p><div class="big g-n"></div></div><div class="box"><p class="cap">${esc(d.l_chance)}</p><div class="big g-p"></div><div class="g-x" style="font-size:13px;color:var(--white)"></div></div></div>`);
+  const fmt = n => n >= 1e6 ? (n / 1e6).toFixed(n >= 1e7 ? 0 : 1) + "M" : n >= 1e3 ? Math.round(n / 1e3) + "k" : String(Math.round(n));
+  function calc() {
+    const rate = +$("[data-k=rate]", w).value, lock = +$("[data-k=lock]", w).value, valid = +$("[data-k=valid]", w).value, time = +$("[data-k=time]", w).value;
+    let guesses = rate * time / 60;
+    if (lock > 0) guesses = Math.min(guesses, lock * Math.max(1, Math.floor(time / 900)));
+    if (lock < 0) guesses = Math.min(guesses, -lock);
+    const p = 1 - Math.pow(1 - valid / 1e6, guesses);
+    $(".g-n", w).textContent = fmt(guesses);
+    const el = $(".g-p", w); el.textContent = p >= 0.995 ? "≈100%" : p >= 0.01 ? (p * 100).toFixed(1) + "%" : p >= 1e-6 ? (p * 100).toFixed(4) + "%" : "<0.0001%";
+    el.className = "big g-p " + (p > 0.05 ? "bad" : p > 0.001 ? "meh" : "");
+    $(".g-x", w).textContent = p > 0 && p < 0.5 ? `≈ 1 ${d.l_in} ${fmt(1 / p)}` : "";
+  }
+  w.addEventListener("change", calc); calc();
+});
+</script>
+</body>
+</html>

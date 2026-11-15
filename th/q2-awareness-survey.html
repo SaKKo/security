@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="th" data-lang="rails">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Q2 แบบสำรวจความตระหนักรู้ภัยไซเบอร์ · Web Security</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="icon" href="../favicon.ico" sizes="32x32">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<link rel="manifest" href="../site.webmanifest">
+<meta name="theme-color" content="#000000">
+<link rel="stylesheet" href="../assets/site.css?v=8f1e007517">
+<script src="../assets/consent.js?v=9320b4a322"></script>
+</head>
+<body data-slug="q2-awareness-survey">
+<div class="win">
+  <div class="titlebar"><span class="dots"><i></i><i></i><i></i></span><span class="t">guest@websec: ~/websec/q2-awareness-survey/th — zsh — 100×40</span>
+    <a class="by" href="about.html" title="เกี่ยวกับผู้เขียน"><span class="w0">เขียนโดย </span>SaKKo</a>
+    <span class="lsw" role="group" aria-label="ภาษา"><a href="../q2-awareness-survey.html" data-setlang="en">EN</a><a href="q2-awareness-survey.html" aria-current="true" data-setlang="th">TH</a></span>
+    <span class="langsw" role="group" aria-label="Code examples language"><span class="d">โค้ด:</span><button type="button" data-l="rails">rails</button><button type="button" data-l="node">node</button></span></div>
+  <nav class="top" aria-label="Sections"><a href="index.html" title="คู่มือความปลอดภัยเว็บแอปพลิเคชัน">~/</a>
+<a class="trk on" href="index.html#security">#1 ความปลอดภัย</a>
+<a class="trk" href="r01-rails-api-app.html">#2 rails</a>
+<span class="grp">|</span>
+<a href="01-introduction.html" title="บทนำ">01·บทนำ</a>
+<a href="02-sql-injection.html" title="SQL Injection">02·sql</a>
+<a href="03-unsafe-query-generation.html" title="การสร้าง query ที่ไม่ปลอดภัย">03·query</a>
+<a href="04-xss-and-other-injection.html" title="XSS และ injection แบบอื่น">04·xss</a>
+<span class="grp">| บัญชี:</span>
+<a href="05-authentication.html" title="การยืนยันตัวตน">05·auth</a>
+<a href="05b-mfa.html" title="การยืนยันตัวตนหลายปัจจัย">05b·mfa</a>
+<a href="06-sessions.html" title="Session">06·session</a>
+<a href="07-csrf.html" title="Cross-Site Request Forgery">07·csrf</a>
+<a href="08-user-management.html" title="การจัดการผู้ใช้">08·ผู้ใช้</a>
+<a href="09-mass-assignment-and-authorization.html" title="Mass Assignment และ Authorization">09·authz</a>
+<span class="grp">| เบราว์เซอร์:</span>
+<a href="10-redirection-and-files.html" title="Redirect และไฟล์">10·ไฟล์</a>
+<a href="11-http-security-headers.html" title="HTTP Security Header">11·header</a>
+<a href="12-transport-cookies-third-party.html" title="การรับส่งข้อมูล คุกกี้ และสคริปต์บุคคลที่สาม">12·คุกกี้</a>
+<span class="grp">| เซิร์ฟเวอร์:</span>
+<a href="13-ssrf.html" title="Server-Side Request Forgery">13·ssrf</a>
+<a href="14-deserialization-and-xxe.html" title="Deserialization และ XXE">14·deserialize</a>
+<a href="15-environmental-security.html" title="ความปลอดภัยของสภาพแวดล้อม">15·secret</a>
+<a href="16-cryptography.html" title="การเข้ารหัสและการปกป้องข้อมูล">16·crypto</a>
+<a href="17-dependencies-and-cves.html" title="Dependency และ CVE">17·dependency</a>
+<span class="grp">| ดูแลระบบ:</span>
+<a href="18-intranet-and-admin.html" title="ความปลอดภัยของ intranet และ admin">18·admin</a>
+<a href="19-misconfiguration-and-errors.html" title="การตั้งค่าผิดพลาดและการจัดการ error">19·config</a>
+<a href="20-insecure-design.html" title="การออกแบบที่ไม่ปลอดภัยและ business logic">20·design</a>
+<a href="21-logging-and-incident-response.html" title="Logging การแจ้งเตือน และการรับมือเหตุการณ์">21·logging</a>
+<a href="22-additional-resources.html" title="แหล่งข้อมูลเพิ่มเติม">22·แหล่งข้อมูล</a>
+<span class="grp">| แบบสอบถาม:</span>
+<a href="q1-developer-survey.html" title="แบบสำรวจความปลอดภัยสำหรับนักพัฒนา">Q1·dev</a>
+<a href="q2-awareness-survey.html" aria-current="page" title="แบบสำรวจความตระหนักรู้ภัยไซเบอร์">Q2·ทุกคน</a></nav>
+  <main>
+<div class="col">
+<p class="prompt">guest@websec ~ % <b>./q2-awareness-survey.sh</b></p>
+<h1>Q2 · แบบสำรวจความตระหนักรู้ภัยไซเบอร์</h1>
+<p class="lede">สำหรับทุกคน ไม่ต้องมีความรู้เทคนิค ใช้เวลาราว 10 นาที: คุณจะทำอย่างไร และนิสัยของคุณเป็นแบบไหน? มีคำแนะนำตอนท้าย</p>
+<div class="note">ใช้เวลาราว 10 นาที ไม่มีการบันทึกหรือส่งข้อมูลไปที่ใด นี่คือการประเมินตัวเองแบบส่วนตัว คำตอบจะหายไปเมื่อออกจากหน้านี้</div>
+<h2>ส่วน A · คุณจะทำอย่างไร?</h2>
+<form id="sv-form" onsubmit="return false">
+<div id="sv-qs"></div>
+<h2>ส่วน B · นิสัยประจำวัน</h2><p>ตอบตามจริง: ส่วนนี้ไม่ได้ตัดสินถูกผิด แต่แสดงว่าการเปลี่ยนแปลงเล็กๆ ตรงไหนช่วยได้มากที่สุด</p><div id="sv-habits"></div>
+<div class="sticky-sub"><button class="btn on" disabled="" id="sv-submit" type="button">ส่งคำตอบ</button><button class="btn" id="sv-next" type="button"></button><span class="d" id="sv-prog"></span><div id="sv-map" class="sv-map"></div></div>
+</form>
+<div id="sv-result" style="margin-top:18px"></div>
+</div>
+
+<div class="col"><div class="pager"><a href="q1-developer-survey.html">◀ Q1 แบบสำรวจความปลอดภัยสำหรับนักพัฒนา</a><a href="index.html">กลับหน้าแรก ▶</a></div></div>
+  </main>
+  <footer class="site">อ้างอิงจาก <a href="https://guides.rubyonrails.org/security.html">Ruby on Rails Security Guide</a> (CC BY-SA 4.0), <a href="https://cheatsheetseries.owasp.org/">OWASP Cheat Sheet Series</a>, <a href="https://owasp.org/Top10/2025/">OWASP Top 10:2025</a> และ <a href="https://infosec.mozilla.org/guidelines/web_security.html">Mozilla Web Security Guidelines</a> เขียนสำหรับทีมพัฒนาของเรา ตัวอย่างโค้ดเพื่อการอธิบาย ข้อความในผลการจำลองบางส่วนยังเป็นภาษาอังกฤษ</footer>
+</div>
+<script src="../assets/site.js?v=92ac7aa3f8"></script>
+<script>
+
+const DATA = {"kind": "aware", "title": "แบบสำรวจความตระหนักรู้ภัยไซเบอร์", "t": {"likert": ["เสมอ", "บ่อย", "บางครั้ง", "ไม่เคย"], "answered": "ข้อที่ตอบแล้ว", "score": "คะแนน", "knowledge": "ความรู้", "habits": "นิสัยที่ปลอดภัย", "lvl3": "ดีมาก คุณเข้าใจเนื้อหาเป็นอย่างดี", "lvl2": "พื้นฐานดี ยังมีบางจุดที่ต้องเติม", "lvl1": "ควรใส่ใจเพิ่ม ทบทวนข้อด้านล่าง", "copy": "คัดลอกผลของฉัน", "retake": "ทำใหม่", "copied": "คัดลอกแล้ว", "copyFail": "คัดลอกไม่สำเร็จ"}, "secs": {}, "questions": [{"sec": "Email", "q": "คุณได้อีเมลจาก \"ฝ่าย IT\" บอกว่ากล่องจดหมายเต็ม และต้องล็อกอินผ่านลิงก์ภายใน 1 ชั่วโมง คุณจะทำอย่างไร?", "opts": ["รีบคลิกลิงก์ จะได้ไม่เสียอีเมล", "ไม่คลิก ตรวจสอบผ่านพอร์ทัล IT ที่เป็นทางการหรือถาม IT โดยตรง และรายงานอีเมลนี้", "ตอบกลับถามว่าเป็นของจริงไหม"], "a": 1, "why": "ความเร่งด่วน + ลิงก์ล็อกอิน คือรูปแบบคลาสสิกของ phishing ให้เข้าเว็บเอง และรายงานอีเมลเพื่อปกป้องคนอื่น", "id": "k00"}, {"sec": "Email", "q": "สัญญาณใดบอกได้น่าเชื่อถือที่สุดว่าอีเมลอาจปลอม?", "opts": ["มีโลโก้บริษัท", "ที่อยู่ผู้ส่งหรือโดเมนของลิงก์ผิดเพี้ยนเล็กน้อย เช่น paypa1-secure.com", "เรียกชื่อคุณ"], "a": 1, "why": "โลโก้และชื่อลอกเลียนได้ง่าย ให้ชี้เมาส์ที่ลิงก์เพื่อดูโดเมนจริง", "id": "k01"}, {"sec": "Passwords", "q": "วิธีจัดการรหัสผ่านที่ปลอดภัยที่สุดคือ?", "opts": ["รหัสผ่านแข็งแรงตัวเดียวใช้ทุกที่", "ใช้ password manager และรหัสผ่านไม่ซ้ำกันในแต่ละเว็บ", "จดรหัสผ่านไว้ในแอปโน้ต"], "a": 1, "why": "เมื่อเว็บหนึ่งถูกเจาะ รหัสที่ใช้ซ้ำจะเปิดบัญชีอื่นของคุณ password manager ทำให้การใช้รหัสไม่ซ้ำเป็นเรื่องง่าย", "id": "k02"}, {"sec": "Passwords", "q": "โทรศัพท์ของคุณเด้งคำขออนุมัติการล็อกอินที่คุณไม่ได้ทำ คุณจะทำอย่างไร?", "opts": ["กดอนุมัติให้มันหยุดสั่น", "กดปฏิเสธ แล้วเปลี่ยนรหัสผ่านและแจ้ง IT", "เพิกเฉย"], "a": 1, "why": "มีคนน่าจะได้รหัสผ่านของคุณไปแล้ว และหวังว่าคุณจะกดอนุมัติ (\"MFA fatigue\")", "id": "k03"}, {"sec": "Phone", "q": "\"CEO\" โทรมาทาง WhatsApp เสียงเหมือนตัวจริงทุกอย่าง ขอให้รีบซื้อบัตรของขวัญหรือโอนเงินให้ซัพพลายเออร์รายใหม่ คุณจะทำอย่างไร?", "opts": ["ทำตาม เสียงตรงกัน", "วางสาย แล้วยืนยันผ่านเบอร์ที่รู้จักหรือพบตัวจริงก่อนทำอะไร", "ถามคำถามส่วนตัว"], "a": 1, "why": "AI โคลนเสียงได้จากเสียงเพียงไม่กี่วินาที ให้ยืนยันคำขอเรื่องเงินหรือบัตรของขวัญผ่านช่องทางอื่นที่รู้จักเสมอ", "id": "k04"}, {"sec": "Phone", "q": "มีคนโทรมาอ้างว่าเป็น IT และต้องการรหัส MFA ของคุณเพื่อแก้บัญชี คุณจะทำอย่างไร?", "opts": ["ให้ไป เขาเป็น IT", "ไม่ให้รหัส MFA หรือรหัสผ่านกับใครเด็ดขาด วางสายแล้วโทรหา IT เอง", "ให้ไปครึ่งเดียว"], "a": 1, "why": "IT ตัวจริงไม่ต้องการรหัสของคุณ การให้รหัสคือการยกบัญชีให้", "id": "k05"}, {"sec": "Devices", "q": "คุณเจอแฟลชไดรฟ์ติดป้าย \"เงินเดือน 2026\" ในลานจอดรถ คุณจะทำอย่างไร?", "opts": ["เสียบดูเพื่อหาเจ้าของ", "ส่งให้ IT/ฝ่ายความปลอดภัยโดยไม่เสียบ", "ทิ้งถังขยะ"], "a": 1, "why": "การทิ้ง USB ไว้เป็นการโจมตีที่รู้จักกันดี: เสียบเพียงครั้งเดียวอาจติดตั้งมัลแวร์", "id": "k06"}, {"sec": "Devices", "q": "โน้ตบุ๊กขอให้ติดตั้งอัปเดต ควรติดตั้งเมื่อไร?", "opts": ["ไม่เลย อัปเดตทำให้ของพัง", "เร็วที่สุดเท่าที่สะดวก อัปเดตปิดช่องโหว่ที่ผู้โจมตีรู้อยู่แล้ว", "ปีละครั้ง"], "a": 1, "why": "การโจมตีจำนวนมากใช้ช่องโหว่ที่ถูกแพตช์แล้วบนเครื่องที่อัปเดต", "id": "k07"}, {"sec": "Data", "q": "คุณอยากให้แชตบอต AI ช่วยสรุปสัญญาของลูกค้า วิธีที่ถูกคือ?", "opts": ["วางสัญญาทั้งฉบับลงในเครื่องมือ AI ฟรีตัวไหนก็ได้", "ใช้เฉพาะเครื่องมือ AI ที่บริษัทอนุมัติและทำตามนโยบายข้อมูล ถ้าไม่แน่ใจให้ลบข้อมูลส่วนบุคคลหรือข้อมูลลับออก", "ส่งเข้าอีเมลส่วนตัวก่อน"], "a": 1, "why": "เครื่องมือฟรีอาจเก็บหรือนำสิ่งที่คุณวางไปฝึกโมเดล ข้อมูลลับหรือข้อมูลส่วนบุคคลต้องอยู่ในระบบที่ได้รับอนุมัติ", "id": "k08"}, {"sec": "Data", "q": "เพื่อนร่วมงานขอให้ส่งสเปรดชีตที่มีข้อมูลส่วนบุคคลของลูกค้าไปที่ Gmail ส่วนตัวเพื่อทำงานจากบ้าน คุณจะทำอย่างไร?", "opts": ["ส่งให้ เขาเป็นเพื่อนร่วมงาน", "ปฏิเสธและแนะนำเครื่องมือที่บริษัทอนุมัติ ปรึกษาหัวหน้าหรือฝ่ายความปลอดภัย", "ส่งแบบตั้งรหัสผ่าน"], "a": 1, "why": "ข้อมูลบริษัทในบัญชีส่วนตัวอยู่นอกการป้องกันของเรา และอาจผิดกฎหมายคุ้มครองข้อมูลส่วนบุคคล (PDPA)", "id": "k09"}, {"sec": "Wi-Fi", "q": "คุณทำงานในร้านกาแฟ วิธีใดปลอดภัยที่สุด?", "opts": ["ใช้ Wi-Fi ฟรีของร้านโดยไม่ระวังอะไร", "ใช้ VPN ของบริษัท หรือ hotspot จากโทรศัพท์", "ถามพนักงานว่า Wi-Fi ปลอดภัยไหม"], "a": 1, "why": "เครือข่ายเปิดอาจถูกดักฟังหรือถูกปลอมได้ VPN หรือ hotspot ช่วยปกป้องการรับส่งข้อมูล", "id": "k10"}, {"sec": "QR", "q": "ที่จอดรถมีสติกเกอร์ QR code ให้ 'จ่ายออนไลน์' มีความเสี่ยงอะไร?", "opts": ["ไม่มี QR code ปลอดภัย", "อาจพาไปเว็บชำระเงินปลอมที่ขโมยข้อมูลบัตร", "QR code เปิดได้แต่เว็บจริงเท่านั้น"], "a": 1, "why": "\"Quishing\" คือการแปะ QR code อันตรายทับของจริง ให้ตรวจที่อยู่เว็บหลังสแกน หรือใช้แอปทางการ", "id": "k11"}, {"sec": "Reporting", "q": "คุณคลิกลิงก์น่าสงสัยและกรอกรหัสผ่านไปแล้วก่อนจะรู้ตัว ต้องทำอะไร?", "opts": ["เงียบไว้ เพราะอาย", "รายงาน IT/ฝ่ายความปลอดภัยทันที และเปลี่ยนรหัสผ่าน", "รอดูว่าจะเกิดอะไรขึ้น"], "a": 1, "why": "ความเร็วสำคัญที่สุด การรายงานเร็วทำให้ทีมบล็อกผู้โจมตีได้ก่อนเกิดความเสียหาย และจะไม่มีใครถูกตำหนิเพราะรายงาน", "id": "k12"}, {"sec": "Social", "q": "ทำไมการแชร์รายละเอียดอย่างตำแหน่งงาน ทีม และแผนการเดินทางบนโซเชียลมีเดียจึงอาจเสี่ยง?", "opts": ["ไม่เสี่ยง", "ผู้โจมตีใช้ข้อมูลนี้สร้างข้อความ phishing และการปลอมตัวที่น่าเชื่อ", "ทำให้อินเทอร์เน็ตช้า"], "a": 1, "why": "การหลอกลวงแบบเจาะจงเป้าหมาย (\"spear phishing\") ใช้รายละเอียดสาธารณะเพื่อให้ฟังดูน่าเชื่อถือ", "id": "k13"}], "cats": {"Email": "อีเมล", "Passwords": "รหัสผ่าน", "Phone": "โทรศัพท์", "Devices": "อุปกรณ์", "Data": "ข้อมูล", "Wi-Fi": "Wi-Fi", "QR": "QR code", "Reporting": "การรายงาน", "Social": "โซเชียลมีเดีย"}, "habits": [{"id": "h00", "t": "ฉันใช้รหัสผ่านไม่ซ้ำกันในทุกบัญชีงาน", "rev": false}, {"id": "h01", "t": "ฉันใช้ password manager", "rev": false}, {"id": "h02", "t": "MFA เปิดอยู่สำหรับอีเมลและบัญชีงานของฉัน", "rev": false}, {"id": "h03", "t": "ฉันล็อกหน้าจอทุกครั้งที่ลุกจากคอมพิวเตอร์", "rev": false}, {"id": "h04", "t": "ฉันติดตั้งอัปเดตซอฟต์แวร์บนโน้ตบุ๊กและโทรศัพท์ภายในไม่กี่วัน", "rev": false}, {"id": "h05", "t": "ฉันตรวจผู้ส่งและที่อยู่ลิงก์ก่อนคลิกลิงก์ในอีเมล", "rev": false}, {"id": "h06", "t": "ฉันรายงานอีเมลหรือข้อความน่าสงสัยให้ IT/ฝ่ายความปลอดภัย", "rev": false}, {"id": "h07", "t": "ฉันแชร์รหัสผ่านหรือรหัส MFA กับเพื่อนร่วมงานเมื่อสะดวก", "rev": true}, {"id": "h08", "t": "ฉันใช้อีเมลส่วนตัวหรือคลาวด์ส่วนตัวเก็บไฟล์งาน", "rev": true}, {"id": "h09", "t": "ฉันเชื่อมต่อ Wi-Fi สาธารณะเพื่อทำงานโดยไม่ใช้ VPN", "rev": true}], "tips": ["ใช้ password manager เพื่อให้ทุกบัญชีมีรหัสผ่านของตัวเอง", "ติดตั้ง password manager ของบริษัท มันกรอกรหัสผ่านให้คุณ", "เปิด MFA (แอป authenticator หรือ passkey) กับอีเมลก่อน เพราะอีเมลคือกุญแจสำหรับรีเซ็ตทุกอย่าง", "ล็อกหน้าจอทุกครั้งที่ลุก (Win+L / Ctrl+Cmd+Q)", "เปิดการอัปเดตอัตโนมัติบนโน้ตบุ๊กและโทรศัพท์", "ชี้เมาส์ที่ลิงก์เพื่อดูที่อยู่จริงก่อนคลิก", "ใช้ปุ่ม 'รายงาน phishing' หรือส่งต่อข้อความน่าสงสัยให้ IT", "ห้ามแชร์รหัสผ่านหรือรหัส MFA ให้ขอสิทธิ์เข้าถึงร่วมจาก IT แทน", "เก็บไฟล์งานในเครื่องมือของบริษัทเท่านั้น", "ใช้ VPN หรือ hotspot จากโทรศัพท์เมื่อใช้ Wi-Fi สาธารณะ"]};
+
+const KIND = DATA.kind, T = DATA.t;
+const U = document.documentElement.lang === "th"
+  ? { next: "ไปข้อที่ยังไม่ตอบ ↓", leave: "คำตอบยังไม่ถูกส่ง ถ้าออกจากหน้านี้คำตอบจะหายไป", jump: "ข้อ" }
+  : { next: "next unanswered ↓", leave: "Your answers aren't submitted yet and will be lost if you leave.", jump: "question" };
+const secName = s => (DATA.cats && DATA.cats[s]) || s;
+let submitted = false;
+const ids = () => DATA.questions.map(q => q.id).concat((DATA.habits || []).map(h => h.id));
+const label = id => { const q = DATA.questions.findIndex(x => x.id === id); return q >= 0 ? "Q" + (q + 1) : "H" + ((DATA.habits || []).findIndex(x => x.id === id) + 1); };
+function render() {
+  const out = [];
+  let lastSec = null;
+  DATA.questions.forEach((q, i) => {
+    if (q.sec !== lastSec) { lastSec = q.sec; const s = DATA.secs[q.sec]; out.push(`<h3 id="sec-${q.sec}">${s ? `<a href="${s[0]}.html">${q.sec} · ${esc(s[1])}</a>` : esc(secName(q.sec))}</h3>`); }
+    out.push(`<div class="qcard" id="c-${q.id}"><p class="qh"><span class="sec">Q${i + 1}</span>${q.q}</p>` + q.opts.map((o, j) => `<label class="opt"><input type="radio" name="${q.id}" value="${j}"> <span>${o}</span></label>`).join("") + `<div class="why">${q.why}</div></div>`);
+  });
+  $("#sv-qs").innerHTML = out.join("");
+  if (DATA.habits) {
+    $("#sv-habits").innerHTML = DATA.habits.map((h, i) => `<div class="qcard" id="c-${h.id}"><p class="qh"><span class="sec">H${i + 1}</span>${esc(h.t)}</p><div class="likert">${T.likert.map((l, j) => `<label><input type="radio" name="${h.id}" value="${3 - j}">${l}</label>`).join("")}</div><div class="why">${esc(DATA.tips[i])}</div></div>`).join("");
+  }
+  $$("#sv-form input[type=radio]").forEach(r => r.addEventListener("change", progress));
+  $("#sv-next").textContent = U.next;
+  progress();
+}
+function answers() { const a = {}; ids().forEach(id => { const r = $(`input[name="${id}"]:checked`); if (r) a[id] = +r.value; }); return a; }
+function progress() {
+  const a = answers(), all = ids(), n = Object.keys(a).length;
+  const cur = submitted ? null : all.find(id => !(id in a));
+  $("#sv-prog").textContent = `${n}/${all.length} ${T.answered}`;
+  $("#sv-submit").disabled = submitted || n < all.length;
+  $("#sv-next").hidden = !cur;
+  if (!submitted) {
+    all.forEach(id => { const c = $("#c-" + id); c.classList.toggle("done", id in a); c.classList.toggle("cur", id === cur); });
+    $("#sv-map").innerHTML = all.map(id => `<a href="#c-${id}" class="${id in a ? "done" : id === cur ? "cur" : ""}" title="${U.jump} ${label(id)}">${label(id)}</a>`).join("");
+  }
+}
+function jump(id) {
+  const c = $("#c-" + id); if (!c) return;
+  c.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "center" });
+  const i = $("input:not(:disabled)", c); if (i) i.focus({ preventScroll: true });
+}
+$("#sv-next").addEventListener("click", () => { const a = answers(); jump(ids().find(id => !(id in a))); });
+$("#sv-map").addEventListener("click", e => { const l = e.target.closest("a"); if (!l) return; e.preventDefault(); jump(l.getAttribute("href").slice(3)); });
+function grade(a) {
+  const by = {}; let c = 0;
+  DATA.questions.forEach(q => { by[q.sec] = by[q.sec] || [0, 0]; by[q.sec][1]++; if (a[q.id] === q.a) { by[q.sec][0]++; c++; } });
+  let habit = null;
+  if (DATA.habits) { let s = 0; DATA.habits.forEach(h => { const v = a[h.id] ?? 0; s += h.rev ? 3 - v : v; }); habit = Math.round(s / (DATA.habits.length * 3) * 100); }
+  return { correct: c, total: DATA.questions.length, by, habit };
+}
+function showGrades(a) {
+  const marks = {};
+  DATA.questions.forEach(q => {
+    const card = $("#c-" + q.id); card.classList.remove("cur", "done"); card.classList.add("graded");
+    $$("label.opt", card).forEach((l, j) => { if (j === q.a) l.classList.add("right"); else if (a[q.id] === j) l.classList.add("wrong"); });
+    marks[q.id] = a[q.id] === q.a ? "right" : "wrong";
+  });
+  (DATA.habits || []).forEach(h => {
+    const v = a[h.id] ?? 0, good = h.rev ? 3 - v : v, card = $("#c-" + h.id);
+    card.classList.remove("cur", "done");
+    if (good < 2) card.classList.add("graded");
+    marks[h.id] = good < 2 ? "wrong" : "right";
+  });
+  $$("#sv-form input").forEach(i => i.disabled = true);
+  $("#sv-map").innerHTML = ids().map(id => `<a href="#c-${id}" class="${marks[id]}" title="${U.jump} ${label(id)}">${label(id)}</a>`).join("");
+}
+function summaryHTML(g) {
+  const pct = Math.round(g.correct / g.total * 100);
+  let h = `<div class="tldr" style="margin-top:0"><b style="font-size:20px">${KIND === "dev" ? T.score : T.knowledge}: ${g.correct}/${g.total} (${pct}%)</b>`;
+  if (g.habit !== null) h += `<br><b style="font-size:20px">${T.habits}: ${g.habit}%</b>`;
+  const lvl = g.habit === null ? pct : Math.round((pct + g.habit) / 2);
+  h += `<br>${lvl >= 85 ? `<span class="g">${T.lvl3}</span>` : lvl >= 65 ? `<span class="y">${T.lvl2}</span>` : `<span class="r">${T.lvl1}</span>`}</div>`;
+  h += Object.entries(g.by).map(([s, [c, t]]) => { const nm = DATA.secs[s] ? DATA.secs[s][1] : secName(s); return `<div class="bar"><span>${DATA.secs[s] ? `<a href="${DATA.secs[s][0]}.html">${s} ${esc(nm)}</a>` : esc(nm)}</span><div class="track"><span style="width:${c / t * 100}%;background:${c === t ? "var(--fg)" : c / t >= .5 ? "var(--yellow)" : "var(--red)"}"></span></div><span>${c}/${t}</span></div>`; }).join("");
+  return h;
+}
+function resultText(g) {
+  return `${DATA.title}\n${KIND === "dev" ? T.score : T.knowledge}: ${g.correct}/${g.total}` + (g.habit !== null ? `\n${T.habits}: ${g.habit}%` : "") + "\n" + Object.entries(g.by).map(([s, [c, t]]) => `${DATA.secs[s] ? s + " " + DATA.secs[s][1] : secName(s)}: ${c}/${t}`).join("\n") + `\n${new Date().toISOString().slice(0, 10)}`;
+}
+$("#sv-submit").addEventListener("click", () => {
+  const a = answers(); if (Object.keys(a).length < ids().length) return;
+  submitted = true; progress();
+  const g = grade(a); showGrades(a);
+  $("#sv-result").innerHTML = summaryHTML(g) + `<div class="row" style="margin-top:10px"><button class="btn" id="sv-copy" type="button">${T.copy}</button><button class="btn" id="sv-retake" type="button">${T.retake}</button></div>`;
+  $("#sv-result").scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+  $("#sv-copy").onclick = async () => { try { await navigator.clipboard.writeText(resultText(g)); $("#sv-copy").textContent = T.copied; } catch (e) { $("#sv-copy").textContent = T.copyFail; } };
+  $("#sv-retake").onclick = () => { submitted = false; $("#sv-result").innerHTML = ""; render(); window.scrollTo(0, 0); };
+});
+// links inside the questionnaire open in a new tab, so answers are never lost
+document.querySelector("main").addEventListener("click", e => {
+  const a = e.target.closest("a[href]");
+  if (!a || a.closest(".pager") || a.closest("#sv-map") || a.getAttribute("href").startsWith("#")) return;
+  a.target = "_blank"; a.rel = "noopener";
+});
+window.addEventListener("beforeunload", e => {
+  if (!submitted && Object.keys(answers()).length) { e.preventDefault(); e.returnValue = U.leave; }
+});
+render();
+</script>
+</body>
+</html>

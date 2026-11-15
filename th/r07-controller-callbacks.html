@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="th" data-lang="rails">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Controller Callback · Rails Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600&display=swap" rel="stylesheet">
+<link rel="icon" href="../favicon.ico" sizes="32x32">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<link rel="manifest" href="../site.webmanifest">
+<meta name="theme-color" content="#000000">
+<link rel="stylesheet" href="../assets/site.css?v=8f1e007517">
+<script src="../assets/consent.js?v=9320b4a322"></script>
+</head>
+<body data-slug="r07-controller-callbacks">
+<div class="win">
+  <div class="titlebar"><span class="dots"><i></i><i></i><i></i></span><span class="t">guest@websec: ~/websec/r07-controller-callbacks/th — zsh — 100×40</span>
+    <a class="by" href="about.html" title="เกี่ยวกับผู้เขียน"><span class="w0">เขียนโดย </span>SaKKo</a>
+    <span class="lsw" role="group" aria-label="ภาษา"><a href="../r07-controller-callbacks.html" data-setlang="en">EN</a><a href="r07-controller-callbacks.html" aria-current="true" data-setlang="th">TH</a></span></div>
+  <nav class="top" aria-label="บทเรียน"><a href="index.html#rails" title="หน้าแรก">~/</a>
+<a class="trk" href="index.html#security">#1 ความปลอดภัย</a>
+<a class="trk on" href="r01-rails-api-app.html">#2 rails</a>
+<span class="grp">| พื้นฐาน:</span>
+<a href="r01-rails-api-app.html" title="แอป Rails แบบ API">r01·api-app</a>
+<a href="r02-rails-commands.html" title="คำสั่ง Rails">r02·commands</a>
+<a href="r03-migrations.html" title="Migration">r03·migrations</a>
+<span class="grp">| model:</span>
+<a href="r04-models.html" title="Model และ ApplicationRecord">r04·models</a>
+<a href="r05-model-callbacks.html" title="Model Callback">r05·model-hooks</a>
+<span class="grp">| controller:</span>
+<a href="r06-controllers.html" title="Controller และลำดับชั้นของ API">r06·controllers</a>
+<a href="r07-controller-callbacks.html" aria-current="page" title="Controller Callback">r07·controller-hooks</a>
+<a href="r08-where-code-goes.html" title="Controller, Model หรือ Service?">r08·services</a>
+<span class="grp">| api:</span>
+<a href="r09-rest-routes.html" title="Route แบบ RESTful และ Resourceful">r09·rest-routes</a>
+<a href="r10-testing.html" title="การทดสอบ API">r10·testing</a></nav>
+  <main>
+<div class="col">
+<p class="prompt">guest@websec ~ % <b>man r07-controller-callbacks</b></p>
+<h1>Controller Callback</h1>
+<p class="lede">controller callback ("filter") รันโค้ดก่อน หลัง หรือครอบ action นี่คือวิธีที่ base controller ของเราบังคับ login และตรวจสิทธิ์ในทุก endpoint โดยที่แต่ละ endpoint ไม่ต้องเขียนเอง</p>
+<h2>callback ที่มี</h2><div class="tablewrap"><table><thead><tr><th>callback</th><th>ทำงาน</th><th>ใช้ทำอะไร</th></tr></thead><tbody><tr><td><code>before_action</code></td><td>ก่อน action และหยุด chain ได้</td><td>auth, ตรวจสิทธิ์, โหลด record</td></tr><tr><td><code>after_action</code></td><td>หลัง action เฉพาะเมื่อจบปกติ</td><td>header ของ response, metrics</td></tr><tr><td><code>around_action</code></td><td>ครอบ action ต้อง <code>yield</code></td><td>จับเวลา, transaction, ตั้งค่า context</td></tr><tr><td><code>skip_before_action</code></td><td>ลบ callback ที่สืบทอดมา</td><td>action สาธารณะใน controller ที่ต้อง login</td></tr><tr><td><code>prepend_before_action</code></td><td>เพิ่มไว้หน้าสุดของ chain</td><td>ต้องทำงานก่อน callback ที่สืบทอดมา</td></tr><tr><td><code>rescue_from</code></td><td>เมื่อมี exception หลุดออกจากส่วนใดข้างบน</td><td>แปลง exception เป็น JSON</td></tr></tbody></table></div><p>option ที่ใช้ได้กับทุกตัว: <code>only:</code>, <code>except:</code>, <code>if:</code>, <code>unless:</code> ลำดับคือ callback ของ class แม่ก่อน แล้วตามด้วยของ class ลูก ตามลำดับที่ประกาศ</p><h2>chain ของ admin</h2><div class="code" data-label="ruby · app/controllers/api/v1/admin/app_controller.rb"><pre>class Api::V1::Admin::AppController &lt; Api::V1::AppController
+  before_action :verify_x_requested_with      <span class="c"># 1. CSRF guard for cookie auth</span>
+  before_action :set_current_user             <span class="c"># 2. who is calling?</span>
+  before_action :set_paper_trail_whodunnit    <span class="c"># 3. audit: who changed it</span>
+  before_action :check_permissions            <span class="c"># 4. may they call this action?</span>
+
+  def set_current_user(type = :bearer)
+    @current_user = User.find_by_jwt(fetch_cookies(type), type)
+    raise AppAuthenticationError.new("not logged in") if current_user.blank?
+    raise AppAuthenticationError.new("user not admin") if !current_user.is_admin?
+    update_cookies(type, current_user.jwt(type))       <span class="c"># sliding expiry</span>
+  end
+
+  def check_permissions
+    return if params[:action][0..2] == "my_"           # my_* actions are always allowed
+    controller_action = "#{params[:controller]}##{params[:action]}"
+    return if controller_action.include?("api/v1/admin/sessions")
+    raise AppPermissionDenied.new("You are not allowed to call #{controller_action}") if !current_user.permissions.include?(controller_action)
+  end
+
+  private
+
+  def verify_x_requested_with
+    return if %w[GET HEAD OPTIONS].include?(request.request_method)
+    unless request.headers["X-Requested-With"] == "XMLHttpRequest"
+      render json: { error: "Missing required client header" }, status: :forbidden   # render halts
+    end
+  end
+end</pre></div><p>การหยุด request ใน <code>before_action</code> ทำได้สองทาง: <b>render</b> (หรือ <code>head</code>) ซึ่งหยุด chain และส่ง response นั้นกลับ หรือ <b>raise</b> ซึ่งกระโดดไปที่ <code>rescue_from</code> ทันที เราเลือก raise class error ของเรา เพื่อให้ทุก error มีรูปแบบ JSON เดียวกัน</p><div class="demo"><header><b>explorer: ติดตาม request ผ่าน filter</b><span>เลือก request แล้วลองทำให้พัง</span></header><div class="body"><div class="chain"><script type="application/json">{"reqs": [{"label": "POST …/client_applications/:id/roles", "rows": [{"cls": "Api::V1::Admin::AppController", "h": "verify_x_requested_with", "st": "run", "x": "มี <code>X-Requested-With: XMLHttpRequest<\/code> ✓"}, {"cls": "Api::V1::Admin::AppController", "h": "set_current_user", "st": "run", "x": "cookie → JWT → <code>User<\/code> และต่ออายุ cookie ✓"}, {"cls": "Api::V1::Admin::AppController", "h": "set_paper_trail_whodunnit", "st": "run", "x": "ประวัติการแก้ไขจะบันทึกชื่อ admin คนนี้"}, {"cls": "Api::V1::Admin::AppController", "h": "check_permissions", "st": "run", "x": "\"api/v1/admin/roles#create\" ∈ current_user.permissions ✓"}, {"cls": "Admin::RolesController", "h": "set_client_application", "st": "run", "x": "ClientApplication.find(params[:client_application_id])"}, {"cls": "Admin::RolesController", "h": "set_role", "st": "skip", "x": "<code>only: %i[ show update ]<\/code>: ข้ามสำหรับ create"}, {"cls": "Admin::RolesController", "h": "create", "st": "act", "x": "Role.new(role_params).save!"}], "scen": [{"label": "ปกติ", "code": 201, "body": "{\"role\":{\"id\":\"0193a7b1-…\",\"name\":\"Content Manager\",\"status\":\"active\",…}}"}, {"label": "ไม่มี X-Requested-With", "fail": 0, "x": "<code>render json:, status: :forbidden<\/code>: การ render ใน before_action หยุด chain", "code": 403, "body": "{\"error\":\"Missing required client header\"}"}, {"label": "ไม่ได้ login", "fail": 1, "x": "raise AppAuthenticationError, \"not logged in\"", "rescue": "rescue_from AppAuthenticationError → handle_authentication_error", "rx": "และล้าง cookie bearer", "code": 401, "body": "{\"success\":false,\"type\":\"AppAuthenticationError\",\"error\":\"not logged in\"}"}, {"label": "ไม่มีสิทธิ์", "fail": 3, "x": "raise AppPermissionDenied", "rescue": "rescue_from AppPermissionDenied → handle_forbidden_error", "code": 403, "body": "{\"success\":false,\"type\":\"AppPermissionDenied\",\"error\":\"You are not allowed to call api/v1/admin/roles#create\"}"}, {"label": "ไม่พบ app id", "fail": 4, "x": "ActiveRecord::RecordNotFound", "rescue": "rescue_from ActiveRecord::RecordNotFound → handle_not_found_error", "code": 404, "body": "{\"success\":false,\"type\":\"ActiveRecord::RecordNotFound\",\"error\":\"Couldn't find ClientApplication with 'id'=…\"}"}, {"label": "ชื่อว่าง", "fail": 6, "x": "<code>save!<\/code> raise ActiveRecord::RecordInvalid", "rescue": "rescue_from ActiveRecord::RecordInvalid → handle_record_invalid_error", "code": 400, "body": "{\"success\":false,\"type\":\"ActiveRecord::RecordInvalid\",\"error\":\"Validation failed: Name can't be blank\",\"details\":{\"name\":[\"can't be blank\"]}}"}]}, {"label": "POST /api/v1/admin/sessions", "rows": [{"cls": "Api::V1::Admin::AppController", "h": "verify_x_requested_with", "st": "run", "x": "มี <code>X-Requested-With: XMLHttpRequest<\/code> ✓"}, {"cls": "Admin::SessionsController", "h": "set_current_user", "st": "skip", "x": "<code>skip_before_action :set_current_user, only: [:create, :destroy]<\/code>: ตอนนี้ยังไม่ได้ login"}, {"cls": "Admin::SessionsController", "h": "set_paper_trail_whodunnit", "st": "skip", "x": "ข้ามสำหรับ create / destroy"}, {"cls": "Api::V1::Admin::AppController", "h": "check_permissions", "st": "run", "x": "return ทันที: <code>api/v1/admin/sessions<\/code> อนุญาตเสมอ"}, {"cls": "Admin::SessionsController", "h": "create", "st": "act", "x": "รหัสผ่าน → เป็น admin? → OTP → ตั้ง cookie bearer ที่เข้ารหัส"}], "scen": [{"label": "login ถูกต้อง", "code": 201, "body": "{\"success\":true}"}, {"label": "รหัส 2FA ผิด", "fail": 4, "x": "raise AppAuthenticationError, \"401: Invalid 2FA code\"", "rescue": "rescue_from AppAuthenticationError → handle_authentication_error", "code": 401, "body": "{\"success\":false,\"type\":\"AppAuthenticationError\",\"error\":\"401: Invalid 2FA code\"}"}]}, {"label": "GET /api/v1/client/roles", "rows": [{"cls": "Api::V1::Client::AppController", "h": "authenticate_client_application!", "st": "run", "x": "<code>X-App-Key<\/code> → แอป; ตรวจ JWT ใน <code>X-App-Secret<\/code> ด้วย app.api_secret (HS256) และ <code>sub == app_key<\/code> ✓"}, {"cls": "Client::RolesController", "h": "index", "st": "act", "x": "current_client_application.roles"}], "scen": [{"label": "header ถูกต้อง", "code": 200, "body": "{\"user_id\":null,\"username\":null,\"roles\":[{\"id\":\"…\",\"name\":\"HR Viewer\",\"permissions\":[\"reports:view\"]}]}"}, {"label": "ไม่มี header", "fail": 0, "x": "raise AppAuthenticationError, \"App key and secret headers are required\"", "rescue": "rescue_from AppAuthenticationError", "code": 401, "body": "{\"success\":false,\"type\":\"AppAuthenticationError\",\"error\":\"App key and secret headers are required\"}"}, {"label": "JWT เซ็นด้วย secret ผิด", "fail": 0, "x": "JWT::VerificationError → raise AppPermissionDenied", "rescue": "rescue_from AppPermissionDenied → handle_forbidden_error", "code": 403, "body": "{\"success\":false,\"type\":\"AppPermissionDenied\",\"error\":\"Invalid client application credentials\"}"}]}, {"label": "POST /api/v1/admin/users/:id/toggle_admin", "rows": [{"cls": "Api::V1::Admin::AppController", "h": "verify_x_requested_with", "st": "run", "x": "มี <code>X-Requested-With: XMLHttpRequest<\/code> ✓"}, {"cls": "Api::V1::Admin::AppController", "h": "set_current_user", "st": "run", "x": "cookie → JWT → <code>User<\/code> และต่ออายุ cookie ✓"}, {"cls": "Api::V1::Admin::AppController", "h": "set_paper_trail_whodunnit", "st": "run", "x": "ประวัติการแก้ไขจะบันทึกชื่อ admin คนนี้"}, {"cls": "Api::V1::Admin::AppController", "h": "check_permissions", "st": "run", "x": "\"api/v1/admin/users#toggle_admin\" ∈ current_user.permissions ✓"}, {"cls": "Admin::UsersController", "h": "set_user", "st": "run", "x": "<code>only: %i[ show toggle_admin ]<\/code> → User.find(params[:id])"}, {"cls": "Admin::UsersController", "h": "toggle_admin", "st": "act", "x": "@user.toggle_admin!"}], "scen": [{"label": "ปกติ", "code": 200, "body": "{\"user\":{\"id\":\"…\",\"username\":\"bob\",\"is_admin\":true,\"actionables\":[\"toggle_admin\"]}}"}, {"label": "ไม่มีสิทธิ์", "fail": 3, "x": "raise AppPermissionDenied", "rescue": "rescue_from AppPermissionDenied → handle_forbidden_error", "code": 403, "body": "{\"success\":false,\"type\":\"AppPermissionDenied\",\"error\":\"You are not allowed to call api/v1/admin/users#toggle_admin\"}"}]}], "l_req": "request", "l_sc": "สถานการณ์"}</script></div></div></div><h2>ข้ามเฉพาะบาง action</h2><div class="code" data-label="ruby · app/controllers/api/v1/admin/sessions_controller.rb"><pre>class Api::V1::Admin::SessionsController &lt; Api::V1::Admin::AppController
+  skip_before_action :set_current_user, only: [:create, :destroy]
+  skip_before_action :set_paper_trail_whodunnit, only: [:create, :destroy]
+
+  def create   <span class="c"># login: nobody is logged in yet</span>
+    ...
+  end
+
+  def me       <span class="c"># still protected: needs current_user</span>
+    render json: { user: current_user.as_admin_profile_json }
+  end
+
+  def destroy  <span class="c"># logout: try to find the user, but never fail</span>
+    set_current_user rescue nil
+    current_user&amp;.reset_authentication_token
+    update_cookies(:bearer, "")
+    render json: { success: true }
+  end
+end</pre></div><div class="warn">ใช้ <code>skip_before_action</code> คู่กับ <code>only:</code> เสมอ ถ้าเขียน <code>skip_before_action :set_current_user</code> เฉยๆ ทุก action ใน controller นั้น รวมถึง action ที่จะเพิ่ม<i>ในอนาคต</i> จะกลายเป็นสาธารณะโดยไม่มีใครสังเกต</div><h2>สิทธิ์มาจาก route</h2><div class="code" data-label="ruby · app/models/permission.rb"><pre>def self.all_admin_permissions
+  Rails.application.routes.routes
+    .map { |r| { path: r.path.spec.to_s, controller: r.defaults[:controller], action: r.defaults[:action] } }
+    .select { |x| x[:path].include?("/api/v1/admin") }
+    .group_by { |x| x[:controller] }
+    .transform_values { |v| v.map { |x| x[:action] }.uniq.reject { |a| a.include?("my_") } }
+    .except("api/v1/admin/sessions")
+    .flat_map { |controller, actions| actions.map { |a| "#{controller}##{a}" } }
+end
+<span class="c"># =&gt; ["api/v1/admin/client_applications#index", "api/v1/admin/roles#create", ...]</span></pre></div><p>เพิ่ม route แล้วสิทธิ์ <code>"controller#action"</code> ของมันจะมีขึ้นเองอัตโนมัติ <code>check_permissions</code> เทียบกับ string นี้ตรงๆ ตั้งชื่อ action ว่า <code>my_*</code> เมื่อ admin ทุกคนที่ login แล้วควรเข้าถึงได้ (เช่น โปรไฟล์ของตัวเอง)</p><h2>after_action / around_action</h2><div class="code" data-label="ruby"><pre>class Api::V1::Admin::ReportsController &lt; Api::V1::Admin::AppController
+  around_action :log_duration, only: :export
+  after_action :no_store, only: :export
+
+  private
+
+  def log_duration
+    started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    yield                                              <span class="c"># the action (and later filters) run here</span>
+  ensure
+    Rails.logger.info("export took #{(Process.clock_gettime(Process::CLOCK_MONOTONIC) - started).round(3)}s")
+  end
+
+  def no_store
+    response.headers["Cache-Control"] = "no-store"     # sensitive download: don't cache
+  end
+end</pre></div><div class="quiz" data-a="0"><p><code>Api::V1::Admin::AppController</code> ประกาศ <code>before_action :set_current_user</code> และ <code>RolesController</code> ประกาศ <code>before_action :set_client_application</code> อันไหนทำงานก่อน?</p><div class="opts"><button type="button">set_current_user</button><button type="button">set_client_application</button><button type="button">สุ่ม</button><button type="button">ตามตัวอักษร</button></div><p class="explain">callback ของ class แม่ทำงานก่อนตามลำดับที่ประกาศ ทำให้การค้นหา record ใช้ <code>current_user</code> ได้</p></div><div class="quiz" data-a="1"><p><code>before_action</code> raise <code>AppPermissionDenied</code> แล้ว <code>after_action</code> ของ controller จะทำงานไหม?</p><div class="opts"><button type="button">ทำงานเสมอ</button><button type="button">ไม่: after_action ทำงานเฉพาะเมื่อ action จบสมบูรณ์</button><button type="button">เฉพาะบน production</button><button type="button">เฉพาะ GET</button></div><p class="explain">ใช้ <code>around_action</code> กับ <code>ensure</code> ถ้ามีสิ่งที่ต้องทำเสมอ</p></div></div>
+
+<div class="col"><label class="readmark"><input type="checkbox" id="read-r07-controller-callbacks"> ทำเครื่องหมายว่าอ่านบท r07 แล้ว</label><div class="pager"><a href="r06-controllers.html">◀ r06 Controller และลำดับชั้นของ API</a><a href="r08-where-code-goes.html">r08 Controller, Model หรือ Service? ▶</a></div></div>
+  </main>
+  <footer class="site">อ้างอิงจาก <a href="https://guides.rubyonrails.org/">Ruby on Rails Guides</a> (CC BY-SA 4.0) เฉพาะส่วนที่ใช้กับแอปแบบ API-only และแนวทางการเขียนโค้ดในโปรเจกต์ของเรา ตัวอย่างโค้ดดัดแปลงจากโค้ดจริงเพื่อใช้สอน</footer>
+</div>
+<script src="../assets/site.js?v=92ac7aa3f8"></script>
+<script>
+
+
+</script>
+<script src="../assets/widgets.js?v=b9f4e038ea"></script>
+</body>
+</html>

@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en" data-lang="rails">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Models and ApplicationRecord · Rails Guide</title>
+
+<link rel="icon" href="favicon.ico" sizes="32x32">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="site.webmanifest">
+<meta name="theme-color" content="#000000">
+<link rel="stylesheet" href="assets/site.css?v=8f1e007517">
+<script src="assets/consent.js?v=9320b4a322"></script>
+</head>
+<body data-slug="r04-models">
+<div class="win">
+  <div class="titlebar"><span class="dots"><i></i><i></i><i></i></span><span class="t">guest@websec: ~/websec/r04-models — zsh — 100×40</span>
+    <a class="by" href="about.html" title="About the author"><span class="w0">by </span>SaKKo</a>
+    <span class="lsw" role="group" aria-label="Language"><a href="r04-models.html" aria-current="true" data-setlang="en">EN</a><a href="th/r04-models.html" data-setlang="th">TH</a></span></div>
+  <nav class="top" aria-label="Lessons"><a href="index.html#rails" title="Home">~/</a>
+<a class="trk" href="index.html#security">#1 security</a>
+<a class="trk on" href="r01-rails-api-app.html">#2 rails</a>
+<span class="grp">| basics:</span>
+<a href="r01-rails-api-app.html" title="A Rails API App">r01·api-app</a>
+<a href="r02-rails-commands.html" title="Rails Commands">r02·commands</a>
+<a href="r03-migrations.html" title="Migrations">r03·migrations</a>
+<span class="grp">| models:</span>
+<a href="r04-models.html" aria-current="page" title="Models and ApplicationRecord">r04·models</a>
+<a href="r05-model-callbacks.html" title="Model Callbacks">r05·model-hooks</a>
+<span class="grp">| controllers:</span>
+<a href="r06-controllers.html" title="Controllers and the API Hierarchy">r06·controllers</a>
+<a href="r07-controller-callbacks.html" title="Controller Callbacks">r07·controller-hooks</a>
+<a href="r08-where-code-goes.html" title="Controllers, Models or Services?">r08·services</a>
+<span class="grp">| api:</span>
+<a href="r09-rest-routes.html" title="RESTful and Resourceful Routes">r09·rest-routes</a>
+<a href="r10-testing.html" title="Testing the API">r10·testing</a></nav>
+  <main>
+<div class="col">
+<p class="prompt">guest@websec ~ % <b>man r04-models</b></p>
+<h1>Models and ApplicationRecord</h1>
+<p class="lede">A model is a Ruby class for one table. It owns the rules about its data: what is valid, how records relate, what states they can be in, and what JSON they show to each audience.</p>
+<h2>ApplicationRecord: the parent of every model</h2><p>Rails generates <code>ApplicationRecord</code> so you have one place to put behaviour that every model shares. It is <b>abstract</b>: it has no table of its own. Our version does a lot:</p><div class="code" data-label="ruby · app/models/application_record.rb"><pre>class ApplicationRecord &lt; ActiveRecord::Base
+  include SoftDeletable          <span class="c"># deleted_at, default_scope, soft_delete!, restore</span>
+  primary_abstract_class         <span class="c"># no table; the app's main DB connection</span>
+
+  has_paper_trail skip: [:authentication_token, :otp_secret]   <span class="c"># audit history</span>
+
+  <span class="c"># Ransack search: only columns that don't look like secrets</span>
+  def self.ransackable_attributes(auth_object = nil)
+    column_names - column_names.select { |x| ["passw", "token", "encryp"].any? { |f| x.include?(f) } } + _ransackers.keys
+  end
+
+  def self.ransackable_associations(auth_object = nil)
+    reflect_on_all_associations.map { |a| a.name.to_s }
+  end
+
+  <span class="c"># Last line of defence: never serialize secret-looking columns</span>
+  def as_json(options = {})
+    except = attributes.keys.select { |key| ["_ip", "sign_in", "_token", "password", "remember", "otp", "locked_at"].any? { |y| key.include?(y) } }
+    super(options).except(*except)
+  end
+end</pre></div><div class="tablewrap"><table><thead><tr><th>line</th><th>every model gets…</th></tr></thead><tbody><tr><td><code>include SoftDeletable</code></td><td>soft delete instead of real delete, and hidden deleted rows by default</td></tr><tr><td><code>has_paper_trail</code></td><td>a <code>versions</code> history of every change (who and what), minus secret columns</td></tr><tr><td><code>ransackable_*</code></td><td>safe search filters: a client can't filter by <code>password_digest</code> to guess it</td></tr><tr><td><code>as_json</code></td><td>token / password / OTP columns removed from any default JSON</td></tr></tbody></table></div><div class="rs">Add cross-cutting behaviour to <code>ApplicationRecord</code> (or a concern it includes), never by copy-pasting into each model. Model-specific behaviour stays in the model.</div><h2>The shape of one of our models</h2><p>Every model is laid out in the same order, so you always know where to look:</p><div class="code" data-label="ruby · app/models/client_application.rb"><pre><span class="c"># == Schema Information          &lt;- 1. generated by annotaterb, never hand-edit</span>
+<span class="c">#  id          :uuid  not null, primary key</span>
+<span class="c">#  name        :text  not null</span>
+<span class="c">#  app_key     :text  not null</span>
+<span class="c">#  ...</span>
+class ClientApplication &lt; ApplicationRecord
+  has_many :roles                                <span class="c"># 2. associations</span>
+  has_many :permissions
+
+  before_validation :generate_credentials, on: :create   <span class="c"># 3. callbacks</span>
+
+  validates :name, :app_key, :api_secret, presence: true <span class="c"># 4. validations</span>
+  validates :app_key, uniqueness: true
+
+  def notify_webhook(event_name, payload = {})   <span class="c"># 5. public behaviour</span>
+    return if webhook_url.blank?
+    ClientApplicationWebhookJob.perform_later(id, event_name, payload)
+  end
+
+  def as_admin_json                              <span class="c"># 6. JSON shapes per audience</span>
+    { id:, allowed_hosts:, app_key:, name:, created_at:, updated_at:, webhook_url: }
+  end
+
+  def as_admin_show_json                         <span class="c">#    the secret only on "show"</span>
+    as_admin_json.merge(api_secret:)
+  end
+
+  private                                        <span class="c"># 7. private helpers + soft-delete hooks</span>
+
+  def generate_credentials
+    self.app_key ||= loop do
+      token = SecureRandom.hex(16)
+      break token unless self.class.exists?(app_key: token)
+    end
+    self.api_secret ||= SecureRandom.hex(32)
+  end
+
+  def cascade_soft_delete
+    roles.not_deleted.find_each(&amp;:soft_delete!)
+  end
+
+  def cascade_restore
+    nil <span class="c"># nothing to cascade</span>
+  end
+end</pre></div><h2>Associations</h2><div class="code" data-label="ruby"><pre>class User &lt; ApplicationRecord
+  has_many :user_roles
+  has_many :roles, through: :user_roles     <span class="c"># many-to-many via a join model</span>
+end
+
+class UserRole &lt; ApplicationRecord
+  belongs_to :user                          <span class="c"># required by default: user must exist</span>
+  belongs_to :role
+end
+
+class Role &lt; ApplicationRecord
+  belongs_to :client_application
+  has_many :user_roles
+  has_many :users, through: :user_roles
+end</pre></div><p>We use a real join <i>model</i> (<code>UserRole</code>) instead of <code>has_and_belongs_to_many</code>, because the link itself has data: a <code>status</code>, timestamps, soft delete and its own state machine.</p><div class="term" data-title="zsh — ~/myapp"><script type="application/json">[{"c": "bin/rails c", "o": "Loading development environment (Rails 8.1.0)"}, {"p": "myapp(dev)>", "c": "user = User.find_by!(username: \"alice\")", "o": "  User Load (0.5ms)  SELECT \"users\".* FROM \"users\" WHERE \"users\".\"deleted_at\" IS NULL AND \"users\".\"username\" = $1 LIMIT $2\n=> #<User id: \"0193a6f2-...\", username: \"alice\", ...>"}, {"p": "myapp(dev)>", "c": "user.roles.pluck(:name)", "o": "  Role Pluck (0.8ms)  SELECT \"roles\".\"name\" FROM \"roles\" INNER JOIN \"user_roles\" ON \"roles\".\"id\" = \"user_roles\".\"role_id\" WHERE \"roles\".\"deleted_at\" IS NULL AND \"user_roles\".\"deleted_at\" IS NULL AND \"user_roles\".\"user_id\" = $1\n=> [\"HR Viewer\", \"Payroll Admin\"]", "n": "<code>through:<\/code> builds the JOIN for you, and the soft-delete scope is applied to <b>both<\/b> tables."}, {"p": "myapp(dev)>", "c": "ur = UserRole.new(user:); ur.valid?", "o": "=> false"}, {"p": "myapp(dev)>", "c": "ur.errors.full_messages", "o": "=> [\"Role must exist\", \"Role can't be blank\"]", "n": "<code>belongs_to<\/code> validates presence by default."}]</script></div><h2>Validations</h2><div class="code" data-label="ruby · app/models/role.rb"><pre>validates :name, presence: true, uniqueness: { scope: :client_application_id }
+validates :status, presence: true, inclusion: { in: %w[active inactive] }
+validates :username, presence: true, uniqueness: {
+                       case_sensitive: false,
+                       conditions: -&gt; { not_deleted },          <span class="c"># ignore soft-deleted rows</span>
+                       message: "is already in use by an active account",
+                     }
+validate :validate_permissions_inclusion                        <span class="c"># custom method</span>
+
+private
+
+def validate_permissions_inclusion
+  return if permissions.blank?
+  return unless client_application
+
+  invalid = Array(permissions) - client_application.permissions.pluck(:name)
+  errors.add(:permissions, "contains invalid permissions: #{invalid.join(", ")}") if invalid.any?
+end</pre></div><div class="term" data-title="zsh — ~/myapp"><script type="application/json">[{"p": "myapp(dev)>", "c": "role = app.roles.new(name: \"intruder\", permissions: [\"reports:view\", \"admin:destroy\"])", "o": "=> #<Role id: nil, name: \"intruder\", ...>"}, {"p": "myapp(dev)>", "c": "role.valid?", "o": "=> false"}, {"p": "myapp(dev)>", "c": "role.errors.as_json", "o": "=> {permissions: [\"contains invalid permissions: admin:destroy\"]}"}, {"p": "myapp(dev)>", "c": "role.save!", "o": "ActiveRecord::RecordInvalid: Validation failed: Permissions contains invalid permissions: admin:destroy", "n": "In a controller this exception is caught by <code>rescue_from ActiveRecord::RecordInvalid<\/code> and becomes a 400 with <code>details: record.errors<\/code>. That's why our controllers call <code>save!<\/code> and never write <code>if @role.save … else …<\/code> (r06)."}]</script></div><div class="warn">Validations are not a security boundary by themselves: <code>update_columns</code>, <code>insert_all</code> and raw SQL skip them. Back important rules with database constraints (<code>null: false</code>, unique indexes, foreign keys).</div><h2>Scopes and soft delete</h2><div class="code" data-label="ruby · app/models/concerns/soft_deletable.rb (outline)"><pre>module SoftDeletable
+  extend ActiveSupport::Concern
+
+  included do
+    scope :not_deleted, -&gt; { where(deleted_at: nil) }
+    scope :deleted,     -&gt; { where.not(deleted_at: nil) }
+    scope :with_deleted, -&gt; { unscope(where: :deleted_at) }
+
+    default_scope { not_deleted }                 <span class="c"># every query hides deleted rows</span>
+    define_model_callbacks :soft_delete, :restore <span class="c"># custom callbacks (r05)</span>
+  end
+
+  def soft_delete!                                <span class="c"># sets deleted_at, cascades</span>
+  def restore                                     <span class="c"># clears it, re-checks uniqueness</span>
+  def destroy                                     <span class="c"># raises: use soft_delete! or hard_destroy!</span>
+  def hard_destroy!                               <span class="c"># the only real DELETE</span>
+end</pre></div><div class="term" data-title="zsh — ~/myapp"><script type="application/json">[{"p": "myapp(dev)>", "c": "role.soft_delete!", "o": "  Role Update All (0.6ms)  UPDATE \"roles\" SET \"deleted_at\" = $1, \"updated_at\" = $2 WHERE \"roles\".\"id\" = $3\n=> true"}, {"p": "myapp(dev)>", "c": "Role.find(role.id)", "o": "ActiveRecord::RecordNotFound: Couldn't find Role with 'id'=\"0193...\"", "n": "Hidden by the default scope, so controllers return 404 for deleted records with no extra code."}, {"p": "myapp(dev)>", "c": "Role.with_deleted.find(role.id).restore", "o": "=> true"}, {"p": "myapp(dev)>", "c": "role.destroy", "o": "AppSoftDeleteError: Direct call to #destroy is blocked on Role. Use #soft_delete! or #hard_destroy! instead."}]</script></div><p>Each model that includes <code>SoftDeletable</code> must implement <code>cascade_soft_delete</code> and <code>cascade_restore</code>. That forces you to decide, per model, what happens to children: <code>User</code> soft-deletes its <code>user_roles</code>; <code>Department</code> has nothing to cascade and says so with <code>nil # nothing to cascade</code>.</p><h2>JSON shapes live in the model</h2><div class="code" data-label="ruby · app/models/role.rb"><pre>def as_admin_json(with_client_application: false, with_permissions: true)
+  json = { id:, name:, created_at:, updated_at:, client_application_id:, description:, status:, deleted_at: }
+  json[:permissions] = permissions if with_permissions
+  json[:client_application] = client_application.as_admin_json if with_client_application
+  json
+end
+
+def as_client_json(with_client_application: false, with_permissions: true)
+  <span class="c"># same idea, for server-to-server clients</span>
+end</pre></div><ul><li><b>Explicit fields</b>: new columns are private until you add them. <code>api_secret</code> appears only in <code>as_admin_show_json</code>, never in a list.</li><li><b>One method per audience</b>: <code>as_admin_json</code>, <code>as_client_json</code>, <code>as_admin_profile_json</code>.</li><li><b><code>with_*:</code> flags</b> for nested data, so a list endpoint doesn’t load associations it doesn’t show.</li><li><code>{ id:, name: }</code> is Ruby 3.1 shorthand for <code>{ id: id, name: name }</code>.</li></ul><h2>Class methods vs instance methods</h2><div class="code" data-label="ruby · app/models/user.rb"><pre><span class="c"># class method: no record yet; find, create or sync one</span>
+def self.authenticate_and_sync!(username, password)
+  entry = DirectoryService.authenticate!(username, password)    <span class="c"># service does the I/O</span>
+  sync_from_directory!(entry)
+end
+
+def self.sync_from_directory!(entry)
+  user = find_or_initialize_by(username: entry[:username].downcase)
+  user.assign_attributes(email: entry[:email], display_name: entry[:display_name])
+  user.save!
+  user
+end
+
+<span class="c"># instance method: acts on this record</span>
+def toggle_admin!
+  update(is_admin: !is_admin?)
+end</pre></div><div class="rs">A trailing <code>!</code> means "raises on failure" (<code>save!</code>, <code>sync_from_directory!</code>) or "changes state" (<code>toggle_admin!</code>, <code>soft_delete!</code>). Methods ending in <code>?</code> return booleans.</div><h2>State machines with AASM</h2><div class="code" data-label="ruby · app/models/user_role.rb"><pre>class UserRole &lt; ApplicationRecord
+  include AASM
+
+  aasm :status, timestamps: true, column: "status" do   # timestamps: sets active_at / inactive_at
+    state :active, initial: true
+    state :inactive
+
+    event :activate do
+      transitions from: :inactive, to: :active
+    end
+
+    event :inactivate do
+      transitions from: :active, to: :inactive
+    end
+  end
+
+  def admin_actionables              <span class="c"># tells the admin UI which buttons to show</span>
+    rows = []
+    rows &lt;&lt; "activate" if may_activate?
+    rows &lt;&lt; "inactivate" if may_inactivate?
+    rows
+  end
+end</pre></div><div class="term" data-title="zsh — ~/myapp"><script type="application/json">[{"p": "myapp(dev)>", "c": "ur = user.user_roles.first; ur.status", "o": "=> \"active\""}, {"p": "myapp(dev)>", "c": "ur.admin_actionables", "o": "=> [\"inactivate\"]"}, {"p": "myapp(dev)>", "c": "ur.activate!", "o": "AASM::InvalidTransition: Event 'activate' cannot transition from 'active'.", "n": "Rescued in <code>Api::AppController<\/code> as 400. Each event becomes a <b>member route<\/b>: <code>POST /users/:user_id/user_roles/:id/activate<\/code> (r09)."}]</script></div><div class="quiz" data-a="1"><p>You add a <code>salary</code> column to <code>users</code>. Which endpoints now expose it?</p><div class="opts"><button type="button">All of them, automatically</button><button type="button">None, until you add it to an <code>as_*_json</code> method</button><button type="button">Only admin endpoints</button><button type="button">Only if it's not encrypted</button></div><p class="explain">Our serializers list fields explicitly, so new columns stay private by default.</p></div><div class="quiz" data-a="1"><p>Why does <code>Role.find(id)</code> raise <code>RecordNotFound</code> for a soft-deleted role?</p><div class="opts"><button type="button">Soft delete really deletes the row</button><button type="button">The <code>default_scope</code> adds <code>deleted_at IS NULL</code></button><button type="button">Paper trail hides it</button><button type="button">The ID changes</button></div><p class="explain">Use <code>Role.with_deleted</code> when you really need deleted rows (e.g. to restore).</p></div></div>
+
+<div class="col"><label class="readmark"><input type="checkbox" id="read-r04-models"> Mark lesson r04 as read</label><div class="pager"><a href="r03-migrations.html">◀ r03 Migrations</a><a href="r05-model-callbacks.html">r05 Model Callbacks ▶</a></div></div>
+  </main>
+  <footer class="site">Based on the <a href="https://guides.rubyonrails.org/">Ruby on Rails Guides</a> (CC BY-SA 4.0), API-only parts, and the conventions in our own codebase. Code samples are adapted from our real code for teaching.</footer>
+</div>
+<script src="assets/site.js?v=92ac7aa3f8"></script>
+<script>
+
+
+</script>
+<script src="assets/widgets.js?v=b9f4e038ea"></script>
+</body>
+</html>

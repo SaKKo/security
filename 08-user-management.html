@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en" data-lang="rails">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>08 User Management · Web Security</title>
+
+<link rel="icon" href="favicon.ico" sizes="32x32">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="site.webmanifest">
+<meta name="theme-color" content="#000000">
+<link rel="stylesheet" href="assets/site.css?v=8f1e007517">
+<script src="assets/consent.js?v=9320b4a322"></script>
+</head>
+<body data-slug="08-user-management">
+<div class="win">
+  <div class="titlebar"><span class="dots"><i></i><i></i><i></i></span><span class="t">guest@websec: ~/websec/08-user-management — zsh — 100×40</span>
+    <a class="by" href="about.html" title="About the author"><span class="w0">by </span>SaKKo</a>
+    <span class="lsw" role="group" aria-label="Language"><a href="08-user-management.html" aria-current="true" data-setlang="en">EN</a><a href="th/08-user-management.html" data-setlang="th">TH</a></span>
+    <span class="langsw" role="group" aria-label="Code examples language"><span class="d">code:</span><button type="button" data-l="rails">rails</button><button type="button" data-l="node">node</button></span></div>
+  <nav class="top" aria-label="Sections"><a href="index.html" title="Web Security Field Guide">~/</a>
+<a class="trk on" href="index.html#security">#1 security</a>
+<a class="trk" href="r01-rails-api-app.html">#2 rails</a>
+<span class="grp">|</span>
+<a href="01-introduction.html" title="Introduction">01·introduction</a>
+<a href="02-sql-injection.html" title="SQL Injection">02·sql-injection</a>
+<a href="03-unsafe-query-generation.html" title="Unsafe Query Generation">03·query-shape</a>
+<a href="04-xss-and-other-injection.html" title="XSS and Other Injection">04·xss</a>
+<span class="grp">| accounts:</span>
+<a href="05-authentication.html" title="Authentication">05·auth</a>
+<a href="05b-mfa.html" title="Multi-Factor Authentication">05b·mfa</a>
+<a href="06-sessions.html" title="Sessions">06·sessions</a>
+<a href="07-csrf.html" title="Cross-Site Request Forgery">07·csrf</a>
+<a href="08-user-management.html" aria-current="page" title="User Management">08·accounts</a>
+<a href="09-mass-assignment-and-authorization.html" title="Mass Assignment and Authorization">09·authz</a>
+<span class="grp">| browser:</span>
+<a href="10-redirection-and-files.html" title="Redirection and Files">10·files</a>
+<a href="11-http-security-headers.html" title="HTTP Security Headers">11·headers</a>
+<a href="12-transport-cookies-third-party.html" title="Transport, Cookies and Third-Party Scripts">12·cookies-tls</a>
+<span class="grp">| server:</span>
+<a href="13-ssrf.html" title="Server-Side Request Forgery">13·ssrf</a>
+<a href="14-deserialization-and-xxe.html" title="Deserialization and XXE">14·deserialize</a>
+<a href="15-environmental-security.html" title="Environmental Security">15·secrets</a>
+<a href="16-cryptography.html" title="Cryptography and Data Protection">16·crypto</a>
+<a href="17-dependencies-and-cves.html" title="Dependencies and CVEs">17·dependencies</a>
+<span class="grp">| ops:</span>
+<a href="18-intranet-and-admin.html" title="Intranet and Admin Security">18·admin</a>
+<a href="19-misconfiguration-and-errors.html" title="Misconfiguration and Error Handling">19·misconfig</a>
+<a href="20-insecure-design.html" title="Insecure Design and Business Logic">20·design</a>
+<a href="21-logging-and-incident-response.html" title="Logging, Alerting and Incident Response">21·logging</a>
+<a href="22-additional-resources.html" title="Additional Resources">22·resources</a>
+<span class="grp">| questionnaires:</span>
+<a href="q1-developer-survey.html" title="Developer Security Survey">Q1·developer</a>
+<a href="q2-awareness-survey.html" title="Cyber Threat Awareness Survey">Q2·cyber</a></nav>
+  <main>
+<div class="col">
+<p class="prompt">guest@websec ~ % <b>man 08-user-management</b></p>
+<h1>08 · User Management</h1>
+<p class="lede">Accounts attract simple attacks: guessing passwords, swapping someone's email, changing an ID in the URL. Plus two sneaky leaks: logs and regexes.</p>
+<div class="rp partial">The generator and Devise handle the basics. Devise can also lock accounts (<code>:lockable</code>). Neither adds MFA for you.</div>
+<div class="toc"><b>on this page</b><ol>
+<li><a href="#brute">Brute-forcing accounts</a></li><li><a href="#hijack">Account hijacking</a></li><li><a href="#captcha">CAPTCHAs</a></li><li><a href="#logging">Logging</a></li><li><a href="#regex">Regular expressions</a></li><li><a href="#priv">Privilege escalation</a></li></ol></div>
+<h2 id="brute">8.1 Brute-forcing accounts</h2>
+<p>Attackers don't guess randomly. They try common passwords and ones leaked from other sites (<b>credential stuffing</b>). Most passwords fall within a few thousand tries.</p>
+<p>Defenses:</p>
+<ul>
+<li><b>Generic errors</b> on login and "forgot password".</li>
+<li><b>Rate limits</b> per IP and per account. Rails: <code>rate_limit to: 10, within: 3.minutes</code>.</li>
+<li><b>CAPTCHA</b> after a few failures.</li>
+<li><b>MFA</b>, so a right password still isn't enough.</li>
+</ul>
+<div class="anim" data-actors="Old breach dump|Attacker's bots|POST /session|rate limiter" data-title="Credential stuffing"><script type="application/json">[{"f": 0, "t": 1, "l": "1.4 billion email:password pairs", "c": "Passwords leaked from other sites. People reuse them."}, {"f": 1, "t": 2, "l": "ana@corp.test / Summer2019!", "k": "a", "c": "Bots try each pair once against our login."}, {"f": 2, "t": 1, "l": "401", "c": "Most fail. Some don't."}, {"f": 1, "t": 2, "l": "lee@corp.test / Lee1985!", "k": "a", "c": "A real reused password: without MFA, <b>account taken over<\/b>."}, {"f": 1, "t": 3, "l": "11th try from this IP in 3 min", "k": "b", "c": "<code>rate_limit to: 10, within: 3.minutes<\/code> answers 429 Too Many Requests."}, {"f": 1, "t": 3, "l": "botnet: 1 try per IP, many IPs", "k": "a", "c": "Per-IP limits don't see a distributed attack. Count failures <b>per account<\/b> too (rack-attack), and require MFA."}]</script></div>
+<div class="demo"><header><b>sim: dictionary attack vs rate limiting</b><span>the real password is #8,114 on the attacker's list</span></header><div class="body">
+<div class="row">
+<label><input id="bf-rl" type="checkbox"/> rate limit: 10 attempts / 3 min per IP</label>
+<label><input id="bf-acct" type="checkbox"/> per-account limit: 20 / hour across all IPs</label>
+<label><input id="bf-cap" type="checkbox"/> CAPTCHA after 5 failures</label>
+<label><input id="bf-mfa" type="checkbox"/> MFA enabled</label>
+</div>
+<div class="row" style="margin-top:8px"><label for="bf-ips">attacker IPs (botnet size)</label><input id="bf-ips" max="100000" min="1" style="width:120px" type="number" value="1"/></div>
+<div class="row" style="margin-top:10px"><button class="btn red" id="bf-go" type="button">run attack ▶</button></div>
+<div class="out" id="bf-out" style="margin-top:10px"></div>
+</div></div>
+<div class="code">
+<pre data-lang="rails">class SessionsController &lt; ApplicationController
+  rate_limit to: 10, within: 3.minutes, only: :create,
+             with: -&gt; { redirect_to new_session_url, alert: "Try again later." }
+end
+
+<span class="c"># config/initializers/rack_attack.rb: per-account limit across all IPs</span>
+Rack::Attack.throttle("logins/email", limit: 20, period: 1.hour) do |req|
+  req.params["email_address"].to_s.downcase.presence if req.path == "/session" &amp;&amp; req.post?
+end</pre>
+<pre data-lang="node">const rateLimit = require("express-rate-limit");
+const loginLimiter = rateLimit({
+  windowMs: 3 * 60 * 1000, limit: 10,                <span class="c">// 10 per 3 minutes per IP</span>
+  standardHeaders: "draft-7", legacyHeaders: false,
+  message: "Too many attempts. Try again in a few minutes.",
+});
+app.post("/login", loginLimiter, loginHandler);
+<span class="c">// add a per-account counter (e.g. in Redis keyed by email) to stop botnets
+// that rotate IPs, and require a CAPTCHA once it passes a threshold</span></pre>
+</div>
+<div class="rp partial"><code>rate_limit</code> needs a shared cache in production, or each server counts alone. For per-account limits, add <code>rack-attack</code>.</div>
+<h2 id="hijack">8.2 Account hijacking</h2>
+<p>Someone grabs a session for a minute (unlocked laptop, XSS). They'll try to make it permanent by changing the password or email.</p>
+<h3>Passwords</h3>
+<p>Ask for the <b>current password</b> before setting a new one.</p>
+<h3>Email</h3>
+<p>Same for email, since a new email means they control password resets. Also notify the old address.</p>
+<h3>Other</h3>
+<p>Treat phone numbers, MFA devices and forwarding rules the same way.</p>
+<div class="demo"><header><b>sim: attacker with a stolen session</b><span>try to take the account over</span></header><div class="body">
+<div class="row"><label><input id="ah-pw" type="checkbox"/> require current password for sensitive changes</label><label><input id="ah-notify" type="checkbox"/> notify old email + confirm new one</label></div>
+<div class="row" style="margin-top:10px">
+<button class="btn red" data-ah="pw" type="button">change password to "pwned"</button>
+<button class="btn red" data-ah="email" type="button">change email to mallory@evil.test</button>
+<button class="btn red" data-ah="fwd" type="button">add mail forwarding rule</button>
+<button class="btn" id="ah-reset" type="button">reset</button></div>
+<div class="log" id="ah-log" style="margin-top:10px"></div>
+</div></div>
+<div class="rp partial">Devise asks for the current password already. In our own settings code, check <code>user.authenticate(params[:current_password])</code>.</div>
+<h2 id="captcha">8.3 CAPTCHAs</h2>
+<p>Two flavors:</p>
+<ul>
+<li><b>Visible</b> (reCAPTCHA, Turnstile): ask humans to prove it. Works, but annoys people.</li>
+<li><b>Invisible</b>: a hidden <b>honeypot</b> field. People don't see it; dumb bots fill it in.</li>
+</ul>
+<p>Neither replaces rate limiting.</p>
+<div class="demo"><header><b>sim: honeypot field</b><span>submit as a human, then as a bot</span></header><div class="body">
+<div class="grid2">
+<div class="box"><p class="cap">what the human sees</p>
+<label for="hp-name">name</label><input id="hp-name" type="text" value="Ana"/>
+<label for="hp-msg">comment</label><input id="hp-msg" type="text" value="Great article!"/>
+<div class="row" style="margin-top:8px"><button class="btn on" id="hp-human" type="button">submit as human</button><button class="btn red" id="hp-bot" type="button">submit as spam bot</button></div>
+</div>
+<div class="box"><p class="cap">the actual form HTML</p><pre class="plain" style="font-size:12px">&lt;input name="name"&gt;
+&lt;input name="comment"&gt;
+<span class="y">&lt;!-- hidden from humans --&gt;
+&lt;div style="position:absolute;left:-9999px"
+     aria-hidden="true"&gt;
+  &lt;input name="website" tabindex="-1"
+         autocomplete="off"&gt;
+&lt;/div&gt;</span>
+&lt;input type="hidden" name="ts" value="…"&gt;</pre></div>
+</div>
+<div class="out" id="hp-out" style="margin-top:10px"></div>
+</div></div>
+<h2 id="logging">8.4 Logging</h2>
+<p>Frameworks log request params. That puts passwords and card numbers in plain text in log files, which get shared and kept for months.</p>
+<p>Mask sensitive params before they're logged.</p>
+<div class="demo"><header><b>sim: request log filter</b><span>edit the filter list</span></header><div class="body">
+<label for="lg-filter">filtered parameter name fragments (comma-separated)</label>
+<input id="lg-filter" type="text" value="passw, secret, token"/>
+<div class="out" id="lg-out" style="margin-top:10px"></div>
+</div></div>
+<div class="code">
+<pre data-lang="rails"><span class="c"># config/initializers/filter_parameter_logging.rb (generated)</span>
+Rails.application.config.filter_parameters += [
+  :passw, :email, :secret, :token, :_key, :crypt, :salt, :certificate, :otp, :ssn, :cvv, :cvc,
+  :card_number, :national_id                  <span class="c"># add your own</span>
+]</pre>
+<pre data-lang="node"><span class="c">// pino (common Express logger) supports redaction paths</span>
+const logger = require("pino")({
+  redact: { paths: ["req.body.password", "req.body.card_number",
+                    "req.headers.authorization", "req.headers.cookie", "*.token"],
+            censor: "[FILTERED]" },
+});</pre>
+</div>
+<div class="rp yes"><code>filter_parameters</code> already masks passwords, tokens, keys and more. Add your own fields, like card numbers.</div>
+<h2 id="regex">8.5 Regular expressions</h2>
+<p>"Start" and "end" anchors mean different things in different languages:</p>
+<div class="tablewrap"><table><thead><tr><th>language</th><th><code>^</code> / <code>$</code> mean…</th><th>whole-string anchors</th></tr></thead><tbody>
+<tr><td>Ruby</td><td>start / end of <b>any line</b>, always</td><td><code>\A</code> … <code>\z</code></td></tr>
+<tr><td>JavaScript</td><td>start / end of string, unless the <code>m</code> flag is set</td><td><code>^</code> … <code>$</code> without <code>m</code></td></tr>
+<tr><td>PHP (PCRE)</td><td><code>$</code> also matches before a trailing <code>\n</code>; it allows a trailing newline unless <code>D</code> flag</td><td><code>\A</code> … <code>\z</code></td></tr>
+<tr><td>Java</td><td><code>matches()</code> checks the whole string</td><td><code>matches()</code> or <code>\A</code>…<code>\z</code></td></tr>
+</tbody></table></div>
+<p>The classic bug: a URL check passes because the <i>second line</i> looks fine, while line one is <code>javascript:</code>. Anchor to the whole string and test with newlines.</p>
+<div class="demo"><header><b>sim: anchors and newlines</b><span>JavaScript regex engine, live</span></header><div class="body">
+<label for="rx-in">input (use the buttons to insert a newline)</label>
+<textarea id="rx-in" rows="2">javascript:alert(document.cookie)/*
+http://ok.test/*/</textarea>
+<div class="row" style="margin-top:8px"><button class="btn" data-rx="https://example.test/page" type="button">normal URL</button><button class="btn" data-rx="javascript:alert(document.cookie)/*
+http://ok.test/*/" type="button">two-line payload</button><button class="btn" data-rx="admin
+" type="button">"admin" + trailing newline</button></div>
+<div class="tablewrap" style="margin-top:10px"><table><thead><tr><th>pattern</th><th>behaves like</th><th>result</th></tr></thead><tbody id="rx-out"></tbody></table></div>
+</div></div>
+<div class="rp yes">Rails' format validator refuses <code>^</code>/<code>$</code> unless you say <code>multiline: true</code>. Regexes elsewhere get no such check.</div>
+<h2 id="priv">8.6 Privilege escalation</h2>
+<p>One of the most common bugs on the web: change <code>/projects/1042</code> to <code>1043</code> and see someone else's project. It's called <b>IDOR</b> (Insecure Direct Object Reference).</p>
+<p>Fix: always look things up through the current user. <code>current_user.projects.find(id)</code>, not <code>Project.find(id)</code>.</p>
+<p>And remember: hidden fields and front-end checks aren't security. Anyone can edit what their browser sends.</p>
+<div class="demo"><header><b>sim: edit the ID</b><span>you are user #7 (dana)</span></header><div class="body">
+<div class="row"><span>GET /projects/</span><input id="id-in" style="width:110px" type="number" value="1042"/><button class="btn" id="id-prev" type="button">−1</button><button class="btn" id="id-next" type="button">+1</button></div>
+<div class="grid2" style="margin-top:10px">
+<div class="box"><p class="cap r">Project.find(id)</p><div class="out" id="id-a"></div></div>
+<div class="box"><p class="cap g">current_user.projects.find(id)</p><div class="out" id="id-b"></div></div>
+</div>
+</div></div>
+<div class="code">
+<pre data-lang="rails"><span class="bad"># VULNERABLE: any logged-in user can read any project</span>
+@project = Project.find(params[:id])
+
+<span class="ok"># SAFE: scope through the current user; others get 404 (RecordNotFound)</span>
+@project = Current.user.projects.find(params[:id])
+
+<span class="c"># shared resources: a policy object (Pundit)</span>
+@project = Project.find(params[:id])
+authorize @project            <span class="c"># ProjectPolicy#show? decides</span></pre>
+<pre data-lang="node"><span class="bad">// VULNERABLE: any logged-in user can read any project</span>
+const p = await db.query("SELECT * FROM projects WHERE id = $1", [req.params.id]);
+
+<span class="ok">// SAFE: owner is part of the lookup; others get a 404</span>
+const p = await db.query(
+  "SELECT * FROM projects WHERE id = $1 AND owner_id = $2",
+  [req.params.id, req.user.id]);
+if (!p.rows.length) return res.sendStatus(404);</pre>
+</div>
+<div class="rp no">No authorization built in. Scope through <code>current_user</code>, or use Pundit. More in section 09.</div>
+</div>
+
+<div class="col"><label class="readmark"><input type="checkbox" id="read-08-user-management"> mark section 08 as read</label><div class="pager"><a href="07-csrf.html">◀ 07 Cross-Site Request Forgery</a><a href="09-mass-assignment-and-authorization.html">09 Mass Assignment and Authorization ▶</a></div></div>
+  </main>
+  <footer class="site">Based on the <a href="https://guides.rubyonrails.org/security.html">Ruby on Rails Security Guide</a> (CC BY-SA 4.0), the <a href="https://cheatsheetseries.owasp.org/">OWASP Cheat Sheet Series</a>, the <a href="https://owasp.org/Top10/2025/">OWASP Top 10:2025</a> and <a href="https://infosec.mozilla.org/guidelines/web_security.html">Mozilla's Web Security Guidelines</a>. Written for our dev team; code samples are illustrative.</footer>
+</div>
+<script src="assets/site.js?v=92ac7aa3f8"></script>
+<script>
+
+// brute force
+$("#bf-go").onclick = () => {
+  const rl = $("#bf-rl").checked, acct = $("#bf-acct").checked, cap = $("#bf-cap").checked, mfa = $("#bf-mfa").checked;
+  const ips = Math.max(1, +$("#bf-ips").value || 1), need = 8114, raw = 2000; // tries/min unthrottled per IP
+  let perMin = raw * ips, notes = [];
+  if (rl) { perMin = Math.min(perMin, (10 / 3) * ips); notes.push(`per-IP limit caps each IP at 3.3/min → ${(perMin).toFixed(1)}/min total`); }
+  if (acct) { perMin = Math.min(perMin, 20 / 60); notes.push("per-account limit caps all IPs combined at 20/hour"); }
+  if (cap) { notes.push("after 5 failures every guess needs a CAPTCHA solve (~$0.002 and ~10 s each via solving farms)"); perMin = Math.min(perMin, 6 * ips); }
+  const mins = need / perMin;
+  const human = m => m < 1 ? `${Math.max(1, Math.round(m * 60))} seconds` : m < 120 ? `${Math.round(m)} minutes` : m < 2880 ? `${(m / 60).toFixed(1)} hours` : m < 525600 ? `${Math.round(m / 1440)} days` : `${(m / 525600).toFixed(1)} years`;
+  let res = `guess rate: ${perMin < 1 ? perMin.toFixed(2) : Math.round(perMin).toLocaleString()} passwords/min\n` + notes.map(n => "  · " + n).join("\n") + `\ntime to reach guess #8,114: <b>${human(mins)}</b>`;
+  if (mfa) res += `\n\n<span class="g">password found eventually… but login still asks for a 6-digit code from the owner's phone. Attack fails.</span>`;
+  else res += mins < 60 * 24 ? `\n\n<span class="r">account compromised.</span>` : `\n\n<span class="g">impractical: attackers move on to easier targets.</span>`;
+  if (rl && !acct && ips > 100) res += `\n<span class="y">notice: per-IP limits barely matter against a large botnet. Add per-account limits.</span>`;
+  $("#bf-out").innerHTML = res;
+};
+$("#bf-go").click();
+
+// account hijack
+function ahLog(s) { $("#ah-log").innerHTML += s + "\n"; $("#ah-log").scrollTop = 1e9; }
+$$("[data-ah]").forEach(b => b.onclick = () => {
+  const pw = $("#ah-pw").checked, nt = $("#ah-notify").checked, a = b.dataset.ah;
+  const label = { pw: "PATCH /settings/password", email: "PATCH /settings/email", fwd: "POST /settings/forwarding" }[a];
+  if (pw) return ahLog(`${label} → <span class="g">403: "Enter your current password." Attacker doesn't know it.</span>`);
+  if (a === "pw") return ahLog(`${label} → <span class="r">200: owner is locked out</span>`);
+  if (a === "email") return ahLog(nt ? `${label} → <span class="y">pending: confirmation sent to mallory@, and alice@ got "Your email is changing. Not you? Undo."</span>` : `${label} → <span class="r">200: then "forgot password" sends the reset link to mallory@evil.test</span>`);
+  ahLog(nt ? `${label} → <span class="y">created, but alice@ is notified of the new rule</span>` : `${label} → <span class="r">200: every future email silently copied to the attacker</span>`);
+});
+$("#ah-reset").onclick = () => $("#ah-log").innerHTML = "";
+
+// honeypot
+let loadT = Date.now();
+$("#hp-human").onclick = () => { const dt = ((Date.now() - loadT) / 1000).toFixed(1); $("#hp-out").innerHTML = `POST name=${esc($("#hp-name").value)}&comment=${esc($("#hp-msg").value)}&website=&ts=${dt}s\n<span class="g">website empty ✓  time on page ${dt}s ✓  → comment accepted</span>`; };
+$("#hp-bot").onclick = () => { $("#hp-out").innerHTML = `POST name=Buy+Cheap&comment=CLICK+HERE&website=http%3A%2F%2Fspam.test&ts=0.2s\n<span class="r">honeypot "website" filled ✗  submitted 0.2s after load ✗</span>\n→ respond 200 OK anyway (so the bot doesn't adapt) and silently discard`; };
+
+// logging
+const reqParams = { email: "ana@example.test", password: "hunter2-but-longer", password_confirmation: "hunter2-but-longer", card_number: "4111 1111 1111 1111", api_token: "sk_live_51Hx9…", otp_code: "492817", plan: "pro" };
+function lg() {
+  const f = $("#lg-filter").value.split(",").map(s => s.trim().toLowerCase()).filter(Boolean);
+  const lines = Object.entries(reqParams).map(([k, v]) => { const hit = f.some(x => k.toLowerCase().includes(x)); return `    "${k}": ${hit ? '<span class="g">"[FILTERED]"</span>' : (["email", "plan"].includes(k) ? `"${esc(v)}"` : `<span class="r">"${esc(v)}"</span>`)}`; });
+  const leaks = Object.keys(reqParams).filter(k => !["email", "plan"].includes(k) && !f.some(x => k.toLowerCase().includes(x)));
+  $("#lg-out").innerHTML = `I, [2026-11-14T22:58:03] Started POST "/signup" for 203.0.113.9\n  Parameters: {\n${lines.join(",\n")}\n  }\n\n` + (leaks.length ? `<span class="r">leaking: ${leaks.join(", ")}</span>  (try adding "card, otp")` : '<span class="g">no secrets in this log line</span>');
+}
+$("#lg-filter").addEventListener("input", lg); lg();
+
+// regex
+function rx() {
+  const v = $("#rx-in").value;
+  const tests = [
+    ["/^https?:\\/\\/[^\\n]+$/m", "Ruby's ^…$ (always line-based)", /^https?:\/\/[^\n]+$/m],
+    ["/^https?:\\/\\/[^\\n]+$/", "JS without m flag", /^https?:\/\/[^\n]+$/],
+    ["/^[a-z]+$/  (PHP-style $)", "PHP preg_match", { test: s => /^[a-z]+\n?$/.test(s) }],
+    ["/^[a-z]+$/  via fullmatch / \\A…\\z", "strict whole-string", /^[a-z]+$/]];
+  $("#rx-out").innerHTML = tests.map(([p, d, re]) => { const m = re.test(v); return `<tr><td><code>${esc(p)}</code></td><td>${d}</td><td>${m ? '<span class="y">MATCH</span>' : '<span class="d">no match</span>'}</td></tr>`; }).join("") +
+    `<tr><td colspan="3" class="w">${v.includes("\n") ? 'Input contains a newline. Line-based anchors let the "good" line vouch for the "bad" one.' : "Single line: all anchor styles agree. Add a newline to see them diverge."}</td></tr>`;
+}
+$("#rx-in").addEventListener("input", rx); $$("[data-rx]").forEach(b => b.onclick = () => { $("#rx-in").value = b.dataset.rx; rx(); }); rx();
+
+// IDOR
+const projects = { 1040: ["sam", 3, "Q3 layoffs plan"], 1041: ["dana", 7, "Garden redesign"], 1042: ["dana", 7, "Wedding budget"], 1043: ["lee", 12, "Acquisition target list (CONFIDENTIAL)"], 1044: ["ana", 9, "Medical bills 2026"], 1045: ["dana", 7, "Novel draft"] };
+function idr() {
+  const id = +$("#id-in").value, p = projects[id];
+  $("#id-a").innerHTML = p ? `${p[1] === 7 ? '<span class="g">' : '<span class="r">'}#${id} "${esc(p[2])}"\nowner: ${p[0]} (user ${p[1]})${p[1] !== 7 ? "\n→ data leak!" : ""}</span>` : "404 Not Found";
+  $("#id-b").innerHTML = p && p[1] === 7 ? `<span class="g">#${id} "${esc(p[2])}"\nowner: dana</span>` : `<span class="g">404 Not Found</span>${p ? '\n<span class="d">(exists, but not yours: indistinguishable from missing)</span>' : ""}`;
+}
+$("#id-in").addEventListener("input", idr); $("#id-prev").onclick = () => { $("#id-in").value = +$("#id-in").value - 1; idr(); }; $("#id-next").onclick = () => { $("#id-in").value = +$("#id-in").value + 1; idr(); }; idr();
+
+</script>
+</body>
+</html>

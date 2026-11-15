@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="th" data-lang="rails">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>แอป Rails แบบ API · Rails Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600&display=swap" rel="stylesheet">
+<link rel="icon" href="../favicon.ico" sizes="32x32">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<link rel="manifest" href="../site.webmanifest">
+<meta name="theme-color" content="#000000">
+<link rel="stylesheet" href="../assets/site.css?v=8f1e007517">
+<script src="../assets/consent.js?v=9320b4a322"></script>
+</head>
+<body data-slug="r01-rails-api-app">
+<div class="win">
+  <div class="titlebar"><span class="dots"><i></i><i></i><i></i></span><span class="t">guest@websec: ~/websec/r01-rails-api-app/th — zsh — 100×40</span>
+    <a class="by" href="about.html" title="เกี่ยวกับผู้เขียน"><span class="w0">เขียนโดย </span>SaKKo</a>
+    <span class="lsw" role="group" aria-label="ภาษา"><a href="../r01-rails-api-app.html" data-setlang="en">EN</a><a href="r01-rails-api-app.html" aria-current="true" data-setlang="th">TH</a></span></div>
+  <nav class="top" aria-label="บทเรียน"><a href="index.html#rails" title="หน้าแรก">~/</a>
+<a class="trk" href="index.html#security">#1 ความปลอดภัย</a>
+<a class="trk on" href="r01-rails-api-app.html">#2 rails</a>
+<span class="grp">| พื้นฐาน:</span>
+<a href="r01-rails-api-app.html" aria-current="page" title="แอป Rails แบบ API">r01·api-app</a>
+<a href="r02-rails-commands.html" title="คำสั่ง Rails">r02·commands</a>
+<a href="r03-migrations.html" title="Migration">r03·migrations</a>
+<span class="grp">| model:</span>
+<a href="r04-models.html" title="Model และ ApplicationRecord">r04·models</a>
+<a href="r05-model-callbacks.html" title="Model Callback">r05·model-hooks</a>
+<span class="grp">| controller:</span>
+<a href="r06-controllers.html" title="Controller และลำดับชั้นของ API">r06·controllers</a>
+<a href="r07-controller-callbacks.html" title="Controller Callback">r07·controller-hooks</a>
+<a href="r08-where-code-goes.html" title="Controller, Model หรือ Service?">r08·services</a>
+<span class="grp">| api:</span>
+<a href="r09-rest-routes.html" title="Route แบบ RESTful และ Resourceful">r09·rest-routes</a>
+<a href="r10-testing.html" title="การทดสอบ API">r10·testing</a></nav>
+  <main>
+<div class="col">
+<p class="prompt">guest@websec ~ % <b>man r01-rails-api-app</b></p>
+<h1>แอป Rails แบบ API</h1>
+<p class="lede">backend ของเราเป็น Rails โหมด API-only ไม่มีหน้า HTML รับ JSON เข้าและส่ง JSON ออกเท่านั้น บทนี้อธิบายว่าโหมดนี้เก็บอะไรไว้ ตัดอะไรออก และโค้ดแต่ละส่วนอยู่ตรงไหนในโปรเจกต์ของเรา</p>
+<div class="tldr"><code>rails new myapp --api</code> ให้ Rails ที่เบากว่า controller สืบทอดจาก <code>ActionController::API</code> ไม่มี view, asset, session หรือ flash ส่วนอื่น (routing, Active Record, job, mailer, test) ใช้งานได้เหมือนเดิม</div><h2>สร้างแอปแบบ API-only</h2><p>เพิ่ม flag เดียวก็เปลี่ยนสิ่งที่ generator สร้างให้ เราใช้ PostgreSQL เสมอ เพราะเราใช้ key แบบ <code>uuid</code>, คอลัมน์ <code>jsonb</code> และคอลัมน์แบบ array</p><div class="term" data-title="zsh — ~"><script type="application/json">[{"p": "~ %", "c": "rails new myapp --api -d postgresql", "o": "      create  \n      create  README.md\n      create  Gemfile\n      create  config/routes.rb\n      create  app/controllers/application_controller.rb\n      create  app/models/application_record.rb\n      create  app/jobs/application_job.rb\n      create  app/mailers/application_mailer.rb\n      create  config/initializers/cors.rb\n      create  test/test_helper.rb\n         run  bundle install\nBundle complete! 24 Gemfile dependencies, 102 gems now installed.", "n": "สังเกตสิ่งที่<b>ไม่ได้<\/b>ถูกสร้าง: ไม่มี <code>app/views<\/code> สำหรับหน้าเว็บ ไม่มี <code>app/assets<\/code> ไม่มี <code>app/helpers<\/code> แต่มี initializer <code>cors.rb<\/code> แทน เพราะเบราว์เซอร์จาก origin อื่นจะเรียก API ของเรา"}, {"p": "~ %", "c": "cd myapp && grep -n api_only config/application.rb", "o": "    config.api_only = true", "n": "การตั้งค่าบรรทัดเดียวนี้ทำให้ middleware stack เล็กลง และทำให้ generator ไม่สร้าง view"}, {"c": "cat app/controllers/application_controller.rb", "o": "class ApplicationController < ActionController::API\nend", "n": "ใช้ <code>ActionController::API<\/code> แทน <code>ActionController::Base<\/code> ความต่างระดับ controller มีแค่นี้"}]</script></div><h3>โหมด API เก็บอะไรไว้ และตัดอะไรออก</h3><div class="tablewrap"><table><thead><tr><th>ยังมี</th><th>ตัดออก (เพิ่มกลับเฉพาะเมื่อจำเป็น)</th></tr></thead><tbody><tr><td>routing, <code>params</code>, strong parameters</td><td>view, layout, helper, asset pipeline</td></tr><tr><td><code>render json:</code>, <code>head</code>, status codes</td><td>cookie (<code>ActionController::Cookies</code>)</td></tr><tr><td><code>before_action</code>, <code>rescue_from</code></td><td>session store และ flash message</td></tr><tr><td>Active Record, Active Job, Action Mailer</td><td>การป้องกัน CSRF (<code>protect_from_forgery</code>)</td></tr><tr><td>caching, logging, instrumentation</td><td>middleware สำหรับเบราว์เซอร์ (method override, flash)</td></tr></tbody></table></div><div class="rs">admin API ของเราใช้ cookie ที่เข้ารหัสในการ login จึงเพิ่ม module กลับมาหนึ่งตัวใน <code>Api::AppController</code> คือ <code>include ActionController::Cookies</code> ให้เพิ่มกลับทีละ module เฉพาะที่ต้องใช้ อย่าเปลี่ยนไปใช้ <code>ActionController::Base</code></div><h2>หนึ่ง request ตั้งแต่ต้นจนจบ</h2><p>ทุกบทใน track นี้จะขยายดูกล่องใดกล่องหนึ่งในภาพนี้</p><div class="anim" data-actors="Client|Rack|Router|Controller|Model|PostgreSQL" data-title="วงจรชีวิตของ request"><script type="application/json">[{"f": 0, "t": 1, "l": "POST /api/v1/admin/client_applications/42/roles", "c": "client ส่ง JSON มา Rack middleware แปลงข้อมูล บันทึก log และจัดการ CORS"}, {"f": 1, "t": 2, "l": "match → api/v1/admin/roles#create", "c": "router จับคู่ verb + path กับ <code>controller#action<\/code> (บท r09)"}, {"n": 3, "l": "before_action: auth, permissions, set_client_application", "k": "k", "c": "controller callback ทำงานก่อน: คุณคือใคร มีสิทธิ์ไหม และ record แม่คืออะไร (r07)"}, {"f": 3, "t": 4, "l": "Role.new(role_params).save!", "c": "controller ส่ง params ที่ผ่านการกรองแล้วให้ model (r06)"}, {"n": 4, "l": "validations + callbacks", "k": "k", "c": "model ตรวจสอบข้อมูลและรัน callback ของตัวเอง (r04, r05)"}, {"f": 4, "t": 5, "l": "INSERT INTO roles … COMMIT", "c": "Active Record เขียนข้อมูลภายใน transaction"}, {"f": 3, "t": 0, "l": "201 { role: role.as_admin_json }", "c": "controller render JSON ตามรูปแบบที่ model กำหนด ถ้ามี error ที่ไหนก็ตาม <code>rescue_from<\/code> จะแปลงเป็น JSON"}]</script></div><h2>สำรวจโปรเจกต์ของเรา</h2><p>คลิกที่โฟลเดอร์เพื่อดูว่าอะไรควรอยู่ในนั้น และอะไรไม่ควร</p><div class="demo"><header><b>สำรวจโปรเจกต์</b><span>คลิกที่ path</span></header><div class="body"><div class="pick"><script type="application/json">[{"k": "app/controllers/", "dir": true, "d": "controller ทั้งหมด ที่ระดับบนสุดมีแค่ <code>ApplicationController<\/code> ส่วนทุกอย่างที่ให้บริการ API อยู่ใต้ <code>api/<\/code>"}, {"k": "app/controllers/api/v1/admin/", "dir": true, "d": "endpoint สำหรับเว็บ admin ทุก controller ในนี้สืบทอดจาก <code>Api::V1::Admin::AppController<\/code> ซึ่งตรวจ cookie login และสิทธิ์ก่อนทุก action"}, {"k": "app/controllers/api/v1/client/", "dir": true, "d": "endpoint ที่แอปอื่นเรียกแบบ server-to-server ยืนยันตัวตนด้วย <code>X-App-Key<\/code> และ JWT ที่เซ็นแล้วใน <code>X-App-Secret<\/code>"}, {"k": "app/controllers/api/v1/public/", "dir": true, "d": "endpoint ที่ไม่ต้อง login (เช่น การลงทะเบียน 2FA) แต่ยังได้การจัดการ error ร่วมกัน"}, {"k": "app/models/", "dir": true, "d": "หนึ่ง class ต่อหนึ่งตาราง ทุกตัวสืบทอด <code>ApplicationRecord<\/code> เก็บกฎทางธุรกิจ validation, callback และรูปแบบ JSON ของแต่ละ record (<code>as_admin_json<\/code>)"}, {"k": "app/models/concerns/", "dir": true, "d": "พฤติกรรมของ model ที่ใช้ร่วมกันในรูป module เช่น <code>SoftDeletable<\/code> include ใน <code>ApplicationRecord<\/code> หรือใน model ตัวเดียว"}, {"k": "app/services/", "dir": true, "d": "class Ruby ธรรมดาที่คุยกับระบบภายนอกหรือห่อ algorithm ไว้ เช่น <code>DirectoryService<\/code>, <code>TokenService<\/code> ไม่มีตารางในฐานข้อมูล (บท r08)"}, {"k": "app/jobs/", "dir": true, "d": "งานเบื้องหลังที่ retry ได้ เช่น การส่ง webhook (<code>ClientApplicationWebhookJob<\/code>) ใช้กับงานที่ช้าหรืออาจล้มเหลวเพราะเครือข่าย"}, {"k": "config/routes.rb", "dir": false, "d": "จับคู่ HTTP verb + path กับ controller#action แบ่ง namespace เป็น <code>api/v1/admin<\/code>, <code>api/v1/client<\/code>, <code>api/v1/public<\/code> (บท r09)"}, {"k": "config/initializers/", "dir": true, "d": "โค้ดที่รันตอนบูต: การตั้งค่า UUID ของ generator, class error ของเรา, ส่วนขยายเล็กๆ เช่น <code>String#to_bool<\/code>, CORS, Rack::Attack"}, {"k": "db/migrate/", "dir": true, "d": "ไฟล์ที่มี timestamp ใช้เปลี่ยน schema ทีละขั้น (บท r03)"}, {"k": "db/schema.rb", "dir": false, "d": "snapshot ของ schema ปัจจุบันที่ถูกสร้างอัตโนมัติ commit เข้า git แต่ห้ามแก้ด้วยมือ"}, {"k": "test/", "dir": true, "d": "Minitest: <code>models/<\/code>, <code>controllers/<\/code> (integration test), <code>services/<\/code>, <code>fixtures/<\/code> และ helper ใน <code>support/<\/code> (บท r10)"}]</script></div></div></div><h2>ข้อตกลงที่ตั้งไว้ตอนบูต</h2><p>initializer ไม่กี่ไฟล์กำหนดรูปแบบของทั้ง codebase คุณจะเห็นผลของมันในทุกบทต่อจากนี้</p><h3>primary key แบบ UUID</h3><div class="code" data-label="ruby · config/initializers/generator.rb"><pre><span class="c"># config/initializers/generator.rb</span>
+Rails.application.config.generators do |g|
+  g.orm :active_record, primary_key_type: :uuid
+end
+
+<span class="c"># every create_table(id: :uuid) defaults to uuidv7(), which sorts by time</span>
+ActiveSupport.on_load(:active_record) do
+  require "active_record/connection_adapters/postgresql_adapter"
+
+  module PostgresUUIDv7Default
+    def create_table(table_name, **options, &amp;block)
+      if options[:id] == :uuid &amp;&amp; !options.key?(:default)
+        options[:default] = -&gt; { "uuidv7()" }
+      end
+      super(table_name, **options, &amp;block)
+    end
+  end
+
+  ActiveRecord::ConnectionAdapters::PostgreSQLAdapter.prepend(PostgresUUIDv7Default)
+end</pre></div><p>ID เดาไม่ได้ด้วยการนับ (<code>/users/2</code>, <code>/users/3</code>…) และ UUID v7 ยังเรียงตามเวลาที่สร้างโดยประมาณ ทำให้ index ทำงานได้ดี</p><h3>class error ของเรา</h3><div class="code" data-label="ruby · config/initializers/app_error.rb"><pre><span class="c"># config/initializers/app_error.rb</span>
+Rails.configuration.to_prepare do
+  class AppError &lt; StandardError; end                <span class="c"># 400 bad request</span>
+  class AppAuthenticationError &lt; StandardError; end  <span class="c"># 401 not logged in</span>
+  class AppPermissionDenied &lt; StandardError; end     <span class="c"># 403 logged in, not allowed</span>
+  class AppSoftDeleteError &lt; StandardError; end      <span class="c"># misuse of soft delete</span>
+end</pre></div><p>model และ service จะ <code>raise</code> error เหล่านี้ แล้ว <code>Api::AppController</code> แปลงแต่ละ class เป็น HTTP status ในที่เดียว (บท r06) ส่วน <code>to_prepare</code> จะรัน block ใหม่ทุกครั้งที่โค้ด reload ตอน development ทำให้ class ไม่ค้างเป็นเวอร์ชันเก่า</p><div class="note">ในโปรเจกต์จริง class เหล่านี้ขึ้นต้นด้วยชื่อย่อของโปรเจกต์แทนคำว่า <code>App</code> สิ่งสำคัญคือรูปแบบ: มี exception ไม่กี่ตัวที่ตั้งชื่อชัดเจน และแปลงเป็น status ในที่เดียว</div><h3>ส่วนขยายเล็กๆ ของ core</h3><div class="code" data-label="ruby"><pre>params[:info].to_bool       <span class="c"># "true" / "yes" =&gt; true, "false" / "no" =&gt; false, nil =&gt; false</span>
+"some text".mask            # "so***ext"
+ENV.fetch("DEBUG", false).to_bool</pre></div><p>ค่าใน query string เป็น string เสมอ <code>to_bool</code> (ซึ่งนิยามไว้บน <code>String</code>, <code>NilClass</code>, <code>TrueClass</code>, <code>FalseClass</code>) ทำให้ controller อ่านค่า flag ได้โดยไม่ต้องเขียน <code>== "true"</code> ทุกที่</p><div class="rs">ทุกไฟล์ Ruby ขึ้นต้นด้วย <code># frozen_string_literal: true</code> string literal จะแก้ไขไม่ได้ ช่วยลดการจองหน่วยความจำและจับการแก้ค่าโดยไม่ตั้งใจ</div><h2>ทดสอบความเข้าใจ</h2><div class="quiz" data-a="1"><p>ข้อใด<b>ไม่มี</b>ใน <code>ActionController::API</code> ตั้งแต่แรก?</p><div class="opts"><button type="button"><code>rescue_from</code></button><button type="button"><code>cookies</code></button><button type="button"><code>params.require(...).permit(...)</code></button><button type="button"><code>render json:</code></button></div><p class="explain">cookie เป็นเรื่องของเบราว์เซอร์ โหมด API จึงตัดออก เราเพิ่ม <code>ActionController::Cookies</code> กลับใน <code>Api::AppController</code> สำหรับ cookie login ของ admin</p></div><div class="quiz" data-a="2"><p>ต้องเขียน class ใหม่สำหรับคุยกับ directory ขององค์กร จะวางไว้ที่ไหน?</p><div class="opts"><button type="button">app/models/</button><button type="button">app/controllers/concerns/</button><button type="button">app/services/</button><button type="button">config/initializers/</button></div><p class="explain">มันคุยกับระบบภายนอกและไม่มีตาราง จึงเป็น service</p></div></div>
+
+<div class="col"><label class="readmark"><input type="checkbox" id="read-r01-rails-api-app"> ทำเครื่องหมายว่าอ่านบท r01 แล้ว</label><div class="pager"><a href="index.html#rails">◀ ~/</a><a href="r02-rails-commands.html">r02 คำสั่ง Rails ▶</a></div></div>
+  </main>
+  <footer class="site">อ้างอิงจาก <a href="https://guides.rubyonrails.org/">Ruby on Rails Guides</a> (CC BY-SA 4.0) เฉพาะส่วนที่ใช้กับแอปแบบ API-only และแนวทางการเขียนโค้ดในโปรเจกต์ของเรา ตัวอย่างโค้ดดัดแปลงจากโค้ดจริงเพื่อใช้สอน</footer>
+</div>
+<script src="../assets/site.js?v=92ac7aa3f8"></script>
+<script>
+
+
+</script>
+<script src="../assets/widgets.js?v=b9f4e038ea"></script>
+</body>
+</html>

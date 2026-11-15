@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="th" data-lang="rails">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ประกาศความเป็นส่วนตัว · Field Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600&display=swap" rel="stylesheet">
+<link rel="icon" href="../favicon.ico" sizes="32x32">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<link rel="manifest" href="../site.webmanifest">
+<meta name="theme-color" content="#000000">
+<link rel="stylesheet" href="../assets/site.css?v=8f1e007517">
+<script src="../assets/consent.js?v=9320b4a322"></script>
+</head>
+<body data-slug="privacy">
+<div class="win">
+  <div class="titlebar"><span class="dots"><i></i><i></i><i></i></span><span class="t">guest@websec: ~/websec/privacy/th — zsh — 100×40</span>
+    <a class="by" href="about.html" title="เกี่ยวกับผู้เขียน"><span class="w0">เขียนโดย </span>SaKKo</a>
+    <span class="lsw" role="group" aria-label="ภาษา"><a href="../privacy.html" data-setlang="en">EN</a><a href="privacy.html" aria-current="true" data-setlang="th">TH</a></span>
+    <span class="langsw" role="group" aria-label="Code examples language"><span class="d">โค้ด:</span><button type="button" data-l="rails">rails</button><button type="button" data-l="node">node</button></span></div>
+  <nav class="top" aria-label="Sections"><a href="index.html" title="คู่มือความปลอดภัยเว็บแอปพลิเคชัน">~/</a>
+<a class="trk on" href="index.html#security">#1 ความปลอดภัย</a>
+<a class="trk" href="r01-rails-api-app.html">#2 rails</a>
+<span class="grp">|</span>
+<a href="01-introduction.html" title="บทนำ">01·บทนำ</a>
+<a href="02-sql-injection.html" title="SQL Injection">02·sql</a>
+<a href="03-unsafe-query-generation.html" title="การสร้าง query ที่ไม่ปลอดภัย">03·query</a>
+<a href="04-xss-and-other-injection.html" title="XSS และ injection แบบอื่น">04·xss</a>
+<span class="grp">| บัญชี:</span>
+<a href="05-authentication.html" title="การยืนยันตัวตน">05·auth</a>
+<a href="05b-mfa.html" title="การยืนยันตัวตนหลายปัจจัย">05b·mfa</a>
+<a href="06-sessions.html" title="Session">06·session</a>
+<a href="07-csrf.html" title="Cross-Site Request Forgery">07·csrf</a>
+<a href="08-user-management.html" title="การจัดการผู้ใช้">08·ผู้ใช้</a>
+<a href="09-mass-assignment-and-authorization.html" title="Mass Assignment และ Authorization">09·authz</a>
+<span class="grp">| เบราว์เซอร์:</span>
+<a href="10-redirection-and-files.html" title="Redirect และไฟล์">10·ไฟล์</a>
+<a href="11-http-security-headers.html" title="HTTP Security Header">11·header</a>
+<a href="12-transport-cookies-third-party.html" title="การรับส่งข้อมูล คุกกี้ และสคริปต์บุคคลที่สาม">12·คุกกี้</a>
+<span class="grp">| เซิร์ฟเวอร์:</span>
+<a href="13-ssrf.html" title="Server-Side Request Forgery">13·ssrf</a>
+<a href="14-deserialization-and-xxe.html" title="Deserialization และ XXE">14·deserialize</a>
+<a href="15-environmental-security.html" title="ความปลอดภัยของสภาพแวดล้อม">15·secret</a>
+<a href="16-cryptography.html" title="การเข้ารหัสและการปกป้องข้อมูล">16·crypto</a>
+<a href="17-dependencies-and-cves.html" title="Dependency และ CVE">17·dependency</a>
+<span class="grp">| ดูแลระบบ:</span>
+<a href="18-intranet-and-admin.html" title="ความปลอดภัยของ intranet และ admin">18·admin</a>
+<a href="19-misconfiguration-and-errors.html" title="การตั้งค่าผิดพลาดและการจัดการ error">19·config</a>
+<a href="20-insecure-design.html" title="การออกแบบที่ไม่ปลอดภัยและ business logic">20·design</a>
+<a href="21-logging-and-incident-response.html" title="Logging การแจ้งเตือน และการรับมือเหตุการณ์">21·logging</a>
+<a href="22-additional-resources.html" title="แหล่งข้อมูลเพิ่มเติม">22·แหล่งข้อมูล</a>
+<span class="grp">| แบบสอบถาม:</span>
+<a href="q1-developer-survey.html" title="แบบสำรวจความปลอดภัยสำหรับนักพัฒนา">Q1·dev</a>
+<a href="q2-awareness-survey.html" title="แบบสำรวจความตระหนักรู้ภัยไซเบอร์">Q2·ทุกคน</a></nav>
+  <main>
+<div class="col">
+<p class="prompt">guest@websec ~ % <b>cat PRIVACY</b></p>
+<h1>ประกาศความเป็นส่วนตัว</h1>
+<p class="lede">เว็บนี้เก็บอะไรไว้ ส่งอะไรให้ Google เมื่อคุณอนุญาต และสิทธิของคุณตามพระราชบัญญัติคุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562 (PDPA) และ GDPR ของสหภาพยุโรป</p>
+<div class="tldr">ไม่มีบัญชีผู้ใช้ และไม่มีฟอร์มที่ส่งข้อมูล ภาษาและความคืบหน้าการอ่านเก็บอยู่ในเบราว์เซอร์ของคุณ Google Analytics จะทำงานก็ต่อเมื่อคุณกด "ยอมรับ" และถอนความยินยอมได้จาก "ตั้งค่าคุกกี้" ท้ายทุกหน้า</div><h2>ผู้ควบคุมข้อมูล</h2><p>ผู้ควบคุมข้อมูลส่วนบุคคล: ธนศักดิ์ ตันติธารทอง (SaKKo) กรุงเทพฯ ประเทศไทย ติดต่อ: <a href="mailto:saklism@gmail.com">saklism@gmail.com</a></p><h2>เก็บอะไร และเพื่ออะไร</h2><div class="tablewrap"><table><thead><tr><th>อะไร</th><th>ที่ไหน</th><th>วัตถุประสงค์</th><th>ฐานทางกฎหมาย</th></tr></thead><tbody><tr><td>ภาษา, ตัวเลือกภาษาโค้ด, บทที่ทำเครื่องหมายว่าอ่านแล้ว, คำตอบแบบทดสอบ/แบบสอบถามระหว่างทำ และตัวเลือกคุกกี้ของคุณ (key <code>websec:*</code>)</td><td>local storage ในเบราว์เซอร์ของคุณเท่านั้น ไม่ถูกส่งมาที่เรา</td><td>ทำให้เว็บทำงานตามที่คุณเลือก</td><td>จำเป็นอย่างยิ่ง ไม่ต้องขอความยินยอม</td></tr><tr><td>หน้าที่เปิด เวลาที่อยู่ในหน้า เครื่องมือที่ใช้ (เช่น ตอบแบบทดสอบถูกหรือผิด หรือกดรัน terminal) ประเภทอุปกรณ์และเบราว์เซอร์ ตำแหน่งโดยประมาณจาก IP และเว็บที่ส่งมา คุกกี้ <code>_ga</code>, <code>_ga_*</code></td><td>Google Analytics โหลดผ่าน Google Tag Manager</td><td>รู้ว่าบทเรียนและเครื่องมือไหนมีประโยชน์ เพื่อนำไปปรับปรุง</td><td>ความยินยอมของคุณ (PDPA มาตรา 19, GDPR ข้อ 6(1)(a))</td></tr><tr><td>IP address และรายละเอียดของ request ใน log ของ server</td><td>ผู้ให้บริการโฮสติ้ง (GitHub Pages)</td><td>ให้บริการเว็บและรักษาความปลอดภัย</td><td>ประโยชน์โดยชอบด้วยกฎหมาย</td></tr></tbody></table></div><p>event ของการวิเคราะห์ไม่ถูกเชื่อมกับชื่อหรืออีเมลของคุณ และเว็บไม่เคยขอข้อมูลเหล่านั้น หมวดการตลาดในการตั้งค่าคุกกี้มีไว้สำหรับอนาคต และยังไม่ได้ใช้ในตอนนี้</p><h2>การเปิดเผยและการส่งข้อมูลไปต่างประเทศ</h2><p>Google (Google LLC / Google Ireland) ประมวลผลข้อมูลการวิเคราะห์แทนเรา บน server ที่อาจอยู่นอกประเทศไทย รวมถึงสหรัฐอเมริกา ภายใต้ข้อกำหนดการประมวลผลข้อมูลและสัญญามาตรฐานของ Google เราไม่ขายข้อมูลและไม่เปิดเผยให้ผู้อื่น</p><h2>ระยะเวลาการเก็บ</h2><p>ข้อมูลการวิเคราะห์ถูกเก็บตามระยะเวลาที่ตั้งไว้ใน Google Analytics ไม่เกิน 14 เดือน ข้อมูลในเบราว์เซอร์อยู่จนกว่าคุณจะลบเอง การถอนความยินยอมจะลบคุกกี้ <code>_ga</code> ออกจากเบราว์เซอร์ของคุณ</p><h2>สิทธิของคุณ</h2><ul><li>ถอนความยินยอมได้ทุกเมื่อ: <a href="#" class="cc-open">เปิดการตั้งค่าคุกกี้</a></li><li>เข้าถึง ขอรับสำเนา แก้ไข หรือลบข้อมูลของคุณ</li><li>คัดค้านหรือขอให้ระงับการประมวลผล และขอโอนย้ายข้อมูล</li><li>ร้องเรียนต่อสำนักงานคณะกรรมการคุ้มครองข้อมูลส่วนบุคคล (<a href="https://www.pdpc.or.th/">pdpc.or.th</a>) หรือหน่วยงานคุ้มครองข้อมูลในประเทศของคุณ</li></ul><p>ส่งอีเมลไปที่ <a href="mailto:saklism@gmail.com">saklism@gmail.com</a> เพื่อใช้สิทธิเหล่านี้ เนื่องจากข้อมูลการวิเคราะห์ไม่ได้ผูกกับตัวตนของคุณ เราอาจต้องขอ client ID จากคุกกี้ <code>_ga</code> เพื่อค้นหาข้อมูล</p><p class="d">ปรับปรุงล่าสุด: 2026-11-15</p>
+</div>
+<script>document.addEventListener('click', e => { const a = e.target.closest && e.target.closest('.cc-open'); if (a) { e.preventDefault(); const l = document.querySelector('.cc-link'); if (l) l.click(); } });</script>
+  </main>
+  <footer class="site">อ้างอิงจาก <a href="https://guides.rubyonrails.org/security.html">Ruby on Rails Security Guide</a> (CC BY-SA 4.0), <a href="https://cheatsheetseries.owasp.org/">OWASP Cheat Sheet Series</a>, <a href="https://owasp.org/Top10/2025/">OWASP Top 10:2025</a> และ <a href="https://infosec.mozilla.org/guidelines/web_security.html">Mozilla Web Security Guidelines</a> เขียนสำหรับทีมพัฒนาของเรา ตัวอย่างโค้ดเพื่อการอธิบาย ข้อความในผลการจำลองบางส่วนยังเป็นภาษาอังกฤษ</footer>
+</div>
+<script src="../assets/site.js?v=92ac7aa3f8"></script>
+<script>
+
+
+</script>
+</body>
+</html>

@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="th" data-lang="rails">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Model และ ApplicationRecord · Rails Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600&display=swap" rel="stylesheet">
+<link rel="icon" href="../favicon.ico" sizes="32x32">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<link rel="manifest" href="../site.webmanifest">
+<meta name="theme-color" content="#000000">
+<link rel="stylesheet" href="../assets/site.css?v=8f1e007517">
+<script src="../assets/consent.js?v=9320b4a322"></script>
+</head>
+<body data-slug="r04-models">
+<div class="win">
+  <div class="titlebar"><span class="dots"><i></i><i></i><i></i></span><span class="t">guest@websec: ~/websec/r04-models/th — zsh — 100×40</span>
+    <a class="by" href="about.html" title="เกี่ยวกับผู้เขียน"><span class="w0">เขียนโดย </span>SaKKo</a>
+    <span class="lsw" role="group" aria-label="ภาษา"><a href="../r04-models.html" data-setlang="en">EN</a><a href="r04-models.html" aria-current="true" data-setlang="th">TH</a></span></div>
+  <nav class="top" aria-label="บทเรียน"><a href="index.html#rails" title="หน้าแรก">~/</a>
+<a class="trk" href="index.html#security">#1 ความปลอดภัย</a>
+<a class="trk on" href="r01-rails-api-app.html">#2 rails</a>
+<span class="grp">| พื้นฐาน:</span>
+<a href="r01-rails-api-app.html" title="แอป Rails แบบ API">r01·api-app</a>
+<a href="r02-rails-commands.html" title="คำสั่ง Rails">r02·commands</a>
+<a href="r03-migrations.html" title="Migration">r03·migrations</a>
+<span class="grp">| model:</span>
+<a href="r04-models.html" aria-current="page" title="Model และ ApplicationRecord">r04·models</a>
+<a href="r05-model-callbacks.html" title="Model Callback">r05·model-hooks</a>
+<span class="grp">| controller:</span>
+<a href="r06-controllers.html" title="Controller และลำดับชั้นของ API">r06·controllers</a>
+<a href="r07-controller-callbacks.html" title="Controller Callback">r07·controller-hooks</a>
+<a href="r08-where-code-goes.html" title="Controller, Model หรือ Service?">r08·services</a>
+<span class="grp">| api:</span>
+<a href="r09-rest-routes.html" title="Route แบบ RESTful และ Resourceful">r09·rest-routes</a>
+<a href="r10-testing.html" title="การทดสอบ API">r10·testing</a></nav>
+  <main>
+<div class="col">
+<p class="prompt">guest@websec ~ % <b>man r04-models</b></p>
+<h1>Model และ ApplicationRecord</h1>
+<p class="lede">model คือ class Ruby สำหรับหนึ่งตาราง มันเป็นเจ้าของกฎของข้อมูลตัวเอง: อะไรถูกต้อง record เชื่อมโยงกันอย่างไร อยู่ในสถานะไหนได้บ้าง และแสดง JSON แบบไหนให้ผู้ใช้แต่ละกลุ่ม</p>
+<h2>ApplicationRecord: แม่ของทุก model</h2><p>Rails สร้าง <code>ApplicationRecord</code> มาให้ เพื่อให้มีที่เดียวสำหรับวางพฤติกรรมที่ทุก model ใช้ร่วมกัน มันเป็น <b>abstract</b> คือไม่มีตารางของตัวเอง เวอร์ชันของเราทำหลายอย่าง:</p><div class="code" data-label="ruby · app/models/application_record.rb"><pre>class ApplicationRecord &lt; ActiveRecord::Base
+  include SoftDeletable          <span class="c"># deleted_at, default_scope, soft_delete!, restore</span>
+  primary_abstract_class         <span class="c"># no table; the app's main DB connection</span>
+
+  has_paper_trail skip: [:authentication_token, :otp_secret]   <span class="c"># audit history</span>
+
+  <span class="c"># Ransack search: only columns that don't look like secrets</span>
+  def self.ransackable_attributes(auth_object = nil)
+    column_names - column_names.select { |x| ["passw", "token", "encryp"].any? { |f| x.include?(f) } } + _ransackers.keys
+  end
+
+  def self.ransackable_associations(auth_object = nil)
+    reflect_on_all_associations.map { |a| a.name.to_s }
+  end
+
+  <span class="c"># Last line of defence: never serialize secret-looking columns</span>
+  def as_json(options = {})
+    except = attributes.keys.select { |key| ["_ip", "sign_in", "_token", "password", "remember", "otp", "locked_at"].any? { |y| key.include?(y) } }
+    super(options).except(*except)
+  end
+end</pre></div><div class="tablewrap"><table><thead><tr><th>บรรทัด</th><th>ทุก model ได้…</th></tr></thead><tbody><tr><td><code>include SoftDeletable</code></td><td>soft delete แทนการลบจริง และซ่อนแถวที่ถูกลบโดยอัตโนมัติ</td></tr><tr><td><code>has_paper_trail</code></td><td>ประวัติ <code>versions</code> ของทุกการเปลี่ยนแปลง (ใครแก้ แก้อะไร) ยกเว้นคอลัมน์ลับ</td></tr><tr><td><code>ransackable_*</code></td><td>ตัวกรองค้นหาที่ปลอดภัย: client กรองด้วย <code>password_digest</code> เพื่อเดาค่าไม่ได้</td></tr><tr><td><code>as_json</code></td><td>คอลัมน์ token / password / OTP ถูกตัดออกจาก JSON เริ่มต้นทุกกรณี</td></tr></tbody></table></div><div class="rs">พฤติกรรมที่ทุก model ใช้ร่วมกันให้ใส่ใน <code>ApplicationRecord</code> (หรือ concern ที่มัน include) ห้าม copy ไปวางในแต่ละ model ส่วนพฤติกรรมเฉพาะ model ให้อยู่ใน model นั้น</div><h2>โครงสร้าง model ของเรา</h2><p>ทุก model เรียงส่วนต่างๆ ในลำดับเดียวกัน คุณจะรู้เสมอว่าต้องหาตรงไหน:</p><div class="code" data-label="ruby · app/models/client_application.rb"><pre><span class="c"># == Schema Information          &lt;- 1. generated by annotaterb, never hand-edit</span>
+<span class="c">#  id          :uuid  not null, primary key</span>
+<span class="c">#  name        :text  not null</span>
+<span class="c">#  app_key     :text  not null</span>
+<span class="c">#  ...</span>
+class ClientApplication &lt; ApplicationRecord
+  has_many :roles                                <span class="c"># 2. associations</span>
+  has_many :permissions
+
+  before_validation :generate_credentials, on: :create   <span class="c"># 3. callbacks</span>
+
+  validates :name, :app_key, :api_secret, presence: true <span class="c"># 4. validations</span>
+  validates :app_key, uniqueness: true
+
+  def notify_webhook(event_name, payload = {})   <span class="c"># 5. public behaviour</span>
+    return if webhook_url.blank?
+    ClientApplicationWebhookJob.perform_later(id, event_name, payload)
+  end
+
+  def as_admin_json                              <span class="c"># 6. JSON shapes per audience</span>
+    { id:, allowed_hosts:, app_key:, name:, created_at:, updated_at:, webhook_url: }
+  end
+
+  def as_admin_show_json                         <span class="c">#    the secret only on "show"</span>
+    as_admin_json.merge(api_secret:)
+  end
+
+  private                                        <span class="c"># 7. private helpers + soft-delete hooks</span>
+
+  def generate_credentials
+    self.app_key ||= loop do
+      token = SecureRandom.hex(16)
+      break token unless self.class.exists?(app_key: token)
+    end
+    self.api_secret ||= SecureRandom.hex(32)
+  end
+
+  def cascade_soft_delete
+    roles.not_deleted.find_each(&amp;:soft_delete!)
+  end
+
+  def cascade_restore
+    nil <span class="c"># nothing to cascade</span>
+  end
+end</pre></div><h2>Association</h2><div class="code" data-label="ruby"><pre>class User &lt; ApplicationRecord
+  has_many :user_roles
+  has_many :roles, through: :user_roles     <span class="c"># many-to-many via a join model</span>
+end
+
+class UserRole &lt; ApplicationRecord
+  belongs_to :user                          <span class="c"># required by default: user must exist</span>
+  belongs_to :role
+end
+
+class Role &lt; ApplicationRecord
+  belongs_to :client_application
+  has_many :user_roles
+  has_many :users, through: :user_roles
+end</pre></div><p>เราใช้ join <i>model</i> จริง (<code>UserRole</code>) แทน <code>has_and_belongs_to_many</code> เพราะตัวความสัมพันธ์เองก็มีข้อมูล: <code>status</code>, timestamp, soft delete และ state machine ของตัวเอง</p><div class="term" data-title="zsh — ~/myapp"><script type="application/json">[{"c": "bin/rails c", "o": "Loading development environment (Rails 8.1.0)"}, {"p": "myapp(dev)>", "c": "user = User.find_by!(username: \"alice\")", "o": "  User Load (0.5ms)  SELECT \"users\".* FROM \"users\" WHERE \"users\".\"deleted_at\" IS NULL AND \"users\".\"username\" = $1 LIMIT $2\n=> #<User id: \"0193a6f2-...\", username: \"alice\", ...>"}, {"p": "myapp(dev)>", "c": "user.roles.pluck(:name)", "o": "  Role Pluck (0.8ms)  SELECT \"roles\".\"name\" FROM \"roles\" INNER JOIN \"user_roles\" ON \"roles\".\"id\" = \"user_roles\".\"role_id\" WHERE \"roles\".\"deleted_at\" IS NULL AND \"user_roles\".\"deleted_at\" IS NULL AND \"user_roles\".\"user_id\" = $1\n=> [\"HR Viewer\", \"Payroll Admin\"]", "n": "<code>through:<\/code> สร้าง JOIN ให้เอง และ scope ของ soft delete ถูกใช้กับ<b>ทั้งสอง<\/b>ตาราง"}, {"p": "myapp(dev)>", "c": "ur = UserRole.new(user:); ur.valid?", "o": "=> false"}, {"p": "myapp(dev)>", "c": "ur.errors.full_messages", "o": "=> [\"Role must exist\", \"Role can't be blank\"]", "n": "<code>belongs_to<\/code> ตรวจว่ามีค่าโดยอัตโนมัติ"}]</script></div><h2>Validation</h2><div class="code" data-label="ruby · app/models/role.rb"><pre>validates :name, presence: true, uniqueness: { scope: :client_application_id }
+validates :status, presence: true, inclusion: { in: %w[active inactive] }
+validates :username, presence: true, uniqueness: {
+                       case_sensitive: false,
+                       conditions: -&gt; { not_deleted },          <span class="c"># ignore soft-deleted rows</span>
+                       message: "is already in use by an active account",
+                     }
+validate :validate_permissions_inclusion                        <span class="c"># custom method</span>
+
+private
+
+def validate_permissions_inclusion
+  return if permissions.blank?
+  return unless client_application
+
+  invalid = Array(permissions) - client_application.permissions.pluck(:name)
+  errors.add(:permissions, "contains invalid permissions: #{invalid.join(", ")}") if invalid.any?
+end</pre></div><div class="term" data-title="zsh — ~/myapp"><script type="application/json">[{"p": "myapp(dev)>", "c": "role = app.roles.new(name: \"intruder\", permissions: [\"reports:view\", \"admin:destroy\"])", "o": "=> #<Role id: nil, name: \"intruder\", ...>"}, {"p": "myapp(dev)>", "c": "role.valid?", "o": "=> false"}, {"p": "myapp(dev)>", "c": "role.errors.as_json", "o": "=> {permissions: [\"contains invalid permissions: admin:destroy\"]}"}, {"p": "myapp(dev)>", "c": "role.save!", "o": "ActiveRecord::RecordInvalid: Validation failed: Permissions contains invalid permissions: admin:destroy", "n": "ใน controller exception นี้จะถูกจับด้วย <code>rescue_from ActiveRecord::RecordInvalid<\/code> แล้วกลายเป็น 400 พร้อม <code>details: record.errors<\/code> นี่คือเหตุผลที่ controller ของเราใช้ <code>save!<\/code> และไม่เขียน <code>if @role.save … else …<\/code> (r06)"}]</script></div><div class="warn">validation อย่างเดียวไม่ใช่ขอบเขตความปลอดภัย: <code>update_columns</code>, <code>insert_all</code> และ SQL ตรงๆ จะข้ามมันไป กฎสำคัญต้องมี constraint ในฐานข้อมูลรองรับ (<code>null: false</code>, unique index, foreign key)</div><h2>Scope และ soft delete</h2><div class="code" data-label="ruby · app/models/concerns/soft_deletable.rb (outline)"><pre>module SoftDeletable
+  extend ActiveSupport::Concern
+
+  included do
+    scope :not_deleted, -&gt; { where(deleted_at: nil) }
+    scope :deleted,     -&gt; { where.not(deleted_at: nil) }
+    scope :with_deleted, -&gt; { unscope(where: :deleted_at) }
+
+    default_scope { not_deleted }                 <span class="c"># every query hides deleted rows</span>
+    define_model_callbacks :soft_delete, :restore <span class="c"># custom callbacks (r05)</span>
+  end
+
+  def soft_delete!                                <span class="c"># sets deleted_at, cascades</span>
+  def restore                                     <span class="c"># clears it, re-checks uniqueness</span>
+  def destroy                                     <span class="c"># raises: use soft_delete! or hard_destroy!</span>
+  def hard_destroy!                               <span class="c"># the only real DELETE</span>
+end</pre></div><div class="term" data-title="zsh — ~/myapp"><script type="application/json">[{"p": "myapp(dev)>", "c": "role.soft_delete!", "o": "  Role Update All (0.6ms)  UPDATE \"roles\" SET \"deleted_at\" = $1, \"updated_at\" = $2 WHERE \"roles\".\"id\" = $3\n=> true"}, {"p": "myapp(dev)>", "c": "Role.find(role.id)", "o": "ActiveRecord::RecordNotFound: Couldn't find Role with 'id'=\"0193...\"", "n": "ถูกซ่อนด้วย default scope ทำให้ controller คืน 404 สำหรับ record ที่ถูกลบโดยไม่ต้องเขียนโค้ดเพิ่ม"}, {"p": "myapp(dev)>", "c": "Role.with_deleted.find(role.id).restore", "o": "=> true"}, {"p": "myapp(dev)>", "c": "role.destroy", "o": "AppSoftDeleteError: Direct call to #destroy is blocked on Role. Use #soft_delete! or #hard_destroy! instead."}]</script></div><p>ทุก model ที่ include <code>SoftDeletable</code> ต้องเขียน <code>cascade_soft_delete</code> และ <code>cascade_restore</code> เพื่อบังคับให้ตัดสินใจทีละ model ว่าจะทำอะไรกับลูก: <code>User</code> soft delete <code>user_roles</code> ของตัวเอง ส่วน <code>Department</code> ไม่มีอะไรต้อง cascade และเขียนบอกไว้ว่า <code>nil # nothing to cascade</code></p><h2>รูปแบบ JSON อยู่ใน model</h2><div class="code" data-label="ruby · app/models/role.rb"><pre>def as_admin_json(with_client_application: false, with_permissions: true)
+  json = { id:, name:, created_at:, updated_at:, client_application_id:, description:, status:, deleted_at: }
+  json[:permissions] = permissions if with_permissions
+  json[:client_application] = client_application.as_admin_json if with_client_application
+  json
+end
+
+def as_client_json(with_client_application: false, with_permissions: true)
+  <span class="c"># same idea, for server-to-server clients</span>
+end</pre></div><ul><li><b>ระบุ field ชัดเจน</b>: คอลัมน์ใหม่จะเป็นความลับจนกว่าคุณจะเพิ่มเข้าไปเอง <code>api_secret</code> ปรากฏเฉพาะใน <code>as_admin_show_json</code> ไม่เคยอยู่ในรายการ</li><li><b>หนึ่ง method ต่อผู้ใช้หนึ่งกลุ่ม</b>: <code>as_admin_json</code>, <code>as_client_json</code>, <code>as_admin_profile_json</code></li><li><b>flag <code>with_*:</code></b> สำหรับข้อมูลซ้อน endpoint ที่แสดงรายการจะได้ไม่โหลด association ที่ไม่ได้แสดง</li><li><code>{ id:, name: }</code> คือรูปย่อของ Ruby 3.1 สำหรับ <code>{ id: id, name: name }</code></li></ul><h2>class method กับ instance method</h2><div class="code" data-label="ruby · app/models/user.rb"><pre><span class="c"># class method: no record yet; find, create or sync one</span>
+def self.authenticate_and_sync!(username, password)
+  entry = DirectoryService.authenticate!(username, password)    <span class="c"># service does the I/O</span>
+  sync_from_directory!(entry)
+end
+
+def self.sync_from_directory!(entry)
+  user = find_or_initialize_by(username: entry[:username].downcase)
+  user.assign_attributes(email: entry[:email], display_name: entry[:display_name])
+  user.save!
+  user
+end
+
+<span class="c"># instance method: acts on this record</span>
+def toggle_admin!
+  update(is_admin: !is_admin?)
+end</pre></div><div class="rs"><code>!</code> ต่อท้ายหมายถึง "raise เมื่อล้มเหลว" (<code>save!</code>, <code>sync_from_directory!</code>) หรือ "เปลี่ยนสถานะ" (<code>toggle_admin!</code>, <code>soft_delete!</code>) ส่วน method ที่ลงท้ายด้วย <code>?</code> คืนค่า boolean</div><h2>State machine ด้วย AASM</h2><div class="code" data-label="ruby · app/models/user_role.rb"><pre>class UserRole &lt; ApplicationRecord
+  include AASM
+
+  aasm :status, timestamps: true, column: "status" do   # timestamps: sets active_at / inactive_at
+    state :active, initial: true
+    state :inactive
+
+    event :activate do
+      transitions from: :inactive, to: :active
+    end
+
+    event :inactivate do
+      transitions from: :active, to: :inactive
+    end
+  end
+
+  def admin_actionables              <span class="c"># tells the admin UI which buttons to show</span>
+    rows = []
+    rows &lt;&lt; "activate" if may_activate?
+    rows &lt;&lt; "inactivate" if may_inactivate?
+    rows
+  end
+end</pre></div><div class="term" data-title="zsh — ~/myapp"><script type="application/json">[{"p": "myapp(dev)>", "c": "ur = user.user_roles.first; ur.status", "o": "=> \"active\""}, {"p": "myapp(dev)>", "c": "ur.admin_actionables", "o": "=> [\"inactivate\"]"}, {"p": "myapp(dev)>", "c": "ur.activate!", "o": "AASM::InvalidTransition: Event 'activate' cannot transition from 'active'.", "n": "ถูก rescue ใน <code>Api::AppController<\/code> เป็น 400 แต่ละ event กลายเป็น <b>member route<\/b>: <code>POST /users/:user_id/user_roles/:id/activate<\/code> (r09)"}]</script></div><div class="quiz" data-a="1"><p>คุณเพิ่มคอลัมน์ <code>salary</code> ในตาราง <code>users</code> endpoint ไหนจะเปิดเผยค่านี้?</p><div class="opts"><button type="button">ทุก endpoint โดยอัตโนมัติ</button><button type="button">ไม่มีเลย จนกว่าคุณจะเพิ่มลงใน method <code>as_*_json</code></button><button type="button">เฉพาะ endpoint ของ admin</button><button type="button">เฉพาะกรณีที่ไม่ได้เข้ารหัส</button></div><p class="explain">serializer ของเราระบุ field ชัดเจน คอลัมน์ใหม่จึงเป็นความลับโดยปริยาย</p></div><div class="quiz" data-a="1"><p>ทำไม <code>Role.find(id)</code> ถึง raise <code>RecordNotFound</code> สำหรับ role ที่ถูก soft delete?</p><div class="opts"><button type="button">soft delete ลบแถวจริง</button><button type="button"><code>default_scope</code> เพิ่ม <code>deleted_at IS NULL</code> ให้</button><button type="button">paper trail ซ่อนไว้</button><button type="button">ID เปลี่ยน</button></div><p class="explain">ใช้ <code>Role.with_deleted</code> เมื่อจำเป็นต้องใช้แถวที่ถูกลบจริงๆ (เช่น เพื่อ restore)</p></div></div>
+
+<div class="col"><label class="readmark"><input type="checkbox" id="read-r04-models"> ทำเครื่องหมายว่าอ่านบท r04 แล้ว</label><div class="pager"><a href="r03-migrations.html">◀ r03 Migration</a><a href="r05-model-callbacks.html">r05 Model Callback ▶</a></div></div>
+  </main>
+  <footer class="site">อ้างอิงจาก <a href="https://guides.rubyonrails.org/">Ruby on Rails Guides</a> (CC BY-SA 4.0) เฉพาะส่วนที่ใช้กับแอปแบบ API-only และแนวทางการเขียนโค้ดในโปรเจกต์ของเรา ตัวอย่างโค้ดดัดแปลงจากโค้ดจริงเพื่อใช้สอน</footer>
+</div>
+<script src="../assets/site.js?v=92ac7aa3f8"></script>
+<script>
+
+
+</script>
+<script src="../assets/widgets.js?v=b9f4e038ea"></script>
+</body>
+</html>

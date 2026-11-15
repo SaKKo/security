@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="th" data-lang="rails">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>16 Cryptography and Data Protection · Web Security</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600&display=swap" rel="stylesheet">
+<link rel="icon" href="../favicon.ico" sizes="32x32">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<link rel="manifest" href="../site.webmanifest">
+<meta name="theme-color" content="#000000">
+<link rel="stylesheet" href="../assets/site.css?v=8f1e007517">
+<script src="../assets/consent.js?v=9320b4a322"></script>
+</head>
+<body data-slug="16-cryptography">
+<div class="win">
+  <div class="titlebar"><span class="dots"><i></i><i></i><i></i></span><span class="t">guest@websec: ~/websec/16-cryptography/th — zsh — 100×40</span>
+    <a class="by" href="about.html" title="เกี่ยวกับผู้เขียน"><span class="w0">เขียนโดย </span>SaKKo</a>
+    <span class="lsw" role="group" aria-label="ภาษา"><a href="../16-cryptography.html" data-setlang="en">EN</a><a href="16-cryptography.html" aria-current="true" data-setlang="th">TH</a></span>
+    <span class="langsw" role="group" aria-label="Code examples language"><span class="d">โค้ด:</span><button type="button" data-l="rails">rails</button><button type="button" data-l="node">node</button></span></div>
+  <nav class="top" aria-label="Sections"><a href="index.html" title="คู่มือความปลอดภัยเว็บแอปพลิเคชัน">~/</a>
+<a class="trk on" href="index.html#security">#1 ความปลอดภัย</a>
+<a class="trk" href="r01-rails-api-app.html">#2 rails</a>
+<span class="grp">|</span>
+<a href="01-introduction.html" title="บทนำ">01·บทนำ</a>
+<a href="02-sql-injection.html" title="SQL Injection">02·sql</a>
+<a href="03-unsafe-query-generation.html" title="การสร้าง query ที่ไม่ปลอดภัย">03·query</a>
+<a href="04-xss-and-other-injection.html" title="XSS และ injection แบบอื่น">04·xss</a>
+<span class="grp">| บัญชี:</span>
+<a href="05-authentication.html" title="การยืนยันตัวตน">05·auth</a>
+<a href="05b-mfa.html" title="การยืนยันตัวตนหลายปัจจัย">05b·mfa</a>
+<a href="06-sessions.html" title="Session">06·session</a>
+<a href="07-csrf.html" title="Cross-Site Request Forgery">07·csrf</a>
+<a href="08-user-management.html" title="การจัดการผู้ใช้">08·ผู้ใช้</a>
+<a href="09-mass-assignment-and-authorization.html" title="Mass Assignment และ Authorization">09·authz</a>
+<span class="grp">| เบราว์เซอร์:</span>
+<a href="10-redirection-and-files.html" title="Redirect และไฟล์">10·ไฟล์</a>
+<a href="11-http-security-headers.html" title="HTTP Security Header">11·header</a>
+<a href="12-transport-cookies-third-party.html" title="การรับส่งข้อมูล คุกกี้ และสคริปต์บุคคลที่สาม">12·คุกกี้</a>
+<span class="grp">| เซิร์ฟเวอร์:</span>
+<a href="13-ssrf.html" title="Server-Side Request Forgery">13·ssrf</a>
+<a href="14-deserialization-and-xxe.html" title="Deserialization และ XXE">14·deserialize</a>
+<a href="15-environmental-security.html" title="ความปลอดภัยของสภาพแวดล้อม">15·secret</a>
+<a href="16-cryptography.html" aria-current="page" title="การเข้ารหัสและการปกป้องข้อมูล">16·crypto</a>
+<a href="17-dependencies-and-cves.html" title="Dependency และ CVE">17·dependency</a>
+<span class="grp">| ดูแลระบบ:</span>
+<a href="18-intranet-and-admin.html" title="ความปลอดภัยของ intranet และ admin">18·admin</a>
+<a href="19-misconfiguration-and-errors.html" title="การตั้งค่าผิดพลาดและการจัดการ error">19·config</a>
+<a href="20-insecure-design.html" title="การออกแบบที่ไม่ปลอดภัยและ business logic">20·design</a>
+<a href="21-logging-and-incident-response.html" title="Logging การแจ้งเตือน และการรับมือเหตุการณ์">21·logging</a>
+<a href="22-additional-resources.html" title="แหล่งข้อมูลเพิ่มเติม">22·แหล่งข้อมูล</a>
+<span class="grp">| แบบสอบถาม:</span>
+<a href="q1-developer-survey.html" title="แบบสำรวจความปลอดภัยสำหรับนักพัฒนา">Q1·dev</a>
+<a href="q2-awareness-survey.html" title="แบบสำรวจความตระหนักรู้ภัยไซเบอร์">Q2·ทุกคน</a></nav>
+  <main>
+<div class="col">
+<p class="prompt">guest@websec ~ % <b>man 16-cryptography</b></p>
+<h1>16 · การเข้ารหัสและการปกป้องข้อมูล</h1>
+<p class="lede">บั๊กด้านการเข้ารหัสแทบไม่เคยเป็นเรื่องคณิตศาสตร์พัง แต่เป็นความสับสน: คิดว่า encoding คือการเข้ารหัส ใช้ hash แบบเร็วกับรหัสผ่าน ตัวเลขสุ่มที่เดาได้ คีย์ที่วางไว้ข้างข้อมูล</p>
+<h2>16.1 เครื่องมือสี่แบบที่ต่างกัน</h2>
+<div class="tablewrap"><table><thead><tr><th>เครื่องมือ</th><th>ย้อนกลับได้?</th><th>ต้องใช้คีย์?</th><th>ใช้สำหรับ</th></tr></thead><tbody>
+<tr><td><b>Encoding</b> (Base64, hex, URL-encoding)</td><td>ได้ ใครก็ได้</td><td>ไม่</td><td>ทำให้ไบต์ส่งต่อได้อย่างปลอดภัย <span class="r">ไม่ใช่การรักษาความลับ</span></td></tr>
+<tr><td><b>Hashing</b> (SHA-256; bcrypt/Argon2 for passwords)</td><td>ไม่</td><td>ไม่ (มี salt สำหรับรหัสผ่าน)</td><td>ลายนิ้วมือข้อมูล ตรวจความถูกต้อง เก็บรหัสผ่าน (เฉพาะ hash แบบช้า)</td></tr>
+<tr><td><b>Encryption</b> (AES-256-GCM, ChaCha20-Poly1305)</td><td>ได้ ถ้ามีคีย์</td><td>ใช่</td><td>รักษาความลับของข้อมูลขณะจัดเก็บหรือรับส่ง</td></tr>
+<tr><td><b>Signing / MAC</b> (HMAC-SHA256, Ed25519)</td><td>ข้อมูลยังอ่านได้</td><td>ใช่</td><td>พิสูจน์ว่าข้อมูลไม่ถูกแก้และมาจากคุณ (token, คุกกี้, webhook)</td></tr>
+</tbody></table></div>
+<div class="demo"><header><b>sim: ความลับเดียวกัน สี่วิธี</b><span>Web Crypto จริงในเบราว์เซอร์ของคุณ</span></header><div class="body">
+<label for="cr4-in">ค่าที่ละเอียดอ่อน</label><input id="cr4-in" type="text" value="SSN 123-45-6789"/>
+<div class="grid2" style="margin-top:10px">
+<div class="box"><p class="cap r">"การเข้ารหัส" แบบ Base64</p><div class="out" id="cr4-b64"></div></div>
+<div class="box"><p class="cap y">hash SHA-256</p><div class="out" id="cr4-sha"></div></div>
+<div class="box"><p class="cap g">การเข้ารหัส AES-256-GCM</p><div class="out" id="cr4-aes"></div></div>
+<div class="box"><p class="cap k">ลายเซ็น HMAC-SHA256</p><div class="out" id="cr4-hmac"></div></div>
+</div></div></div>
+<h2>16.2 การปกป้องข้อมูลขณะจัดเก็บ</h2>
+<p>ข้อแรก อย่าเก็บสิ่งที่ไม่จำเป็น ส่วนที่เหลือ การเข้ารหัสดิสก์กันดิสก์ที่ถูกขโมยได้ แต่ใครที่ query ฐานข้อมูลได้ยังเห็นข้อความเปล่า <b>การเข้ารหัสรายฟิลด์</b> ทำให้ dump, backup และ query ที่สอดรู้สอดเห็นได้แต่ตัวอักษรมั่วๆ</p>
+<div class="anim" data-actors="Attacker with DB access|Database|Rails app (holds keys)" data-title="dump ฐานข้อมูลเปิดเผยอะไรบ้าง"><script type="application/json">[{"f": 0, "t": 1, "l": "SELECT ssn, email FROM users", "k": "a", "c": "backup ที่รั่ว บั๊ก injection หรือบัญชี analytics ที่มีสิทธิ์มากเกินไป"}, {"f": 1, "t": 0, "l": "ssn: {\"p\":\"q8Zx…\",\"h\":{\"iv\":…}}", "k": "k", "c": "เมื่อใช้ Active Record Encryption คอลัมน์เก็บ ciphertext ถ้าไม่มีคีย์ก็เป็นแค่สัญญาณรบกวน"}, {"f": 2, "t": 1, "l": "SELECT … (normal app query)", "c": "แอปอ่านแถวเดียวกัน"}, {"n": 2, "l": "decrypts with key from credentials", "k": "k", "c": "การถอดรหัสเกิดในแอปด้วยคีย์จาก Rails credentials ฐานข้อมูลไม่เคยเห็นคีย์"}, {"n": 0, "l": "deterministic mode: equal values → equal ciphertext", "c": "การเข้ารหัสแบบ deterministic ค้นหาได้ แต่เผยว่าแถวไหนมีค่าเดียวกัน"}]</script></div><div class="rp partial">Rails มี <b>Active Record Encryption</b> แต่ต้องเปิดเอง: <code>bin/rails db:encryption:init</code> แล้ว <code>encrypts :ssn</code> ใช้ <code>deterministic: true</code> เฉพาะคอลัมน์ที่ต้องค้นหา</div><div class="code">
+<pre data-lang="rails">class Patient &lt; ApplicationRecord
+  encrypts :ssn                                   <span class="c"># non-deterministic (default, strongest)</span>
+  encrypts :email, deterministic: true, downcase: true   <span class="c"># queryable: where(email: …)</span>
+end
+
+<span class="c"># bin/rails db:encryption:init → add the output to credentials:</span>
+<span class="c"># active_record_encryption:</span>
+<span class="c">#   primary_key: …   deterministic_key: …   key_derivation_salt: …</span></pre>
+</div>
+<h2>16.3 คีย์</h2>
+<ul>
+<li>เก็บคีย์ <b>แยกจากข้อมูล</b>: ใน credentials หรือ secret manager</li>
+<li><b>คีย์หนึ่งตัวต่อหนึ่งงาน</b> รั่วตัวเดียวจะได้ไม่เปิดทุกอย่าง</li>
+<li>วางแผน <b>การหมุนเวียนคีย์</b> ก่อนจะต้องใช้</li>
+</ul>
+<h2>16.4 ความสุ่ม</h2>
+<p>token ต้องเดาไม่ได้ <code>rand</code> กับ <code>Math.random()</code> มีไว้ทำเกม ถ้าได้ตัวอย่างมากพอ ผู้โจมตีทำนายตัวถัดไปได้ ให้ใช้ตัวสุ่มทางคริปโต</p>
+<div class="tablewrap"><table><thead><tr><th></th><th>เดาได้ (ห้ามใช้)</th><th>ทางคริปโต (ใช้)</th></tr></thead><tbody>
+<tr><td>Ruby</td><td><code>rand</code>, <code>Random.new</code>, <code>Array#sample</code></td><td><code>SecureRandom.urlsafe_base64(32)</code>, <code>SecureRandom.uuid</code></td></tr>
+<tr><td>JavaScript</td><td><code>Math.random()</code></td><td><code>crypto.getRandomValues()</code>, <code>crypto.randomUUID()</code></td></tr>
+</tbody></table></div>
+<p>ทำ token ให้ยาว (128 บิตขึ้นไป) รหัส 6 หลักต้องจำกัดอัตราอย่างเข้มงวด</p>
+<h2>16.5 Timing attack และการเปรียบเทียบแบบใช้เวลาคงที่</h2>
+<p>การเทียบสตริงปกติหยุดที่ตัวแรกที่ผิด การเดาที่ใกล้กว่าจึงช้ากว่านิดหน่อย วัดมากพอก็กู้ความลับได้ทีละตัว ให้ใช้ <b>การเทียบแบบเวลาคงที่</b> กับความลับ</p>
+<div class="demo"><header><b>sim: token รั่วผ่านเวลา</b><span>token ลับ: 6 ตัวอักษร hex</span></header><div class="body">
+<div class="row"><span>comparison:</span><label><input checked="" name="tm-mode" type="radio" value="eq"/> a == b (หยุดเร็ว)</label><label><input name="tm-mode" type="radio" value="ct"/> secure_compare (ใช้เวลาคงที่)</label>
+<button class="btn red" id="tm-go" type="button">โจมตีตัวอักษรถัดไป ▶</button><button class="btn" id="tm-reset" type="button">รีเซ็ต</button></div>
+<div class="out" id="tm-known" style="margin-top:10px"></div>
+<div id="tm-bars" style="margin-top:10px"></div>
+</div></div>
+<div class="rp yes">Rails มีครบ: <code>SecureRandom</code>, <code>secure_compare</code>, <code>has_secure_token</code>, <code>generates_token_for</code>, <code>MessageVerifier</code> ใช้สิ่งเหล่านี้แทน OpenSSL ดิบ</div><div class="code">
+<pre data-lang="rails">token = SecureRandom.urlsafe_base64(32)               <span class="c"># 256 bits</span>
+class ApiKey &lt; ApplicationRecord
+  has_secure_token :token, length: 36                 <span class="c"># random, unique</span>
+end
+
+ActiveSupport::SecurityUtils.secure_compare(provided, expected)   <span class="ok"># constant time</span>
+<span class="bad">provided == expected                                # leaks timing</span>
+
+<span class="c"># verify a webhook signature</span>
+expected = OpenSSL::HMAC.hexdigest("SHA256", webhook_secret, request.raw_post)
+head :unauthorized unless ActiveSupport::SecurityUtils.secure_compare(expected, request.headers["X-Signature"].to_s)
+
+<span class="c"># sign/encrypt your own data instead of rolling crypto</span>
+verifier = Rails.application.message_verifier(:unsubscribe)
+link_token = verifier.generate(user.id, expires_in: 7.days, purpose: :unsubscribe)</pre>
+<pre data-lang="node">import crypto from "node:crypto";
+const token = crypto.randomBytes(32).toString("base64url");
+const a = Buffer.from(provided), b = Buffer.from(expected);
+const ok = a.length === b.length &amp;&amp; crypto.timingSafeEqual(a, b);   <span class="ok">// constant time</span></pre>
+</div>
+<h2>16.6 อย่าคิดค้นเอง</h2>
+<ul>
+<li>ใช้ AES-GCM ผ่านไลบรารีที่ดี ห้ามใช้ ECB ห้ามใช้ IV ซ้ำ</li>
+<li>MD5 และ SHA-1 ใช้เป็น cache key ได้ แต่ไม่ใช่สำหรับความปลอดภัย</li>
+<li>อย่าคิดรูปแบบ token เอง ถ้าใช้ JWT ให้ปฏิเสธ <code>alg: none</code></li>
+</ul>
+</div>
+
+<div class="col"><label class="readmark"><input type="checkbox" id="read-16-cryptography"> ทำเครื่องหมายว่าอ่านหัวข้อ 16 แล้ว</label><div class="pager"><a href="15-environmental-security.html">◀ 15 ความปลอดภัยของสภาพแวดล้อม</a><a href="17-dependencies-and-cves.html">17 Dependency และ CVE ▶</a></div></div>
+  </main>
+  <footer class="site">อ้างอิงจาก <a href="https://guides.rubyonrails.org/security.html">Ruby on Rails Security Guide</a> (CC BY-SA 4.0), <a href="https://cheatsheetseries.owasp.org/">OWASP Cheat Sheet Series</a>, <a href="https://owasp.org/Top10/2025/">OWASP Top 10:2025</a> และ <a href="https://infosec.mozilla.org/guidelines/web_security.html">Mozilla Web Security Guidelines</a> เขียนสำหรับทีมพัฒนาของเรา ตัวอย่างโค้ดเพื่อการอธิบาย ข้อความในผลการจำลองบางส่วนยังเป็นภาษาอังกฤษ</footer>
+</div>
+<script src="../assets/site.js?v=92ac7aa3f8"></script>
+<script>
+
+const enc = new TextEncoder(), hx = b => Array.from(new Uint8Array(b)).map(x => x.toString(16).padStart(2, "0")).join("");
+let aesKey, hmacKey;
+(async () => { aesKey = await crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, false, ["encrypt"]); hmacKey = await crypto.subtle.generateKey({ name: "HMAC", hash: "SHA-256" }, false, ["sign"]); cr4(); })();
+async function cr4() {
+  if (!aesKey) return; const v = $("#cr4-in").value;
+  const b64 = btoa(unescape(encodeURIComponent(v)));
+  $("#cr4-b64").innerHTML = `${esc(b64)}\n<span class="r">anyone decodes it: atob("${esc(b64.slice(0, 12))}…") → "${esc(v)}"</span>`;
+  const sha = hx(await crypto.subtle.digest("SHA-256", enc.encode(v)));
+  $("#cr4-sha").innerHTML = `${sha.slice(0, 32)}…\n<span class="y">one-way, but "123-45-6789" style values have few possibilities: an attacker hashes all billion SSNs and looks yours up</span>`;
+  const iv = crypto.getRandomValues(new Uint8Array(12)), ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, aesKey, enc.encode(v));
+  $("#cr4-aes").innerHTML = `${hx(ct).slice(0, 32)}…  iv=${hx(iv).slice(0, 8)}…\n<span class="g">unreadable without the key; changes every time (random IV)</span>`;
+  const mac = hx(await crypto.subtle.sign("HMAC", hmacKey, enc.encode(v)));
+  $("#cr4-hmac").innerHTML = `${esc(v)}--${mac.slice(0, 24)}…\n<span class="k">value stays readable; the tag proves it wasn't altered</span>`;
+}
+$("#cr4-in").addEventListener("input", cr4);
+const SECRET = "8f2c91", HEX = "0123456789abcdef"; let known = "";
+function tmRender(times) {
+  $("#tm-known").innerHTML = `recovered so far: <b>${known.padEnd(6, "_")}</b>${known === SECRET ? '  <span class="r">token fully recovered!</span>' : ""}`;
+  if (!times) { $("#tm-bars").innerHTML = ""; return; }
+  const max = Math.max(...times.map(t => t[1]));
+  $("#tm-bars").innerHTML = times.map(([c, t, best]) => `<div class="bar" style="grid-template-columns:120px 1fr 80px"><span>${known.slice(0, -1) || ""}<b>${c}</b>${"_".repeat(6 - known.length)}</span><div class="track"><span style="width:${(t / max * 100).toFixed(1)}%;background:${best ? "var(--red)" : "var(--fg)"}"></span></div><span>${t.toFixed(1)} µs</span></div>`).join("");
+}
+$("#tm-go").onclick = () => {
+  if (known.length >= 6) return;
+  const ct = $("input[name=tm-mode]:checked").value === "ct";
+  const times = HEX.split("").map(c => {
+    const guess = (known + c).padEnd(6, "0"); let match = 0; while (match < 6 && guess[match] === SECRET[match]) match++;
+    const base = 20 + Math.random() * 1.2;
+    return [c, ct ? 20 + 6 * 1.5 + Math.random() * 1.2 : base + match * 1.5, false];
+  });
+  if (ct) { $("#tm-known").innerHTML = `recovered so far: <b>${known.padEnd(6, "_")}</b>  <span class="g">every guess takes the same time: nothing to learn</span>`; $("#tm-bars").innerHTML = times.map(([c, t]) => `<div class="bar" style="grid-template-columns:120px 1fr 80px"><span>${known}<b>${c}</b></span><div class="track"><span style="width:${(t / 32 * 100).toFixed(1)}%"></span></div><span>${t.toFixed(1)} µs</span></div>`).join(""); return; }
+  const best = times.reduce((a, b) => b[1] > a[1] ? b : a); best[2] = true; known += best[0];
+  tmRender(times);
+};
+$("#tm-reset").onclick = () => { known = ""; tmRender(null); };
+$$("input[name=tm-mode]").forEach(r => r.addEventListener("change", () => { known = ""; tmRender(null); }));
+tmRender(null);
+
+</script>
+</body>
+</html>

@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en" data-lang="rails">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>02 SQL Injection · Web Security</title>
+
+<link rel="icon" href="favicon.ico" sizes="32x32">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="site.webmanifest">
+<meta name="theme-color" content="#000000">
+<link rel="stylesheet" href="assets/site.css?v=8f1e007517">
+<script src="assets/consent.js?v=9320b4a322"></script>
+</head>
+<body data-slug="02-sql-injection">
+<div class="win">
+  <div class="titlebar"><span class="dots"><i></i><i></i><i></i></span><span class="t">guest@websec: ~/websec/02-sql-injection — zsh — 100×40</span>
+    <a class="by" href="about.html" title="About the author"><span class="w0">by </span>SaKKo</a>
+    <span class="lsw" role="group" aria-label="Language"><a href="02-sql-injection.html" aria-current="true" data-setlang="en">EN</a><a href="th/02-sql-injection.html" data-setlang="th">TH</a></span>
+    <span class="langsw" role="group" aria-label="Code examples language"><span class="d">code:</span><button type="button" data-l="rails">rails</button><button type="button" data-l="node">node</button></span></div>
+  <nav class="top" aria-label="Sections"><a href="index.html" title="Web Security Field Guide">~/</a>
+<a class="trk on" href="index.html#security">#1 security</a>
+<a class="trk" href="r01-rails-api-app.html">#2 rails</a>
+<span class="grp">|</span>
+<a href="01-introduction.html" title="Introduction">01·introduction</a>
+<a href="02-sql-injection.html" aria-current="page" title="SQL Injection">02·sql-injection</a>
+<a href="03-unsafe-query-generation.html" title="Unsafe Query Generation">03·query-shape</a>
+<a href="04-xss-and-other-injection.html" title="XSS and Other Injection">04·xss</a>
+<span class="grp">| accounts:</span>
+<a href="05-authentication.html" title="Authentication">05·auth</a>
+<a href="05b-mfa.html" title="Multi-Factor Authentication">05b·mfa</a>
+<a href="06-sessions.html" title="Sessions">06·sessions</a>
+<a href="07-csrf.html" title="Cross-Site Request Forgery">07·csrf</a>
+<a href="08-user-management.html" title="User Management">08·accounts</a>
+<a href="09-mass-assignment-and-authorization.html" title="Mass Assignment and Authorization">09·authz</a>
+<span class="grp">| browser:</span>
+<a href="10-redirection-and-files.html" title="Redirection and Files">10·files</a>
+<a href="11-http-security-headers.html" title="HTTP Security Headers">11·headers</a>
+<a href="12-transport-cookies-third-party.html" title="Transport, Cookies and Third-Party Scripts">12·cookies-tls</a>
+<span class="grp">| server:</span>
+<a href="13-ssrf.html" title="Server-Side Request Forgery">13·ssrf</a>
+<a href="14-deserialization-and-xxe.html" title="Deserialization and XXE">14·deserialize</a>
+<a href="15-environmental-security.html" title="Environmental Security">15·secrets</a>
+<a href="16-cryptography.html" title="Cryptography and Data Protection">16·crypto</a>
+<a href="17-dependencies-and-cves.html" title="Dependencies and CVEs">17·dependencies</a>
+<span class="grp">| ops:</span>
+<a href="18-intranet-and-admin.html" title="Intranet and Admin Security">18·admin</a>
+<a href="19-misconfiguration-and-errors.html" title="Misconfiguration and Error Handling">19·misconfig</a>
+<a href="20-insecure-design.html" title="Insecure Design and Business Logic">20·design</a>
+<a href="21-logging-and-incident-response.html" title="Logging, Alerting and Incident Response">21·logging</a>
+<a href="22-additional-resources.html" title="Additional Resources">22·resources</a>
+<span class="grp">| questionnaires:</span>
+<a href="q1-developer-survey.html" title="Developer Security Survey">Q1·developer</a>
+<a href="q2-awareness-survey.html" title="Cyber Threat Awareness Survey">Q2·cyber</a></nav>
+  <main>
+<div class="col">
+<p class="prompt">guest@websec ~ % <b>man 02-sql-injection</b></p>
+<h1>02 · SQL Injection</h1>
+<p class="lede">SQL injection happens when user input becomes part of a database query's code. One bad line can let an attacker log in as anyone, read every table, or change our data. It has hit us before, so it comes first.</p>
+<div class="tldr">Never build SQL by gluing strings together. Pass user values as parameters, and let Active Record do the quoting.</div>
+<div class="toc"><b>on this page</b><ol>
+<li><a href="#what">What SQL injection is</a></li><li><a href="#impact">What an attacker can do</a></li><li><a href="#fix">The fix: parameterized queries</a></li><li><a href="#rails">Where it hides in Rails code</a></li><li><a href="#find">Finding it in our code</a></li><li><a href="#limit">Limiting the damage</a></li><li><a href="#after">If it happens again</a></li></ol></div>
+<h2 id="what">2.1 What SQL injection is</h2>
+<p>Our app talks to the database by sending it SQL text. If we build that text by pasting in what the user typed, the user is now writing part of our query. The database can't tell which part is ours and which part is theirs.</p>
+<p>Example: a login that runs <code>WHERE name = '#{params[:name]}'</code>. A normal user types <code>alice</code>. An attacker types <code>' OR '1'='1</code>, and the query becomes <code>WHERE name = '' OR '1'='1'</code>, which is true for every row.</p>
+<div class="code">
+<pre data-lang="rails"><span class="bad"># VULNERABLE: string interpolation into SQL</span>
+User.where("name = '#{params[:name]}' AND password = '#{params[:password]}'").first
+Product.find_by_sql("SELECT * FROM products WHERE title LIKE '%#{params[:q]}%'")
+Order.joins("JOIN users ON users.id = #{params[:uid]}")</pre>
+<pre data-lang="node"><span class="bad">// VULNERABLE: string concatenation</span>
+const sql = "SELECT * FROM users WHERE name = '" + req.body.name +
+            "' AND password = '" + req.body.password + "' LIMIT 1";</pre>
+</div>
+<div class="note">The quote character <code>'</code> is the key. It ends our string early, and everything after it is read as SQL.</div>
+<h2 id="impact">2.2 What an attacker can do</h2>
+<h3>Log in without a password</h3>
+<p><code>' OR '1'='1</code> in both fields makes the condition always true, so you're logged in as the first user, often the admin. <code>admin'--</code> works too: <code>--</code> starts a SQL comment, so the password check is ignored.</p>
+<h3>Read data they shouldn't see</h3>
+<p><code>UNION SELECT</code> bolts a second query onto the first. A product search can suddenly return the users table, password hashes included.</p>
+<h3>Ask yes/no questions (blind SQL injection)</h3>
+<p>Hiding errors and results doesn't stop it. If the page behaves even slightly differently (logged in or not, a result or none, a fast or slow response), each request answers one yes/no question, like "does the admin's password start with S?". Tools like <code>sqlmap</code> ask thousands of these automatically and pull out whole tables.</p>
+<h3>Change or destroy data</h3>
+<p>Depending on the database and on what the app's DB user is allowed to do, injection can also update rows (making the attacker an admin), delete data, or read files on the database server.</p>
+<div class="anim" data-actors="Attacker|Rails app|PostgreSQL" data-title="SQL injection, then the fix"><script type="application/json">[{"f": 0, "t": 1, "l": "name = ' OR '1'='1", "k": "a", "c": "The attacker types SQL syntax into the login form."}, {"n": 1, "l": "\"…WHERE name = '#{name}'…\"", "k": "a", "c": "The app pastes it into the query string with interpolation."}, {"f": 1, "t": 2, "l": "WHERE name = '' OR '1'='1' …", "k": "a", "c": "The database can't tell where our SQL ends and the input begins. The condition is always true."}, {"f": 2, "t": 1, "l": "first row: admin", "k": "a", "c": "It returns the first user, usually the admin."}, {"f": 1, "t": 0, "l": "logged in as admin", "k": "a", "c": "<b>Authentication bypassed.<\/b>"}, {"n": 1, "l": "User.find_by(name: params[:name])", "k": "k", "c": "Now with a hash condition: Active Record sends the SQL and the value separately."}, {"f": 1, "t": 2, "l": "WHERE name = $1   [\"' OR '1'='1\"]", "k": "k", "c": "The value is just a strange name. It can never become SQL."}, {"f": 2, "t": 1, "l": "0 rows", "c": "Login fails, as it should."}]</script></div>
+<p>Try it yourself. This is a tiny but real SQL engine running in your browser. Switch between string concatenation and a parameterized query and watch what changes. The two "blind" buttons ask a yes/no question about the admin's password: logged in means yes.</p>
+<div class="demo"><header><b>sim: a real (tiny) SQL engine</b><span>queries are parsed and run against an in-memory table</span></header><div class="body">
+<div class="tabs"><div role="tablist"><button role="tab">login form</button><button role="tab">product search</button></div>
+<div role="tabpanel">
+<div class="grid2"><div><label for="sq-u">username</label><input id="sq-u" type="text" value="' OR '1'='1"/></div><div><label for="sq-p">password</label><input id="sq-p" type="text" value="' OR '1'='1"/></div></div>
+<div class="row" style="margin-top:8px"><span class="d">payloads:</span><button class="btn" data-sqp="wonderland" data-squ="alice" type="button">real login</button><button class="btn" data-sqp="' OR '1'='1" data-squ="' OR '1'='1" type="button">' OR '1'='1 in both</button><button class="btn" data-sqp="x" data-squ="' OR '1'='1" type="button">' OR '1'='1 in name only</button><button class="btn" data-sqp="" data-squ="admin'--" type="button">admin'--</button><button class="btn" data-sqp="' OR name='admin" data-squ="x" type="button">password: ' OR name='admin</button><button class="btn" data-sqp="" data-squ="admin' AND password LIKE 'S%'--" type="button">blind: admin's password starts with S?</button><button class="btn" data-sqp="" data-squ="admin' AND password LIKE 'x%'--" type="button">blind: … starts with x?</button></div>
+<div class="row" style="margin-top:8px"><label><input checked="" name="sq-mode" type="radio" value="concat"/> string concatenation</label><label><input name="sq-mode" type="radio" value="param"/> parameterized query</label></div>
+<div class="out" id="sq-out" style="margin-top:10px"></div>
+</div>
+<div role="tabpanel">
+<label for="sr-q">search products</label><input id="sr-q" type="text" value="' UNION SELECT name, password FROM users --"/>
+<div class="row" style="margin-top:8px"><span class="d">payloads:</span><button class="btn" data-sr="lamp" type="button">lamp</button><button class="btn" data-sr="' UNION SELECT name, password FROM users --" type="button">UNION users</button><button class="btn" data-sr="' UNION SELECT name, role FROM users --" type="button">UNION roles</button><button class="btn" data-sr="' OR 1=1 --" type="button">' OR 1=1 --</button></div>
+<div class="row" style="margin-top:8px"><label><input checked="" name="sr-mode" type="radio" value="concat"/> string concatenation</label><label><input name="sr-mode" type="radio" value="param"/> parameterized query</label></div>
+<div class="out" id="sr-out" style="margin-top:10px"></div>
+</div></div>
+</div></div>
+<h2 id="fix">2.3 The fix: parameterized queries</h2>
+<p><b>Never glue input into SQL. Use parameters.</b> With a parameterized query, the SQL text and the values travel to the database separately. The database reads the SQL first and only then plugs in the values, so a value can never become code, whatever characters it contains.</p>
+<p>Removing quotes by hand (<code>gsub("'", "")</code>) is not a fix. It's easy to miss a case, and it does nothing for numbers, column names or <code>LIKE</code> patterns.</p>
+<div class="rp partial">Rails parameterizes for you when you use hash conditions (<code>where(name: x)</code>, <code>find_by(name: x)</code>) and placeholders (<code>?</code> or <code>:name</code>). The danger is any string you build yourself with <code>#{}</code> and pass to <code>where</code>, <code>order</code>, <code>find_by_sql</code>, <code>joins</code> or <code>execute</code>. Brakeman catches most of these.</div>
+<div class="code">
+<pre data-lang="rails"><span class="ok"># hash conditions and placeholders are parameterized</span>
+User.find_by(name: params[:name])
+Product.where("title LIKE ?", "%#{Product.sanitize_sql_like(params[:q])}%")
+Product.where("price &lt; :max AND stock &gt; :min", max: params[:max], min: 0)
+
+<span class="c"># identifiers (columns, directions) can't be bound: allowlist them</span>
+SORTS = { "newest" =&gt; { created_at: :desc }, "price" =&gt; { price: :asc } }
+Product.order(SORTS.fetch(params[:sort], { id: :asc }))</pre>
+<pre data-lang="node"><span class="ok">// node-postgres: $1, $2 placeholders</span>
+await db.query("SELECT * FROM users WHERE name = $1 AND active = $2", [name, true]);
+<span class="ok">// mysql2</span>
+await conn.execute("SELECT * FROM products WHERE title LIKE ?", [`%${q}%`]);
+<span class="ok">// Prisma tagged template (parameterized automatically)</span>
+await prisma.$queryRaw`SELECT * FROM users WHERE email = ${email}`;
+<span class="c">// identifiers (column/table names) can't be parameters: map them from an allowlist</span>
+const col = { newest: "created_at", price: "price" }[req.query.sort] ?? "id";</pre>
+</div>
+<p>Column names and sort directions can't be parameters. For those, map the user's choice to a fixed list (an <b>allowlist</b>), like the <code>SORTS</code> example above.</p>
+<h2 id="rails">2.4 Where SQL injection hides in Rails code</h2>
+<p>Active Record is safe when you pass it <i>values</i>, and unsafe when you pass it <i>SQL strings</i> you built. These are the patterns to look for in code review:</p>
+<div class="tablewrap"><table><thead><tr><th>method</th><th>unsafe (string with user input)</th><th>safe</th></tr></thead><tbody>
+<tr><td><code>where</code>, <code>not</code>, <code>rewhere</code>, <code>find_by</code></td><td><code>where("email = '#{params[:email]}'")</code></td><td><code>where(email: params[:email])</code><br/><code>where("email = ?", params[:email])</code></td></tr>
+<tr><td><code>order</code>, <code>reorder</code></td><td><code>order("#{params[:sort]} #{params[:dir]}")</code></td><td>allowlist: <code>order(SORTS.fetch(params[:sort], { id: :asc }))</code></td></tr>
+<tr><td><code>select</code>, <code>pluck</code>, <code>group</code>, <code>having</code>, <code>from</code>, <code>joins</code>, <code>lock</code></td><td><code>pluck(params[:column])</code></td><td>symbols you wrote: <code>pluck(:name)</code></td></tr>
+<tr><td><code>sum</code>, <code>average</code>, <code>minimum</code>, <code>maximum</code>, <code>calculate</code></td><td><code>Order.sum(params[:field])</code></td><td><code>Order.sum(:total)</code></td></tr>
+<tr><td><code>update_all</code>, <code>delete_by</code>, <code>destroy_by</code></td><td><code>update_all("status = '#{s}'")</code></td><td><code>update_all(status: s)</code></td></tr>
+<tr><td><code>find_by_sql</code>, <code>count_by_sql</code></td><td><code>find_by_sql("… WHERE id = #{x}")</code></td><td><code>find_by_sql(["… WHERE id = ?", x])</code></td></tr>
+<tr><td><code>connection.execute</code>, <code>exec_query</code>, <code>select_all</code></td><td><code>execute("DELETE … #{x}")</code></td><td>build it with <code>sanitize_sql_array(["… ?", x])</code>, or use the model API</td></tr>
+<tr><td><code>Arel.sql</code></td><td><code>Arel.sql(params[:anything])</code> tells Rails "this is trusted SQL"</td><td>only around fixed strings you wrote yourself</td></tr>
+</tbody></table></div>
+<p>More traps:</p>
+<ul>
+<li><b>Lists:</b> <code>where("id IN (#{ids.join(',')})")</code> is injectable. Use <code>where(id: ids)</code>.</li>
+<li><b>LIKE searches:</b> <code>%</code> and <code>_</code> are wildcards. Bind the value and wrap it with <code>sanitize_sql_like</code>, so a search for <code>%</code> doesn't match everything.</li>
+<li><b>Second-order injection:</b> data that was saved safely can still be dangerous later. If a background job or report builds SQL from a value stored in the database (a saved filter, a username), treat that value as user input too.</li>
+</ul>
+<div class="note">Recent Rails versions refuse most raw SQL in <code>order</code> and <code>pluck</code> unless you wrap it in <code>Arel.sql</code>. That's a safety net, not a reason to skip the allowlist.</div>
+<h2 id="find">2.5 Finding it in our code</h2>
+<ol>
+<li><b>Run Brakeman</b> and read every "SQL Injection" warning, even the weak-confidence ones. New Rails apps ship with <code>bin/brakeman</code>; older apps can add the gem. Run it in CI so new warnings fail the build.</li>
+<li><b>Search for interpolation inside query methods.</b> Every <code>#{</code> inside a SQL string deserves a second look.</li>
+<li><b>Review rule:</b> no merge if a pull request builds SQL with <code>#{}</code> or <code>+</code>, unless the value comes from a fixed allowlist in the same file.</li>
+</ol>
+<div class="code" data-label="shell">
+<pre><span class="c"># only the SQL injection check, all confidence levels</span>
+bin/brakeman -t SQL -w1
+
+<span class="c"># query methods that receive an interpolated string</span>
+grep -rnE '\.(where|not|find_by|order|reorder|group|having|select|pluck|joins|from|lock|update_all|delete_by|destroy_by|find_by_sql|count_by_sql|execute|exec_query|select_all|sum|calculate)[ (].*#\{' app lib
+
+<span class="c"># raw SQL that someone marked as trusted</span>
+grep -rn 'Arel.sql' app lib</pre>
+</div>
+<h2 id="limit">2.6 Limiting the damage</h2>
+<p>Parameterized queries are the fix. These are extra layers for the day one bug slips through anyway:</p>
+<ul>
+<li><b>Least-privilege database user.</b> The app's DB user shouldn't be a superuser or own the schema in production. Run migrations with a separate user, and give reporting tools a read-only one.</li>
+<li><b>Never show database errors to users.</b> Error messages help attackers map our tables. Keep <code>consider_all_requests_local = false</code> in production (section 19).</li>
+<li><b>Alert on SQL errors.</b> A spike in <code>ActiveRecord::StatementInvalid</code> errors usually means someone is probing.</li>
+<li><b>Encrypt the most sensitive columns</b>, so a stolen dump shows only ciphertext (section 16).</li>
+<li><b>A WAF helps, but it isn't the fix.</b> Attackers have many ways to disguise a payload.</li>
+</ul>
+<div class="rp no">Rails can't choose our database permissions or alerts. That's our setup and our process.</div>
+<h2 id="after">2.7 If it happens again</h2>
+<p>A short checklist, in order. Section 21 covers incident response in general.</p>
+<ol>
+<li><b>Contain:</b> block the attacking IPs or switch off the vulnerable feature. A quick hotfix is fine.</li>
+<li><b>Fix the bug</b> with parameters, then search the whole codebase for the same pattern (the commands above). One injection bug usually has siblings.</li>
+<li><b>Work out what was read or changed.</b> Search web and database logs for the vulnerable URL and for payloads like <code>'</code>, <code>UNION</code>, <code>--</code>, <code>SLEEP</code> or <code>pg_sleep</code>.</li>
+<li><b>Rotate anything in the database that grants access:</b> API tokens, OAuth tokens, password-reset tokens, and the database password itself.</li>
+<li><b>Protect users:</b> if password hashes may have leaked, force password resets. bcrypt slows attackers down, but weak passwords still fall.</li>
+<li><b>Notify:</b> a personal-data leak may have to be reported to the regulator within 72 hours (PDPA). Bring in legal early.</li>
+<li><b>Learn:</b> add a regression test that sends the attack payload, and add Brakeman to CI if it isn't there yet.</li>
+</ol>
+</div>
+
+<div class="col"><label class="readmark"><input type="checkbox" id="read-02-sql-injection"> mark section 02 as read</label><div class="pager"><a href="01-introduction.html">◀ 01 Introduction</a><a href="03-unsafe-query-generation.html">03 Unsafe Query Generation ▶</a></div></div>
+  </main>
+  <footer class="site">Based on the <a href="https://guides.rubyonrails.org/security.html">Ruby on Rails Security Guide</a> (CC BY-SA 4.0), the <a href="https://cheatsheetseries.owasp.org/">OWASP Cheat Sheet Series</a>, the <a href="https://owasp.org/Top10/2025/">OWASP Top 10:2025</a> and <a href="https://infosec.mozilla.org/guidelines/web_security.html">Mozilla's Web Security Guidelines</a>. Written for our dev team; code samples are illustrative.</footer>
+</div>
+<script src="assets/site.js?v=92ac7aa3f8"></script>
+<script>
+
+// 7.2 mini SQL engine
+const DB = {
+  users: [{ id: 1, name: "admin", password: "S3cr3t!x", role: "superuser" }, { id: 2, name: "alice", password: "wonderland", role: "member" }, { id: 3, name: "bob", password: "builder42", role: "member" }],
+  products: [{ id: 1, name: "desk lamp", price: "39.00" }, { id: 2, name: "lava lamp", price: "24.50" }, { id: 3, name: "office chair", price: "189.00" }]
+};
+function tokenize(sql) {
+  const t = []; let i = 0;
+  while (i < sql.length) {
+    const c = sql[i];
+    if (/\s/.test(c)) { i++; continue; }
+    if (c === "-" && sql[i + 1] === "-") break; // comment to end
+    if (c === "'") { let s = ""; i++; while (i < sql.length) { if (sql[i] === "'" && sql[i + 1] === "'") { s += "'"; i += 2; continue; } if (sql[i] === "'") break; s += sql[i++]; } if (i >= sql.length) throw new Error("unterminated string literal"); i++; t.push({ k: "str", v: s }); continue; }
+    if (/[0-9]/.test(c)) { let n = ""; while (/[0-9.]/.test(sql[i] || "")) n += sql[i++]; t.push({ k: "num", v: +n }); continue; }
+    if (/[A-Za-z_*]/.test(c)) { let w = ""; while (/[A-Za-z_0-9*]/.test(sql[i] || "")) w += sql[i++]; t.push({ k: "id", v: w }); continue; }
+    if (c === "?" || c === "$") { i++; while (/[0-9]/.test(sql[i] || "")) i++; t.push({ k: "param" }); continue; }
+    if ("=(),%".includes(c)) { t.push({ k: "op", v: c }); i++; continue; }
+    if (c === "<" || c === ">" || c === "!") { let o = c; i++; if (sql[i] === "=" || sql[i] === ">") o += sql[i++]; t.push({ k: "op", v: o }); continue; }
+    if (c === ";") { t.push({ k: "op", v: ";" }); i++; continue; }
+    throw new Error("unexpected character " + c);
+  }
+  return t;
+}
+function runSQL(sql, params = []) {
+  const t = tokenize(sql); let p = 0, pi = 0;
+  const peek = () => t[p], kw = w => t[p] && t[p].k === "id" && t[p].v.toUpperCase() === w, need = w => { if (!kw(w)) throw new Error(`expected ${w} near "${t[p] ? t[p].v ?? "?" : "end"}"`); p++; };
+  function select() {
+    need("SELECT"); const cols = []; do { if (t[p] && t[p].v === ",") p++; cols.push(t[p++].v); } while (t[p] && t[p].v === ",");
+    need("FROM"); const table = t[p++].v; if (!DB[table]) throw new Error(`no such table: ${table}`);
+    let where = null; if (kw("WHERE")) { p++; where = expr(); }
+    let limit = Infinity; if (kw("LIMIT")) { p++; limit = t[p++].v; }
+    let rows = DB[table].filter(r => !where || where(r));
+    rows = rows.slice(0, limit).map(r => cols[0] === "*" ? Object.values(r) : cols.map(c => { if (!(c in r)) throw new Error(`no such column: ${c}`); return r[c]; }));
+    return { cols: cols[0] === "*" ? Object.keys(DB[table][0]) : cols, rows };
+  }
+  function expr() { let l = and(); while (kw("OR")) { p++; const r = and(), a = l; l = row => a(row) || r(row); } return l; }
+  function and() { let l = cmp(); while (kw("AND")) { p++; const r = cmp(), a = l; l = row => a(row) && r(row); } return l; }
+  function val() {
+    const x = t[p++]; if (!x) throw new Error("unexpected end of query");
+    if (x.k === "op" && x.v === "(") { const e = expr(); p++; return row => e(row); }
+    if (x.k === "str" || x.k === "num") return () => x.v;
+    if (x.k === "param") { const v = params[pi++]; return () => v; }
+    if (x.k === "id") return row => { if (!(x.v in row)) throw new Error(`no such column: ${x.v}`); return row[x.v]; };
+    throw new Error(`syntax error near "${x.v}"`);
+  }
+  function cmp() {
+    const l = val();
+    if (t[p] && t[p].k === "op" && ["=", "!=", "<>"].includes(t[p].v)) { const o = t[p++].v, r = val(); return row => o === "=" ? String(l(row)) === String(r(row)) : String(l(row)) !== String(r(row)); }
+    if (kw("LIKE")) { p++; const r = val(); return row => new RegExp("^" + String(r(row)).replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/%/g, ".*") + "$", "i").test(String(l(row))); }
+    return row => !!l(row) && l(row) !== "0";
+  }
+  let res = select();
+  while (kw("UNION")) { p++; const r2 = select(); if (r2.cols.length !== res.cols.length) throw new Error("UNION column count mismatch"); res.rows = res.rows.concat(r2.rows); }
+  if (t[p] && !(t[p].k === "op" && t[p].v === ";")) throw new Error(`syntax error near "${t[p].v ?? t[p].k}"`);
+  return res;
+}
+function hl(sql, inputs) { let s = esc(sql); inputs.forEach(v => { if (v) s = s.split(esc(v)).join(`<span class="y">${esc(v)}</span>`); }); const ci = s.indexOf("--"); if (ci >= 0) s = s.slice(0, ci) + '<span class="d">' + s.slice(ci) + "</span>"; return s; }
+function table(res) { if (!res.rows.length) return "(0 rows)"; return res.cols.join(" | ") + "\n" + res.rows.map(r => r.join(" | ")).join("\n"); }
+function sqLogin() {
+  const u = $("#sq-u").value, pw = $("#sq-p").value, mode = $("input[name=sq-mode]:checked").value;
+  let sql, out;
+  if (mode === "concat") sql = `SELECT * FROM users WHERE name = '${u}' AND password = '${pw}' LIMIT 1`;
+  else sql = "SELECT * FROM users WHERE name = $1 AND password = $2 LIMIT 1";
+  try {
+    const res = mode === "concat" ? runSQL(sql) : runSQL(sql, [u, pw]);
+    const shown = mode === "concat" ? hl(sql, [u, pw]) : esc(sql) + `\n<span class="d">params: [${esc(JSON.stringify(u))}, ${esc(JSON.stringify(pw))}]</span>`;
+    const who = res.rows[0];
+    const legit = who && DB.users.some(x => x.name === u && x.password === pw);
+    out = `${shown}\n\n${table(res)}\n\n` + (who ? (legit ? `<span class="g">logged in as ${who[1]} (correct credentials)</span>` : `<span class="r">logged in as ${who[1]} (${who[3]}) WITHOUT the password</span>`) : '<span class="g">login failed</span>');
+  } catch (e) { out = hl(sql, [u, pw]) + `\n\n<span class="y">database error: ${esc(e.message)}</span>\n<span class="d">(error messages like this also help attackers map your schema; don't show them to users)</span>`; }
+  $("#sq-out").innerHTML = out;
+}
+function sqSearch() {
+  const q = $("#sr-q").value, mode = $("input[name=sr-mode]:checked").value;
+  let sql, out;
+  if (mode === "concat") sql = `SELECT name, price FROM products WHERE name LIKE '%${q}%'`; else sql = "SELECT name, price FROM products WHERE name LIKE $1";
+  try {
+    const res = mode === "concat" ? runSQL(sql) : runSQL(sql, ["%" + q + "%"]);
+    const leaked = res.rows.some(r => DB.users.some(u => u.name === r[0]));
+    out = (mode === "concat" ? hl(sql, [q]) : esc(sql) + `\n<span class="d">params: [${esc(JSON.stringify("%" + q + "%"))}]</span>`) + `\n\n${table(res)}` + (leaked ? '\n\n<span class="r">user credentials leaked into product results</span>' : "");
+  } catch (e) { out = hl(sql, [q]) + `\n\n<span class="y">database error: ${esc(e.message)}</span>`; }
+  $("#sr-out").innerHTML = out;
+}
+["#sq-u", "#sq-p"].forEach(s => $(s).addEventListener("input", sqLogin)); $$("input[name=sq-mode]").forEach(r => r.addEventListener("change", sqLogin));
+$$("[data-squ]").forEach(b => b.onclick = () => { $("#sq-u").value = b.dataset.squ; $("#sq-p").value = b.dataset.sqp; sqLogin(); });
+$("#sr-q").addEventListener("input", sqSearch); $$("input[name=sr-mode]").forEach(r => r.addEventListener("change", sqSearch));
+$$("[data-sr]").forEach(b => b.onclick = () => { $("#sr-q").value = b.dataset.sr; sqSearch(); });
+sqLogin(); sqSearch();
+
+</script>
+</body>
+</html>

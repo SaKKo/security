@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en" data-lang="rails">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RESTful and Resourceful Routes · Rails Guide</title>
+
+<link rel="icon" href="favicon.ico" sizes="32x32">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="site.webmanifest">
+<meta name="theme-color" content="#000000">
+<link rel="stylesheet" href="assets/site.css?v=8f1e007517">
+<script src="assets/consent.js?v=9320b4a322"></script>
+</head>
+<body data-slug="r09-rest-routes">
+<div class="win">
+  <div class="titlebar"><span class="dots"><i></i><i></i><i></i></span><span class="t">guest@websec: ~/websec/r09-rest-routes — zsh — 100×40</span>
+    <a class="by" href="about.html" title="About the author"><span class="w0">by </span>SaKKo</a>
+    <span class="lsw" role="group" aria-label="Language"><a href="r09-rest-routes.html" aria-current="true" data-setlang="en">EN</a><a href="th/r09-rest-routes.html" data-setlang="th">TH</a></span></div>
+  <nav class="top" aria-label="Lessons"><a href="index.html#rails" title="Home">~/</a>
+<a class="trk" href="index.html#security">#1 security</a>
+<a class="trk on" href="r01-rails-api-app.html">#2 rails</a>
+<span class="grp">| basics:</span>
+<a href="r01-rails-api-app.html" title="A Rails API App">r01·api-app</a>
+<a href="r02-rails-commands.html" title="Rails Commands">r02·commands</a>
+<a href="r03-migrations.html" title="Migrations">r03·migrations</a>
+<span class="grp">| models:</span>
+<a href="r04-models.html" title="Models and ApplicationRecord">r04·models</a>
+<a href="r05-model-callbacks.html" title="Model Callbacks">r05·model-hooks</a>
+<span class="grp">| controllers:</span>
+<a href="r06-controllers.html" title="Controllers and the API Hierarchy">r06·controllers</a>
+<a href="r07-controller-callbacks.html" title="Controller Callbacks">r07·controller-hooks</a>
+<a href="r08-where-code-goes.html" title="Controllers, Models or Services?">r08·services</a>
+<span class="grp">| api:</span>
+<a href="r09-rest-routes.html" aria-current="page" title="RESTful and Resourceful Routes">r09·rest-routes</a>
+<a href="r10-testing.html" title="Testing the API">r10·testing</a></nav>
+  <main>
+<div class="col">
+<p class="prompt">guest@websec ~ % <b>man r09-rest-routes</b></p>
+<h1>RESTful and Resourceful Routes</h1>
+<p class="lede">REST means: URLs name <i>things</i> (resources), HTTP verbs say what to do with them. Rails' <code>resources</code> turns that idea into routes, controller actions and helper methods in one line.</p>
+<h2>Five actions cover almost everything</h2><div class="tablewrap"><table><thead><tr><th>verb</th><th>path</th><th>action</th><th>meaning</th><th>success</th></tr></thead><tbody><tr><td class='y'>GET</td><td><code>/client_applications</code></td><td><code>#index</code></td><td>list</td><td>200</td></tr><tr><td class='y'>POST</td><td><code>/client_applications</code></td><td><code>#create</code></td><td>create one</td><td>201</td></tr><tr><td class='y'>GET</td><td><code>/client_applications/:id</code></td><td><code>#show</code></td><td>read one</td><td>200</td></tr><tr><td class='y'>PATCH / PUT</td><td><code>/client_applications/:id</code></td><td><code>#update</code></td><td>change one</td><td>200</td></tr><tr><td class='y'>DELETE</td><td><code>/client_applications/:id</code></td><td><code>#destroy</code></td><td>remove one (for us: soft delete)</td><td>200</td></tr></tbody></table></div><div class="note">API-only apps skip <code>new</code> and <code>edit</code>: those actions only exist to render HTML forms.</div><h2>Good paths, bad paths</h2><div class="grid2"><div class="box"><p class="cap">✗</p><pre class="out" style="margin:0">POST /api/getRoles?appId=42
+POST /api/v1/admin/createRole
+GET  /api/v1/admin/deleteUser?id=7
+POST /api/v1/admin/role/update
+GET  /api/v1/admin/RolesForApp/42</pre></div><div class="box"><p class="cap">✓</p><pre class="out" style="margin:0">GET    /api/v1/admin/client_applications/:id/roles
+POST   /api/v1/admin/client_applications/:id/roles
+DELETE /api/v1/admin/users/:id
+PATCH  /api/v1/admin/client_applications/:ca_id/roles/:id
+POST   /api/v1/admin/users/:id/toggle_admin</pre></div></div><ul><li>Plural nouns, <code>snake_case</code>, versioned under <code>/api/v1</code>.</li><li>The verb is the HTTP method. Never change data with <code>GET</code>: browsers, proxies and crawlers repeat GETs freely.</li><li>Ownership lives in the path: roles <i>of</i> an application are nested under it.</li><li>A verb in the path is allowed only as a <b>member action</b> for a state change that isn’t plain CRUD (<code>toggle_admin</code>, <code>activate</code>).</li></ul><h2>Resourceful routing</h2><div class="code" data-label="ruby · config/routes.rb"><pre>resources :client_applications, only: %i[ index show create update ]   <span class="c"># always list actions</span>
+
+resources :client_applications do
+  resources :roles, only: %i[ index show create update ]                <span class="c"># nested: /client_applications/:client_application_id/roles</span>
+end
+
+resources :users, only: %i[ index show ] do
+  member do
+    post :toggle_admin                       <span class="c"># /users/:id/toggle_admin      → acts on one</span>
+  end
+  collection do
+    get :export                              <span class="c"># /users/export                → acts on the set</span>
+  end
+end
+
+resource :profile, only: %i[ show update ]   <span class="c"># singular: no :id, it's "mine" → profiles#show</span>
+
+namespace :api do                            <span class="c"># path /api/..., module Api::, folder api/, helper api_...</span>
+  namespace :v1 do
+    namespace :admin do
+      resources :users
+    end
+  end
+end</pre></div><div class="rs">Always pass <code>only:</code>. Routes you don't use are routes someone can probe, and they also become permissions in <code>Permission.all_admin_permissions</code>. Nest one level at most.</div><h3>State changes as member routes</h3><p>Each AASM event on a model becomes a <code>POST</code> member route and a controller action that calls the bang event. The admin UI reads <code>actionables</code> from the JSON to know which buttons to show:</p><div class="code" data-label="ruby · app/controllers/api/v1/admin/user_roles_controller.rb"><pre><span class="c"># POST /api/v1/admin/users/:user_id/user_roles/:id/activate</span>
+def activate
+  @user_role.activate!                                   <span class="c"># AASM::InvalidTransition → 400</span>
+  render json: { user_role: @user_role.as_admin_json }   <span class="c"># includes actionables: ["inactivate"]</span>
+end</pre></div><p>That beats <code>PATCH status=active</code>: the transition rules stay in the model, each event gets its own permission, and audit logs say <i>what</i> happened.</p><h3>Non-resource routes</h3><div class="code" data-label="ruby"><pre>namespace :admin do
+  post   "sessions",    to: "sessions#create"    # login       → api_v1_admin_sessions
+  get    "sessions/me", to: "sessions#me"        # who am I    → api_v1_admin_sessions_me
+  delete "sessions",    to: "sessions#destroy"   # logout
+end</pre></div><p>Some endpoints are actions rather than things (login, verify a token). Write them with <code>verb "path", to: "controller#action"</code>. Rails derives the helper name from the path.</p><h2>Build routes, see the result</h2><div class="demo"><header><b>route builder</b><span>toggle options, then click a row</span></header><div class="body"><div class="rbuild"><script type="application/json">{"l_scope": "scope", "l_nested": "nested inside users", "l_shape": "shape", "l_only": "use only: (untick to see every action)", "l_click": "click a route row below to see its helper and a test line", "helper": "named helpers", "test": "in an integration test"}</script></div></div></div><h2>Reading <code>rails routes</code></h2><div class="term" data-title="zsh — ~/myapp"><script type="application/json">[{"c": "bin/rails routes -g client_application", "o": "                                     Prefix Verb   URI Pattern                                                                    Controller#Action\n      api_v1_admin_client_application_roles GET    /api/v1/admin/client_applications/:client_application_id/roles(.:format)       api/v1/admin/roles#index\n                                            POST   /api/v1/admin/client_applications/:client_application_id/roles(.:format)       api/v1/admin/roles#create\n       api_v1_admin_client_application_role GET    /api/v1/admin/client_applications/:client_application_id/roles/:id(.:format)   api/v1/admin/roles#show\n                                            PATCH  /api/v1/admin/client_applications/:client_application_id/roles/:id(.:format)   api/v1/admin/roles#update\n                                            PUT    /api/v1/admin/client_applications/:client_application_id/roles/:id(.:format)   api/v1/admin/roles#update\napi_v1_admin_client_application_permissions GET    /api/v1/admin/client_applications/:client_application_id/permissions(.:format) api/v1/admin/permissions#index\n           api_v1_admin_client_applications GET    /api/v1/admin/client_applications(.:format)                                    api/v1/admin/client_applications#index\n                                            POST   /api/v1/admin/client_applications(.:format)                                    api/v1/admin/client_applications#create\n            api_v1_admin_client_application GET    /api/v1/admin/client_applications/:id(.:format)                                api/v1/admin/client_applications#show\n                                            PATCH  /api/v1/admin/client_applications/:id(.:format)                                api/v1/admin/client_applications#update\n                                            PUT    /api/v1/admin/client_applications/:id(.:format)                                api/v1/admin/client_applications#update", "n": "Columns: <b>Prefix<\/b> (helper name without <code>_path<\/code>/<code>_url<\/code>; blank = same as the row above), <b>Verb<\/b>, <b>URI Pattern<\/b> (<code>:params<\/code> become <code>params[:…]<\/code>), <b>Controller#Action<\/b> (file <code>app/controllers/api/v1/admin/roles_controller.rb<\/code>, method <code>create<\/code>)."}, {"c": "bin/rails routes -c api/v1/client", "o": "                   Prefix Verb   URI Pattern                          Controller#Action\n api_v1_client_auth_login POST   /api/v1/client/auth/login(.:format)  api/v1/client/auth#login\napi_v1_client_auth_verify GET    /api/v1/client/auth/verify(.:format) api/v1/client/auth#verify\n      api_v1_client_roles GET    /api/v1/client/roles(.:format)       api/v1/client/roles#index\napi_v1_client_permissions GET    /api/v1/client/permissions(.:format) api/v1/client/permissions#index"}, {"c": "bin/rails routes -g toggle --expanded", "o": "--[ Route 1 ]-----------------------------------------------------------\nPrefix            | toggle_admin_api_v1_admin_user\nVerb              | POST\nURI               | /api/v1/admin/users/:id/toggle_admin(.:format)\nController#Action | api/v1/admin/users#toggle_admin\nSource Location   | config/routes.rb:14", "n": "<code>--expanded<\/code> is easier to read in a narrow terminal and shows which line of <code>routes.rb<\/code> defined it."}, {"c": "bin/rails routes --unused", "o": "Found 1 unused route:\n\n              Prefix Verb   URI Pattern                      Controller#Action\napi_v1_admin_user DELETE /api/v1/admin/users/:id(.:format) api/v1/admin/users#destroy", "n": "Lists routes whose controller action doesn't exist. Fix with <code>only:<\/code>."}]</script></div><h2>Named route helpers</h2><p>Every Prefix becomes two methods: <code>…_path</code> (just the path) and <code>…_url</code> (with host). Try them in the console through <code>app</code>:</p><div class="term" data-title="zsh — ~/myapp"><script type="application/json">[{"c": "bin/rails c", "o": "Loading development environment (Rails 8.1.0)"}, {"p": "myapp(dev)>", "c": "app.api_v1_admin_users_path", "o": "=> \"/api/v1/admin/users\""}, {"p": "myapp(dev)>", "c": "app.api_v1_admin_users_path(page: 2, per_page: 20)", "o": "=> \"/api/v1/admin/users?page=2&per_page=20\"", "n": "Extra keys become the query string."}, {"p": "myapp(dev)>", "c": "app.api_v1_admin_client_application_role_path(client_application_id: \"0193a6f2\", id: \"0193a7b1\")", "o": "=> \"/api/v1/admin/client_applications/0193a6f2/roles/0193a7b1\""}, {"p": "myapp(dev)>", "c": "app.api_v1_admin_client_application_roles_path(ClientApplication.first)", "o": "=> \"/api/v1/admin/client_applications/0193a6f2-.../roles\"", "n": "Pass records positionally; Rails calls <code>to_param<\/code> (the id)."}, {"p": "myapp(dev)>", "c": "app.api_v1_admin_client_application_roles_path", "o": "ActionController::UrlGenerationError: No route matches {:action=>\"index\", :controller=>\"api/v1/admin/roles\"}, missing required keys: [:client_application_id]", "n": "Forget a required segment and you get a clear error, instead of a silent 404 from a hand-typed string."}, {"p": "myapp(dev)>", "c": "app.toggle_admin_api_v1_admin_user_url(id: 7)", "o": "=> \"http://www.example.com/api/v1/admin/users/7/toggle_admin\""}]</script></div><h2>All our routes</h2><div class="code" data-label="ruby · config/routes.rb (reconstructed)"><pre>Rails.application.routes.draw do
+  get "health", to: "application#health"
+
+  namespace :api do
+    namespace :v1 do
+      namespace :admin do
+        post   "sessions",    to: "sessions#create"
+        get    "sessions/me", to: "sessions#me"
+        delete "sessions",    to: "sessions#destroy"
+
+        resources :users, only: %i[ index show ] do
+          member do
+            post :toggle_admin
+          end
+          resources :user_roles, only: %i[ index create ] do
+            member do
+              post :activate
+              post :inactivate
+            end
+          end
+        end
+
+        resources :client_applications, only: %i[ index show create update ] do
+          resources :roles, only: %i[ index show create update ]
+          resources :permissions, only: %i[ index ]
+        end
+      end
+
+      namespace :client do
+        post "auth/login",  to: "auth#login"
+        get  "auth/verify", to: "auth#verify"
+        resources :roles, only: %i[ index ]
+        resources :permissions, only: %i[ index ]
+      end
+
+      namespace :public do
+        post "two_factors/enroll",  to: "two_factors#enroll"
+        post "two_factors/confirm", to: "two_factors#confirm"
+        post "two_factors/disable", to: "two_factors#disable"
+      end
+    end
+  end
+end</pre></div><div class="quiz" data-a="2"><p>Admins need to disable a client application without deleting it. Which route fits our style?</p><div class="opts"><button type="button">GET /client_applications/:id/disable</button><button type="button">POST /disableClientApplication?id=:id</button><button type="button">POST /client_applications/:id/inactivate (member)</button><button type="button">DELETE /client_applications/:id</button></div><p class="explain">A state change that isn't CRUD: an AASM event exposed as a POST member route.</p></div><div class="quiz" data-a="1"><p>What is the helper for <code>GET /api/v1/admin/users/:user_id/user_roles</code>?</p><div class="opts"><button type="button">api_v1_admin_user_roles_url</button><button type="button">api_v1_admin_user_user_roles_url</button><button type="button">user_roles_api_v1_admin_url</button><button type="button">api_v1_admin_users_user_roles_url</button></div><p class="explain">Namespace + parent (singular) + child (plural): <code>api_v1_admin</code> + <code>user</code> + <code>user_roles</code>.</p></div></div>
+
+<div class="col"><label class="readmark"><input type="checkbox" id="read-r09-rest-routes"> Mark lesson r09 as read</label><div class="pager"><a href="r08-where-code-goes.html">◀ r08 Controllers, Models or Services?</a><a href="r10-testing.html">r10 Testing the API ▶</a></div></div>
+  </main>
+  <footer class="site">Based on the <a href="https://guides.rubyonrails.org/">Ruby on Rails Guides</a> (CC BY-SA 4.0), API-only parts, and the conventions in our own codebase. Code samples are adapted from our real code for teaching.</footer>
+</div>
+<script src="assets/site.js?v=92ac7aa3f8"></script>
+<script>
+
+
+</script>
+<script src="assets/widgets.js?v=b9f4e038ea"></script>
+</body>
+</html>

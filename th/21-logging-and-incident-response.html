@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="th" data-lang="rails">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>21 Logging, Alerting and Incident Response · Web Security</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600&display=swap" rel="stylesheet">
+<link rel="icon" href="../favicon.ico" sizes="32x32">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<link rel="manifest" href="../site.webmanifest">
+<meta name="theme-color" content="#000000">
+<link rel="stylesheet" href="../assets/site.css?v=8f1e007517">
+<script src="../assets/consent.js?v=9320b4a322"></script>
+</head>
+<body data-slug="21-logging-and-incident-response">
+<div class="win">
+  <div class="titlebar"><span class="dots"><i></i><i></i><i></i></span><span class="t">guest@websec: ~/websec/21-logging-and-incident-response/th — zsh — 100×40</span>
+    <a class="by" href="about.html" title="เกี่ยวกับผู้เขียน"><span class="w0">เขียนโดย </span>SaKKo</a>
+    <span class="lsw" role="group" aria-label="ภาษา"><a href="../21-logging-and-incident-response.html" data-setlang="en">EN</a><a href="21-logging-and-incident-response.html" aria-current="true" data-setlang="th">TH</a></span>
+    <span class="langsw" role="group" aria-label="Code examples language"><span class="d">โค้ด:</span><button type="button" data-l="rails">rails</button><button type="button" data-l="node">node</button></span></div>
+  <nav class="top" aria-label="Sections"><a href="index.html" title="คู่มือความปลอดภัยเว็บแอปพลิเคชัน">~/</a>
+<a class="trk on" href="index.html#security">#1 ความปลอดภัย</a>
+<a class="trk" href="r01-rails-api-app.html">#2 rails</a>
+<span class="grp">|</span>
+<a href="01-introduction.html" title="บทนำ">01·บทนำ</a>
+<a href="02-sql-injection.html" title="SQL Injection">02·sql</a>
+<a href="03-unsafe-query-generation.html" title="การสร้าง query ที่ไม่ปลอดภัย">03·query</a>
+<a href="04-xss-and-other-injection.html" title="XSS และ injection แบบอื่น">04·xss</a>
+<span class="grp">| บัญชี:</span>
+<a href="05-authentication.html" title="การยืนยันตัวตน">05·auth</a>
+<a href="05b-mfa.html" title="การยืนยันตัวตนหลายปัจจัย">05b·mfa</a>
+<a href="06-sessions.html" title="Session">06·session</a>
+<a href="07-csrf.html" title="Cross-Site Request Forgery">07·csrf</a>
+<a href="08-user-management.html" title="การจัดการผู้ใช้">08·ผู้ใช้</a>
+<a href="09-mass-assignment-and-authorization.html" title="Mass Assignment และ Authorization">09·authz</a>
+<span class="grp">| เบราว์เซอร์:</span>
+<a href="10-redirection-and-files.html" title="Redirect และไฟล์">10·ไฟล์</a>
+<a href="11-http-security-headers.html" title="HTTP Security Header">11·header</a>
+<a href="12-transport-cookies-third-party.html" title="การรับส่งข้อมูล คุกกี้ และสคริปต์บุคคลที่สาม">12·คุกกี้</a>
+<span class="grp">| เซิร์ฟเวอร์:</span>
+<a href="13-ssrf.html" title="Server-Side Request Forgery">13·ssrf</a>
+<a href="14-deserialization-and-xxe.html" title="Deserialization และ XXE">14·deserialize</a>
+<a href="15-environmental-security.html" title="ความปลอดภัยของสภาพแวดล้อม">15·secret</a>
+<a href="16-cryptography.html" title="การเข้ารหัสและการปกป้องข้อมูล">16·crypto</a>
+<a href="17-dependencies-and-cves.html" title="Dependency และ CVE">17·dependency</a>
+<span class="grp">| ดูแลระบบ:</span>
+<a href="18-intranet-and-admin.html" title="ความปลอดภัยของ intranet และ admin">18·admin</a>
+<a href="19-misconfiguration-and-errors.html" title="การตั้งค่าผิดพลาดและการจัดการ error">19·config</a>
+<a href="20-insecure-design.html" title="การออกแบบที่ไม่ปลอดภัยและ business logic">20·design</a>
+<a href="21-logging-and-incident-response.html" aria-current="page" title="Logging การแจ้งเตือน และการรับมือเหตุการณ์">21·logging</a>
+<a href="22-additional-resources.html" title="แหล่งข้อมูลเพิ่มเติม">22·แหล่งข้อมูล</a>
+<span class="grp">| แบบสอบถาม:</span>
+<a href="q1-developer-survey.html" title="แบบสำรวจความปลอดภัยสำหรับนักพัฒนา">Q1·dev</a>
+<a href="q2-awareness-survey.html" title="แบบสำรวจความตระหนักรู้ภัยไซเบอร์">Q2·ทุกคน</a></nav>
+  <main>
+<div class="col">
+<p class="prompt">guest@websec ~ % <b>man 21-logging-and-incident-response</b></p>
+<h1>21 · Logging, การแจ้งเตือน และการรับมือเหตุการณ์</h1>
+<p class="lede">การป้องกันทุกอย่างสุดท้ายจะพลาดที่ไหนสักแห่ง ที่สำคัญคือสังเกตเห็นเร็วแค่ไหน และรับมือได้ดีแค่ไหน</p>
+<h2>21.1 ควร log อะไร</h2>
+<p>log security event ให้มี <b>ใคร</b>, <b>อะไร</b>, <b>เมื่อไร</b>, <b>จากที่ไหน</b> และ <b>ผลลัพธ์</b></p>
+<div class="grid2">
+<div class="box"><p class="cap g">ควร log</p><ul style="margin:0">
+<li>การล็อกอิน: สำเร็จ ล้มเหลว ถูกล็อก ออกจากระบบ</li><li>การเปลี่ยนรหัสผ่าน อีเมล และ MFA การรีเซ็ตรหัสผ่าน</li><li>การตรวจสิทธิ์ไม่ผ่าน (403, policy ปฏิเสธ)</li><li>CSRF token ไม่ผ่าน, ถูก rate limit</li><li>การกระทำของ admin และการเปลี่ยนสิทธิ์</li><li>ธุรกรรมมูลค่าสูง การ export ข้อมูลจำนวนมาก</li><li>การตรวจ input ไม่ผ่านที่ดูเหมือนการโจมตี</li><li>รายงานการละเมิด CSP</li></ul></div>
+<div class="box"><p class="cap r">ห้าม log</p><ul style="margin:0">
+<li>รหัสผ่าน (แม้แต่ที่ผิด: มักเป็นรหัสจริงที่พิมพ์ผิด)</li><li>session id, API key, token, ลิงก์รีเซ็ต</li><li>เลขบัตรเต็ม, CVV</li><li>secret จาก config หรือ environment</li><li>ข้อมูลส่วนบุคคลมากเกินจำเป็น (กฎหมายคุ้มครองข้อมูลใช้กับ log ด้วย)</li></ul></div>
+</div>
+<div class="rp partial">Rails log request ให้ (กรอง secret แล้ว) แต่ไม่ log security event อย่างการล็อกอินหรือการปฏิเสธ ต้องเพิ่มเองเป็น JSON แบบมีโครงสร้าง</div><div class="code">
+<pre data-lang="rails"><span class="c"># a tiny security-event helper</span>
+<span class="c"># (assumes Current has request_id and ip, set in a before_action)</span>
+module SecurityLog
+  def self.event(name, **data)
+    Rails.logger.info({ event: name, at: Time.now.utc.iso8601,
+      user_id: Current.user&amp;.id, request_id: Current.request_id, ip: Current.ip, **data }.to_json)
+  end
+end
+
+SecurityLog.event("login.failure", email_hash: Digest::SHA256.hexdigest(email.downcase))
+SecurityLog.event("authz.denied", policy: "OrderPolicy#refund?", order_id: order.id)
+SecurityLog.event("admin.role_changed", target_id: user.id, from: "member", to: "admin")</pre>
+</div>
+<h2>21.2 Log injection</h2>
+<p>การขึ้นบรรทัดใหม่ใน input ของผู้ใช้ปลอมบรรทัด log ได้ทั้งบรรทัด เช่น "admin ล็อกอินแล้ว" ถ้า log เป็น JSON input จะอยู่ในช่องของมัน</p>
+<div class="demo"><header><b>sim: ปลอมบรรทัด log</b><span>ชื่อผู้ใช้ที่พิมพ์ตอนล็อกอิน</span></header><div class="body">
+<label for="li-in">ชื่อผู้ใช้ (\n = ขึ้นบรรทัดใหม่)</label><input id="li-in" type="text" value="eve\n2026-11-14T22:58:04Z INFO login.success user=admin ip=10.0.0.5"/>
+<div class="grid2" style="margin-top:10px"><div class="box"><p class="cap r">logger.info "login.failure user=#{username}"</p><div class="out" id="li-a"></div></div><div class="box"><p class="cap g">log แบบ JSON มีโครงสร้าง</p><div class="out" id="li-b"></div></div></div>
+</div></div>
+<h2>21.3 การแจ้งเตือน: log ที่ไม่มีใครอ่านไม่นับ</h2>
+<p>การเจาะระบบมักอยู่ใน log เป็นเดือนโดยไม่มีใครเห็น ให้เปลี่ยนสัญญาณสำคัญเป็นการแจ้งเตือนที่มีเจ้าของ: ล็อกอินล้มเหลวพุ่ง admin ใหม่ export ใหญ่ๆ ให้มีน้อยๆ ไม่อย่างนั้นคนจะเมิน</p>
+<div class="demo"><header><b>sim: ปรับการแจ้งเตือน</b><span>จำนวนล็อกอินล้มเหลวต่อนาที ชั่วโมงที่ผ่านมา</span></header><div class="body">
+<div class="row"><label for="al-th">แจ้งเตือนเมื่อล็อกอินล้มเหลว/นาที &gt;</label><input id="al-th" max="120" min="5" style="flex:1;accent-color:var(--fg)" type="range" value="40"/><b id="al-thv"></b></div>
+<canvas height="160" id="al-cv" style="width:100%;height:160px;border:1px solid var(--faint);margin-top:8px" width="900"></canvas>
+<div class="out" id="al-out" style="margin-top:8px"></div>
+</div></div>
+<h2>21.4 การปกป้อง log เอง</h2>
+<ul><li>ส่ง log ออกจากเซิร์ฟเวอร์แอปไปยังระบบกลาง (ผู้โจมตีลบ log ในเครื่อง)</li><li>จำกัดคนที่อ่านได้ เพราะมีข้อมูลส่วนบุคคล</li><li>ทำให้เป็นแบบเพิ่มอย่างเดียว หรือตรวจจับการแก้ไขได้ในจุดที่สำคัญ (audit trail)</li></ul>
+<h2>21.5 การรับมือเหตุการณ์</h2>
+<p>ขั้นตอน: <b>ตรวจจับ</b>, <b>วิเคราะห์</b>, <b>ควบคุม</b>, <b>แก้ไข</b>, <b>กู้คืน</b>, <b>เรียนรู้</b> เขียน runbook หนึ่งหน้าไว้ตอนนี้เลย: โทรหาใคร หมุนเวียน secret อย่างไร สั่งให้ทุกคนออกจากระบบอย่างไร ตาม PDPA ของไทย (และ GDPR ของยุโรป) ต้องแจ้งสำนักงานคณะกรรมการคุ้มครองข้อมูลส่วนบุคคล (สคส.) ภายใน 72 ชั่วโมงนับจากที่รู้ว่าข้อมูลส่วนบุคคลรั่ว เว้นแต่ไม่น่าจะกระทบสิทธิของใคร ถ้าความเสี่ยงสูงต้องแจ้งเจ้าของข้อมูลด้วย</p>
+<div class="anim" data-actors="Alerting|On-call dev|App &amp; infra|Team / legal" data-title="เหตุการณ์หนึ่ง ที่รับมือได้ดี"><script type="application/json">[{"f": 0, "t": 1, "l": "ALERT: 40× normal 403s on /api/invoices from 3 IPs", "c": "<b>ตรวจจับ<\/b> การแจ้งเตือนที่มีเจ้าของดังขึ้นตอน 02:14"}, {"n": 1, "l": "logs: one account enumerating invoice IDs", "c": "<b>วิเคราะห์<\/b> request id และ log แบบมีโครงสร้างแสดงความพยายามทำ IDOR และบาง request ได้ 200"}, {"f": 1, "t": 2, "l": "block IPs, disable account, revoke its sessions", "k": "k", "c": "<b>ควบคุม<\/b> ก่อน: หยุดความเสียหายก่อนแก้ต้นเหตุ"}, {"f": 1, "t": 3, "l": "open incident channel, notify lead + legal", "c": "ยกระดับเรื่องตั้งแต่เนิ่นๆ ฝ่ายกฎหมายตัดสินเรื่องหน้าที่การแจ้ง และเวลาอาจเริ่มนับแล้ว"}, {"f": 1, "t": 2, "l": "deploy fix: scope Invoice lookups to account", "k": "k", "c": "<b>กำจัด<\/b> แพตช์บั๊กและหารูปแบบเดียวกันในที่อื่น"}, {"f": 2, "t": 1, "l": "logs: 212 invoices exposed, list of affected customers", "c": "<b>กู้คืน<\/b> log บอกได้แน่ชัดว่าอะไรถูกเข้าถึง ถ้าไม่มีคุณต้องสันนิษฐานว่าทุกอย่าง"}, {"n": 3, "l": "blameless post-mortem → new tests + alert", "c": "<b>เรียนรู้<\/b> เพิ่มเทสต์ authorization เก็บการแจ้งเตือนไว้ อัปเดต runbook"}]</script></div>
+<div class="demo"><header><b>ซ้อม: เรียงลำดับการรับมือ</b><span>คลิกขั้นตอนตามลำดับที่คุณจะทำ</span></header><div class="body">
+<div class="row" id="ir-opts"></div>
+<div class="out" id="ir-out" style="margin-top:10px"></div>
+<div class="row" style="margin-top:8px"><button class="btn" id="ir-reset" type="button">เริ่มซ้อมใหม่</button></div>
+</div></div>
+</div>
+
+<div class="col"><label class="readmark"><input type="checkbox" id="read-21-logging-and-incident-response"> ทำเครื่องหมายว่าอ่านหัวข้อ 21 แล้ว</label><div class="pager"><a href="20-insecure-design.html">◀ 20 การออกแบบที่ไม่ปลอดภัยและ business logic</a><a href="22-additional-resources.html">22 แหล่งข้อมูลเพิ่มเติม ▶</a></div></div>
+  </main>
+  <footer class="site">อ้างอิงจาก <a href="https://guides.rubyonrails.org/security.html">Ruby on Rails Security Guide</a> (CC BY-SA 4.0), <a href="https://cheatsheetseries.owasp.org/">OWASP Cheat Sheet Series</a>, <a href="https://owasp.org/Top10/2025/">OWASP Top 10:2025</a> และ <a href="https://infosec.mozilla.org/guidelines/web_security.html">Mozilla Web Security Guidelines</a> เขียนสำหรับทีมพัฒนาของเรา ตัวอย่างโค้ดเพื่อการอธิบาย ข้อความในผลการจำลองบางส่วนยังเป็นภาษาอังกฤษ</footer>
+</div>
+<script src="../assets/site.js?v=92ac7aa3f8"></script>
+<script>
+
+function li() {
+  const v = $("#li-in").value.replace(/\\n/g, "\n");
+  const lines = ("2026-11-14T22:58:03Z INFO login.failure user=" + v).split("\n");
+  $("#li-a").innerHTML = lines.map((l, i) => i === 0 ? esc(l) : '<span class="r">' + esc(l) + "   ← forged entry</span>").join("\n");
+  $("#li-b").innerHTML = '<span class="g">' + esc(JSON.stringify({ at: "2026-11-14T22:58:03Z", event: "login.failure", user: v })) + "</span>\n<span class=\"d\">the newline stays inside one escaped field</span>";
+}
+$("#li-in").addEventListener("input", li); li();
+const series = Array.from({ length: 60 }, (_, i) => Math.round(6 + Math.random() * 8 + (i > 38 && i < 47 ? 70 + Math.random() * 40 : 0) + (i === 20 ? 30 : 0)));
+function al() {
+  const th = +$("#al-th").value; $("#al-thv").textContent = th;
+  const cv = $("#al-cv"), c = cv.getContext("2d"), W = cv.width, H = cv.height, max = 130;
+  c.clearRect(0, 0, W, H); const bw = W / series.length;
+  series.forEach((v, i) => { c.fillStyle = v > th ? "#E50000" : "#1C9A10"; const h = v / max * (H - 10); c.fillRect(i * bw + 2, H - h, bw - 4, h); });
+  c.strokeStyle = "#E5E500"; c.setLineDash([6, 4]); c.beginPath(); const y = H - th / max * (H - 10); c.moveTo(0, y); c.lineTo(W, y); c.stroke(); c.setLineDash([]);
+  const fired = series.map((v, i) => [v, i]).filter(([v]) => v > th), attack = fired.filter(([, i]) => i > 38 && i < 47).length, noise = fired.length - attack;
+  $("#al-out").innerHTML = `alerts fired: ${fired.length} · attack minutes caught: ${attack}/8 · false alarms: ${noise}\n` + (attack === 0 ? '<span class="r">threshold too high: the credential-stuffing burst went unnoticed</span>' : noise > 5 ? '<span class="y">too noisy: on-call will start ignoring this alert</span>' : '<span class="g">good balance: the attack pages someone, normal traffic doesn\'t</span>');
+}
+$("#al-th").addEventListener("input", al); al();
+const ir = ["Detect & analyze: confirm what's happening from logs", "Contain: block, disable accounts, revoke sessions", "Escalate: notify lead and legal", "Eradicate: deploy the fix, rotate exposed secrets", "Recover: restore service, identify affected users", "Learn: post-mortem, tests, alerts"];
+let pick = [];
+function irRender() {
+  const shuffled = ir.map((t, i) => [t, i]).sort((a, b) => (a[0].length * 7 % 11) - (b[0].length * 7 % 11));
+  $("#ir-opts").innerHTML = shuffled.map(([t, i]) => `<button class="btn${pick.includes(i) ? " on" : ""}" data-ir="${i}" type="button" ${pick.includes(i) ? "disabled" : ""}>${esc(t.split(":")[0])}</button>`).join("");
+  $$("[data-ir]").forEach(b => b.onclick = () => { pick.push(+b.dataset.ir); irRender(); });
+  $("#ir-out").innerHTML = pick.length ? pick.map((i, k) => `${k + 1}. ${i === k ? '<span class="g">' : '<span class="y">'}${esc(ir[i])}</span>`).join("\n") + (pick.length === ir.length ? (pick.every((i, k) => i === k) ? '\n\n<span class="g">textbook order</span>' : '\n\n<span class="y">close: containment before eradication, and escalate early. Steps can overlap in practice.</span>') : "") : "Click a step to start.";
+}
+$("#ir-reset").onclick = () => { pick = []; irRender(); }; irRender();
+
+</script>
+</body>
+</html>

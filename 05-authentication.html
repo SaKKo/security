@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en" data-lang="rails">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>05 Authentication · Web Security</title>
+
+<link rel="icon" href="favicon.ico" sizes="32x32">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="site.webmanifest">
+<meta name="theme-color" content="#000000">
+<link rel="stylesheet" href="assets/site.css?v=8f1e007517">
+<script src="assets/consent.js?v=9320b4a322"></script>
+</head>
+<body data-slug="05-authentication">
+<div class="win">
+  <div class="titlebar"><span class="dots"><i></i><i></i><i></i></span><span class="t">guest@websec: ~/websec/05-authentication — zsh — 100×40</span>
+    <a class="by" href="about.html" title="About the author"><span class="w0">by </span>SaKKo</a>
+    <span class="lsw" role="group" aria-label="Language"><a href="05-authentication.html" aria-current="true" data-setlang="en">EN</a><a href="th/05-authentication.html" data-setlang="th">TH</a></span>
+    <span class="langsw" role="group" aria-label="Code examples language"><span class="d">code:</span><button type="button" data-l="rails">rails</button><button type="button" data-l="node">node</button></span></div>
+  <nav class="top" aria-label="Sections"><a href="index.html" title="Web Security Field Guide">~/</a>
+<a class="trk on" href="index.html#security">#1 security</a>
+<a class="trk" href="r01-rails-api-app.html">#2 rails</a>
+<span class="grp">|</span>
+<a href="01-introduction.html" title="Introduction">01·introduction</a>
+<a href="02-sql-injection.html" title="SQL Injection">02·sql-injection</a>
+<a href="03-unsafe-query-generation.html" title="Unsafe Query Generation">03·query-shape</a>
+<a href="04-xss-and-other-injection.html" title="XSS and Other Injection">04·xss</a>
+<span class="grp">| accounts:</span>
+<a href="05-authentication.html" aria-current="page" title="Authentication">05·auth</a>
+<a href="05b-mfa.html" title="Multi-Factor Authentication">05b·mfa</a>
+<a href="06-sessions.html" title="Sessions">06·sessions</a>
+<a href="07-csrf.html" title="Cross-Site Request Forgery">07·csrf</a>
+<a href="08-user-management.html" title="User Management">08·accounts</a>
+<a href="09-mass-assignment-and-authorization.html" title="Mass Assignment and Authorization">09·authz</a>
+<span class="grp">| browser:</span>
+<a href="10-redirection-and-files.html" title="Redirection and Files">10·files</a>
+<a href="11-http-security-headers.html" title="HTTP Security Headers">11·headers</a>
+<a href="12-transport-cookies-third-party.html" title="Transport, Cookies and Third-Party Scripts">12·cookies-tls</a>
+<span class="grp">| server:</span>
+<a href="13-ssrf.html" title="Server-Side Request Forgery">13·ssrf</a>
+<a href="14-deserialization-and-xxe.html" title="Deserialization and XXE">14·deserialize</a>
+<a href="15-environmental-security.html" title="Environmental Security">15·secrets</a>
+<a href="16-cryptography.html" title="Cryptography and Data Protection">16·crypto</a>
+<a href="17-dependencies-and-cves.html" title="Dependencies and CVEs">17·dependencies</a>
+<span class="grp">| ops:</span>
+<a href="18-intranet-and-admin.html" title="Intranet and Admin Security">18·admin</a>
+<a href="19-misconfiguration-and-errors.html" title="Misconfiguration and Error Handling">19·misconfig</a>
+<a href="20-insecure-design.html" title="Insecure Design and Business Logic">20·design</a>
+<a href="21-logging-and-incident-response.html" title="Logging, Alerting and Incident Response">21·logging</a>
+<a href="22-additional-resources.html" title="Additional Resources">22·resources</a>
+<span class="grp">| questionnaires:</span>
+<a href="q1-developer-survey.html" title="Developer Security Survey">Q1·developer</a>
+<a href="q2-awareness-survey.html" title="Cyber Threat Awareness Survey">Q2·cyber</a></nav>
+  <main>
+<div class="col">
+<p class="prompt">guest@websec ~ % <b>man 05-authentication</b></p>
+<h1>05 · Authentication</h1>
+<p class="lede">Authentication asks one thing: are you really you? Get it right and a stolen database is useless, login leaks nothing, and password reset isn't a back door.</p>
+<div class="rp partial"><code>bin/rails generate authentication</code> (Rails 8) gives you hashed passwords, DB-backed sessions, rate-limited login and safe reset links. You still add: minimum length, breached-password checks, MFA.</div>
+<h2>5.1 Never store the password itself</h2>
+<p>Databases leak. When they do, plain passwords leak too, and people reuse them everywhere. So we store a <b>hash</b>: a one-way scramble. At login, hash what they typed and compare.</p>
+<p>But not just any hash. MD5 and SHA-256 are <em>fast</em>, so a GPU guesses billions per second. Password hashes are deliberately <em>slow</em> and <em>salted</em>:</p>
+<ul>
+<li><b>Slow</b>: bcrypt or Argon2 make every guess cost milliseconds.</li>
+<li><b>Salted</b>: same password, different hash per user. Precomputed tables stop working.</li>
+</ul>
+<div class="anim" data-actors="Browser|Rails app|Database" data-title="Login with a password hash"><script type="application/json">[{"f": 0, "t": 1, "l": "POST /session  email + password", "c": "The password travels over HTTPS and only lives in memory for this request."}, {"f": 1, "t": 2, "l": "SELECT … WHERE email_address = $1", "c": "Look up the user by email (parameterized)."}, {"f": 2, "t": 1, "l": "password_digest: $2a$12$Qx…", "k": "k", "c": "The database only holds the bcrypt hash. Cost 12 means 2<sup>12<\/sup> rounds, around 250 ms per guess."}, {"n": 1, "l": "bcrypt(typed password, salt) → compare", "c": "Re-hash what the user typed with the stored salt and compare in constant time."}, {"f": 1, "t": 0, "l": "Set-Cookie: new session id", "c": "Match → start a <b>new<\/b> session (section 06). No match → one generic error."}]</script></div>
+<div class="demo"><header><b>sim: what a database thief sees</b><span>runs real hashes in your browser</span></header><div class="body">
+<p class="hint">Two people, same password. See what each storage method gives a thief.</p>
+<div class="grid2">
+<div><label for="pw1">alice's password</label><input id="pw1" type="text" value="sunshine123"/></div>
+<div><label for="pw2">bob's password</label><input id="pw2" type="text" value="sunshine123"/></div>
+</div>
+<div class="row" style="margin-top:10px"><button class="btn on" id="hashgo" type="button">hash both ▶</button><span class="d" id="hashtime"></span></div>
+<div class="tablewrap" style="margin-top:10px"><table id="hashtbl"><thead><tr><th>strategy</th><th>alice</th><th>bob</th><th>verdict</th></tr></thead><tbody></tbody></table></div>
+</div></div>
+<div class="code">
+<pre data-lang="rails"><span class="c"># Gemfile: gem "bcrypt"</span>
+class User &lt; ApplicationRecord
+  has_secure_password                       <span class="c"># bcrypt hash in password_digest</span>
+  validates :password, length: { minimum: 12 }, allow_nil: true   <span class="c"># you add this</span>
+end
+
+User.create!(email_address: "ana@x.test", password: "correct horse battery staple")
+user.authenticate("typed password")         <span class="c"># =&gt; user, or false</span></pre>
+<pre data-lang="node"><span class="c">// npm install bcrypt   (or argon2)</span>
+const bcrypt = require("bcrypt");
+
+<span class="c">// sign-up: store only the hash (salt is embedded in it)</span>
+const hash = await bcrypt.hash(password, 12);   <span class="c">// 12 = cost factor</span>
+await db.users.insert({ email, password_hash: hash });
+
+<span class="c">// login</span>
+const ok = await bcrypt.compare(typedPassword, user.password_hash);</pre>
+</div>
+<h3>Password rules the library won't add for you</h3>
+<p>Heads up: bcrypt only looks at the first 72 bytes of a password, and nothing enforces a minimum length. Go for length over complexity: at least 12 characters (NIST now says 15 when the password is the only factor), allow long passphrases, and block passwords that showed up in known leaks.</p>
+<div class="demo"><header><b>sim: password policy checker</b><span>type a password</span></header><div class="body">
+<label for="pol">candidate password</label><input id="pol" type="text" value="correct horse battery staple"/>
+<div class="out" id="polout" style="margin-top:10px"></div>
+</div></div>
+<div class="rp partial"><code>has_secure_password</code> gives you bcrypt and rejects passwords over 72 bytes. You add <code>validates :password, length: { minimum: 12 }</code>, and maybe the <code>pwned</code> gem.</div>
+<h2>5.2 Logging in without leaking information</h2>
+<p>Never say <i>which</i> part was wrong. "No account with that email" tells an attacker who your users are. One message for every failure.</p>
+<p>Timing leaks too: if unknown emails answer instantly and wrong passwords take 200 ms, the clock gives it away.</p>
+<div class="demo"><header><b>sim: user enumeration</b><span>you are the attacker</span></header><div class="body">
+<p class="hint">Try the attacker's email list on both forms. Which one gives secrets away?</p>
+<div class="row"><label for="enumsel">try email:</label>
+<select id="enumsel" style="width:auto"><option>ceo@acme.test</option><option>intern@acme.test</option><option>admin@acme.test</option><option>nobody@acme.test</option></select>
+<span>password: <code>wrong-guess</code></span></div>
+<div class="grid2" style="margin-top:10px">
+<div class="box"><p class="cap r">leaky login</p><button class="btn" id="leaky" type="button">submit</button><div class="out" id="leakyout" style="margin-top:8px"></div></div>
+<div class="box"><p class="cap g">generic login</p><button class="btn" id="generic" type="button">submit</button><div class="out" id="genout" style="margin-top:8px"></div></div>
+</div>
+<div class="out" id="enumlist" style="margin-top:10px">attacker's notes: (empty)</div>
+</div></div>
+<div class="code">
+<pre data-lang="rails">class SessionsController &lt; ApplicationController
+  rate_limit to: 10, within: 3.minutes, only: :create   <span class="c"># Rails 7.2+</span>
+
+  def create
+    <span class="c"># authenticate_by hashes even when the email is unknown (timing-safe)</span>
+    if user = User.authenticate_by(params.permit(:email_address, :password))
+      start_new_session_for user            <span class="c"># generator helper: fresh Session record</span>
+      redirect_to after_authentication_url
+    else
+      <span class="ok">redirect_to new_session_path, alert: "Try another email address or password."</span>
+    end
+  end
+end</pre>
+<pre data-lang="node">app.post("/login", async (req, res) =&gt; {
+  const user = await db.users.findOne({ email: req.body.email });
+  <span class="c">// compare against a dummy hash when the user doesn't exist,
+  // so both paths take the same time</span>
+  const hash = user ? user.password_hash : DUMMY_BCRYPT_HASH;
+  const ok = await bcrypt.compare(req.body.password, hash);
+  if (!user || !ok) return res.status(401).render("login",
+      { error: "Invalid email or password." });       <span class="ok">// one message</span>
+  await startNewSession(req, user);                   <span class="c">// see section 06</span>
+  res.redirect("/");
+});</pre>
+</div>
+<div class="rp yes"><code>User.authenticate_by</code> runs the hash even when the email doesn't exist, so timing stays flat. Hand-rolled lookups lose that.</div>
+<h2>5.3 Password reset</h2>
+<p>"Forgot password" is a second way to log in, so it must be as strong as the first. A safe reset flow:</p>
+<ol>
+<li>Show the same message whether or not the email exists: "If that address has an account, we've sent a link."</li>
+<li>Use a long random token. Store only its hash, or sign it.</li>
+<li>Short-lived (15 min) and single-use. A password change kills it.</li>
+<li>Rate-limit the endpoint (see section 08).</li>
+</ol>
+<div class="demo"><header><b>sim: reset token lifecycle</b><span>15-minute token, compressed to 15 seconds</span></header><div class="body">
+<div class="row"><button class="btn on" id="rtnew" type="button">request reset link</button><button class="btn" id="rtuse" type="button">use link</button><button class="btn" id="rtold" type="button">change password, then reuse old link</button></div>
+<div class="out" id="rtout" style="margin-top:10px">No token yet.</div>
+</div></div>
+<div class="rp yes">Rails 8 reset tokens are signed, expire in 15 minutes, and die when the password changes.</div>
+<h2>5.4 Multi-factor authentication (MFA)</h2>
+<p>Passwords get phished, guessed and reused. A second factor means a stolen password isn't enough. From weakest to strongest (roughly):</p>
+<ul>
+<li><b>SMS codes</b>: better than nothing, but vulnerable to SIM-swap attacks and phishing.</li>
+<li><b>Authenticator codes</b>: good, but a fake site can relay the code within 30 seconds.</li>
+<li><b>Push approvals</b>: attackers spam them until someone taps Approve. Use number matching.</li>
+<li><b>Passkeys</b>: tied to the real domain, so phishing sites get nothing useful. The best option.</li>
+</ul>
+<p>Give recovery codes, require MFA for staff, and treat "turn off MFA" as a sensitive action.</p>
+<div class="anim" data-actors="User|bank-login.evil.test (proxy)|bank.test" data-title="Why passkeys resist phishing"><script type="application/json">[{"f": 0, "t": 1, "l": "password + TOTP code 492817", "k": "a", "c": "The user is on a look-alike site that relays everything to the real bank in real time."}, {"f": 1, "t": 2, "l": "relays password + 492817", "k": "a", "c": "The code is still valid for a few seconds, so the bank accepts it."}, {"f": 2, "t": 1, "l": "Set-Cookie: session", "k": "a", "c": "<b>TOTP phished.<\/b> The attacker now holds a logged-in session."}, {"n": 0, "l": "same attack, but with a passkey", "k": "k", "c": "Now the user's account uses a passkey instead."}, {"f": 1, "t": 0, "l": "WebAuthn challenge", "c": "The proxy asks the browser to sign the bank's challenge."}, {"n": 0, "l": "browser signs for origin bank-login.evil.test", "k": "k", "c": "The browser bakes the <b>real origin<\/b> into the signature. It never signs as bank.test on another domain."}, {"f": 1, "t": 2, "l": "relays signature", "k": "b", "c": "bank.test checks the origin in the signed data, sees evil.test, and rejects it. <b>Phishing fails.<\/b>"}]</script></div><div class="rp no">No MFA built in. Reach for <code>rotp</code> (authenticator apps) or <code>webauthn</code> (passkeys), or <code>devise-two-factor</code> with Devise.</div>
+<h2>5.5 After login: sessions</h2>
+<p>After login, the browser carries a cookie that says "still Alice". The next section is about keeping that cookie out of the wrong hands.</p>
+</div>
+
+<div class="col"><label class="readmark"><input type="checkbox" id="read-05-authentication"> mark section 05 as read</label><div class="pager"><a href="04-xss-and-other-injection.html">◀ 04 XSS and Other Injection</a><a href="05b-mfa.html">05b Multi-Factor Authentication ▶</a></div></div>
+  </main>
+  <footer class="site">Based on the <a href="https://guides.rubyonrails.org/security.html">Ruby on Rails Security Guide</a> (CC BY-SA 4.0), the <a href="https://cheatsheetseries.owasp.org/">OWASP Cheat Sheet Series</a>, the <a href="https://owasp.org/Top10/2025/">OWASP Top 10:2025</a> and <a href="https://infosec.mozilla.org/guidelines/web_security.html">Mozilla's Web Security Guidelines</a>. Written for our dev team; code samples are illustrative.</footer>
+</div>
+<script src="assets/site.js?v=92ac7aa3f8"></script>
+<script>
+
+const hex = b => Array.from(new Uint8Array(b)).map(x => x.toString(16).padStart(2, "0")).join("");
+async function sha(s) { return hex(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s))); }
+async function pbkdf(s, salt) { const k = await crypto.subtle.importKey("raw", new TextEncoder().encode(s), "PBKDF2", false, ["deriveBits"]); return hex(await crypto.subtle.deriveBits({ name: "PBKDF2", hash: "SHA-256", salt, iterations: 200000 }, k, 256)); }
+async function runHash() {
+  const a = $("#pw1").value, b = $("#pw2").value;
+  const t0 = performance.now(); const sa = crypto.getRandomValues(new Uint8Array(16)), sb = crypto.getRandomValues(new Uint8Array(16));
+  const [ha, hb] = [await sha(a), await sha(b)];
+  const t1 = performance.now(); const [pa, pb] = [await pbkdf(a, sa), await pbkdf(b, sb)]; const t2 = performance.now();
+  const same = ha === hb;
+  const per = ((t2 - t1) / 2).toFixed(0);
+  const rows = [
+    ["plain text", esc(a), esc(b), '<span class="pill bad">game over</span> passwords readable'],
+    ["SHA-256, no salt", ha.slice(0, 20) + "…", hb.slice(0, 20) + "…", same ? '<span class="pill bad">weak</span> identical hashes reveal shared passwords; lookup tables crack them instantly' : '<span class="pill meh">weak</span> fast to brute-force'],
+    ["PBKDF2 ×200k + salt", `<span class="d">${hex(sa).slice(0, 8)}$</span>${pa.slice(0, 16)}…`, `<span class="d">${hex(sb).slice(0, 8)}$</span>${pb.slice(0, 16)}…`, `<span class="pill safe">good</span> different hashes; ~${per} ms per guess here`]];
+  $("#hashtbl tbody").innerHTML = rows.map(r => `<tr><td>${r[0]}</td><td><code>${r[1]}</code></td><td><code>${r[2]}</code></td><td>${r[3]}</td></tr>`).join("");
+  const gpuFast = 1e10, slowRate = 1000 / Math.max(+per, 1);
+  $("#hashtime").textContent = `10M-word dictionary: SHA-256 ≈ ${(1e7 / gpuFast * 1000).toFixed(1)} ms on one GPU · slow hash ≈ ${Math.round(1e7 / slowRate / 3600)} hours per user on this device`;
+}
+$("#hashgo").addEventListener("click", runHash); runHash();
+
+const common = ["password", "123456", "12345678", "qwerty", "letmein", "sunshine123", "iloveyou", "admin", "welcome", "password1", "abc123", "dragon", "monkey", "football"];
+function policy() {
+  const p = $("#pol").value, bytes = new TextEncoder().encode(p).length;
+  const checks = [
+    [p.length >= 12, `length ${p.length} chars ${p.length >= 12 ? "(≥ 12 recommended)" : p.length >= 8 ? "(meets the 8-char minimum; 12+ is better)" : "(below 8: reject)"}`],
+    [!common.includes(p.toLowerCase()), common.includes(p.toLowerCase()) ? "appears in breached-password lists: reject" : "not in the sample breached list"],
+    [bytes <= 72, `${bytes} UTF-8 bytes ${bytes > 72 ? "→ bcrypt would ignore everything after byte 72" : "(within bcrypt's 72-byte limit)"}`],
+    [!/^(.)\1+$/.test(p) || !p, /^(.)\1+$/.test(p) ? "one repeated character" : "not a single repeated character"]];
+  const score = checks.filter(c => c[0]).length;
+  $("#polout").innerHTML = checks.map(c => `${c[0] ? '<span class="g">[ok]</span>' : '<span class="r">[!!]</span>'} ${c[1]}`).join("\n") + `\n\n<span class="d">note: no "must contain a symbol" rule. Length and breach checks beat composition rules.</span>`;
+}
+$("#pol").addEventListener("input", policy); policy();
+
+const accounts = ["ceo@acme.test", "admin@acme.test"]; const found = new Set();
+$("#leaky").onclick = () => { const e = $("#enumsel").value; const exists = accounts.includes(e); $("#leakyout").innerHTML = exists ? '<span class="y">Wrong password.</span>' : '<span class="y">No account found for that email.</span>'; if (exists) found.add(e); $("#enumlist").innerHTML = "attacker's notes: " + (found.size ? [...found].map(x => `<span class="r">${x} EXISTS</span>`).join(", ") : "(nothing confirmed)"); };
+$("#generic").onclick = () => { $("#genout").innerHTML = '<span class="g">Invalid email or password.</span>\n<span class="d">same text, same timing either way</span>'; };
+
+let tok = null, timer = null, used = false;
+function rtRender(msg) { $("#rtout").innerHTML = msg; }
+$("#rtnew").onclick = () => {
+  const raw = hex(crypto.getRandomValues(new Uint8Array(16))); tok = { raw, exp: Date.now() + 15000 }; used = false;
+  clearInterval(timer);
+  timer = setInterval(() => { const left = Math.max(0, Math.ceil((tok.exp - Date.now()) / 1000)); $("#rtcount") && ($("#rtcount").textContent = left ? `${left} "minutes" left` : "expired"); if (!left) clearInterval(timer); }, 250);
+  sha(raw).then(h => rtRender(`email link: https://app.test/reset?token=<span class="k">${raw}</span>\nstored in DB: sha256 = ${h.slice(0, 24)}…  (never the raw token)\nstatus: <span id="rtcount">15 "minutes" left</span>`));
+};
+$("#rtuse").onclick = () => { if (!tok) return rtRender("Request a link first."); if (Date.now() > tok.exp) return rtRender('<span class="r">410 Gone</span> token expired. Request a new link.'); if (used) return rtRender('<span class="r">410 Gone</span> token already used.'); used = true; rtRender('<span class="g">200 OK</span> password updated. Token deleted, all other sessions signed out.'); };
+$("#rtold").onclick = () => { if (!tok) return rtRender("Request a link first."); used = true; rtRender('password changed → token invalidated.\nreusing old link… <span class="r">410 Gone</span> token no longer valid.'); };
+
+</script>
+</body>
+</html>

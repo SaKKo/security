@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="th" data-lang="rails">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>06 Sessions · Web Security</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600&display=swap" rel="stylesheet">
+<link rel="icon" href="../favicon.ico" sizes="32x32">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<link rel="manifest" href="../site.webmanifest">
+<meta name="theme-color" content="#000000">
+<link rel="stylesheet" href="../assets/site.css?v=8f1e007517">
+<script src="../assets/consent.js?v=9320b4a322"></script>
+</head>
+<body data-slug="06-sessions">
+<div class="win">
+  <div class="titlebar"><span class="dots"><i></i><i></i><i></i></span><span class="t">guest@websec: ~/websec/06-sessions/th — zsh — 100×40</span>
+    <a class="by" href="about.html" title="เกี่ยวกับผู้เขียน"><span class="w0">เขียนโดย </span>SaKKo</a>
+    <span class="lsw" role="group" aria-label="ภาษา"><a href="../06-sessions.html" data-setlang="en">EN</a><a href="06-sessions.html" aria-current="true" data-setlang="th">TH</a></span>
+    <span class="langsw" role="group" aria-label="Code examples language"><span class="d">โค้ด:</span><button type="button" data-l="rails">rails</button><button type="button" data-l="node">node</button></span></div>
+  <nav class="top" aria-label="Sections"><a href="index.html" title="คู่มือความปลอดภัยเว็บแอปพลิเคชัน">~/</a>
+<a class="trk on" href="index.html#security">#1 ความปลอดภัย</a>
+<a class="trk" href="r01-rails-api-app.html">#2 rails</a>
+<span class="grp">|</span>
+<a href="01-introduction.html" title="บทนำ">01·บทนำ</a>
+<a href="02-sql-injection.html" title="SQL Injection">02·sql</a>
+<a href="03-unsafe-query-generation.html" title="การสร้าง query ที่ไม่ปลอดภัย">03·query</a>
+<a href="04-xss-and-other-injection.html" title="XSS และ injection แบบอื่น">04·xss</a>
+<span class="grp">| บัญชี:</span>
+<a href="05-authentication.html" title="การยืนยันตัวตน">05·auth</a>
+<a href="05b-mfa.html" title="การยืนยันตัวตนหลายปัจจัย">05b·mfa</a>
+<a href="06-sessions.html" aria-current="page" title="Session">06·session</a>
+<a href="07-csrf.html" title="Cross-Site Request Forgery">07·csrf</a>
+<a href="08-user-management.html" title="การจัดการผู้ใช้">08·ผู้ใช้</a>
+<a href="09-mass-assignment-and-authorization.html" title="Mass Assignment และ Authorization">09·authz</a>
+<span class="grp">| เบราว์เซอร์:</span>
+<a href="10-redirection-and-files.html" title="Redirect และไฟล์">10·ไฟล์</a>
+<a href="11-http-security-headers.html" title="HTTP Security Header">11·header</a>
+<a href="12-transport-cookies-third-party.html" title="การรับส่งข้อมูล คุกกี้ และสคริปต์บุคคลที่สาม">12·คุกกี้</a>
+<span class="grp">| เซิร์ฟเวอร์:</span>
+<a href="13-ssrf.html" title="Server-Side Request Forgery">13·ssrf</a>
+<a href="14-deserialization-and-xxe.html" title="Deserialization และ XXE">14·deserialize</a>
+<a href="15-environmental-security.html" title="ความปลอดภัยของสภาพแวดล้อม">15·secret</a>
+<a href="16-cryptography.html" title="การเข้ารหัสและการปกป้องข้อมูล">16·crypto</a>
+<a href="17-dependencies-and-cves.html" title="Dependency และ CVE">17·dependency</a>
+<span class="grp">| ดูแลระบบ:</span>
+<a href="18-intranet-and-admin.html" title="ความปลอดภัยของ intranet และ admin">18·admin</a>
+<a href="19-misconfiguration-and-errors.html" title="การตั้งค่าผิดพลาดและการจัดการ error">19·config</a>
+<a href="20-insecure-design.html" title="การออกแบบที่ไม่ปลอดภัยและ business logic">20·design</a>
+<a href="21-logging-and-incident-response.html" title="Logging การแจ้งเตือน และการรับมือเหตุการณ์">21·logging</a>
+<a href="22-additional-resources.html" title="แหล่งข้อมูลเพิ่มเติม">22·แหล่งข้อมูล</a>
+<span class="grp">| แบบสอบถาม:</span>
+<a href="q1-developer-survey.html" title="แบบสำรวจความปลอดภัยสำหรับนักพัฒนา">Q1·dev</a>
+<a href="q2-awareness-survey.html" title="แบบสำรวจความตระหนักรู้ภัยไซเบอร์">Q2·ทุกคน</a></nav>
+  <main>
+<div class="col">
+<p class="prompt">guest@websec ~ % <b>man 06-sessions</b></p>
+<h1>06 · Session</h1>
+<p class="lede">HTTP จำใครไม่ได้ระหว่างแต่ละ request session คือวิธีที่แอปจำคุณ ใครถือคุกกี้ session ก็ <i>คือ</i> คุณ ในสายตาของเซิร์ฟเวอร์</p>
+<div class="toc"><b>ในหน้านี้</b><ol>
+<li><a href="#what">session คืออะไร</a></li><li><a href="#hijack">การขโมย session (hijacking)</a></li><li><a href="#storage">ข้อมูล session เก็บไว้ที่ไหน</a></li><li><a href="#rotate">การหมุนเวียนคีย์</a></li><li><a href="#replay">การโจมตีแบบ replay</a></li><li><a href="#fixation">session fixation</a></li><li><a href="#expiry">การหมดอายุของ session</a></li></ol></div>
+<h2 id="what">6.1 session คืออะไร</h2>
+<p>หลังล็อกอิน เบราว์เซอร์ได้คุกกี้มาแล้วส่งกลับทุกครั้ง มีสองแบบที่นิยม:</p>
+<ul>
+<li><b>ฝั่งเซิร์ฟเวอร์</b>: คุกกี้เป็นแค่ ID สุ่ม ข้อมูลอยู่บนเซิร์ฟเวอร์</li>
+<li><b>ฝั่ง client</b>: ข้อมูลอยู่ในคุกกี้เลย ลงนามและเข้ารหัสไว้ ค่าเริ่มต้นของ Rails เป็นแบบนี้</li>
+</ul>
+<p>ไม่ว่าแบบไหน คุกกี้คือ bearer credential: ใครยื่นมันก็เข้าระบบได้</p>
+<h2 id="hijack">6.2 การขโมย session (hijacking)</h2>
+<p>ขโมยคุกกี้ได้ ก็เป็นผู้ใช้คนนั้นได้ ไม่ต้องรู้รหัส วิธีที่พบบ่อย:</p>
+<ul>
+<li><b>ดักฟัง (sniffing)</b> บนเครือข่ายที่ไม่เข้ารหัส (Wi-Fi ร้านกาแฟ, เราเตอร์ที่ถูกเจาะ) เมื่อเว็บใช้ HTTP ธรรมดาที่ใดที่หนึ่ง</li>
+<li><b>คอมพิวเตอร์ที่ใช้ร่วมกัน</b> ซึ่งผู้ใช้คนก่อนไม่ได้ออกจากระบบ</li>
+<li><b>XSS</b>: JavaScript ที่ถูกแทรกเข้ามาอ่าน <code>document.cookie</code> แล้วส่งให้ผู้โจมตี (หัวข้อ 04)</li>
+<li><b>session fixation</b>: ผู้โจมตีกำหนด ID ไว้ <i>ก่อน</i> ที่เหยื่อจะล็อกอิน (ดู 6.6)</li>
+</ul>
+<div class="anim" data-actors="Victim|Café Wi-Fi attacker|bank.test" data-title="การขโมย session บน Wi-Fi สาธารณะ"><script type="application/json">[{"f": 0, "t": 2, "l": "GET http://bank.test/  Cookie: sid=8c1f…", "k": "a", "c": "request แบบ HTTP ธรรมดาครั้งเดียวก็พอ: คุกกี้เดินทางเป็นข้อความเปล่าผ่านทุกคนในเครือข่าย"}, {"n": 1, "l": "copies sid=8c1f…", "k": "a", "c": "โปรแกรมดักฟังของผู้โจมตีเก็บคุกกี้ไปได้ ไม่ต้องใช้รหัสผ่าน"}, {"f": 1, "t": 2, "l": "GET /account  Cookie: sid=8c1f…", "k": "a", "c": "ผู้โจมตีนำคุกกี้ไปใช้จากโน้ตบุ๊กของตัวเอง"}, {"f": 2, "t": 1, "l": "200 OK: Alice's account", "k": "a", "c": "สำหรับเซิร์ฟเวอร์ นี่ <i>คือ<\/i> Alice"}, {"n": 0, "l": "now: force_ssl + HSTS + Secure cookie", "k": "k", "c": "ร้านกาแฟเดิม แต่เว็บบังคับ HTTPS ส่ง HSTS และตั้งคุกกี้เป็น Secure"}, {"f": 0, "t": 2, "l": "TLS: 17 03 03 9a e1 … (encrypted)", "k": "k", "c": "เบราว์เซอร์อัปเกรดเป็น HTTPS ก่อนส่งอะไรออกไป และไม่ส่งคุกกี้ผ่าน HTTP เลย"}, {"n": 1, "l": "sees only ciphertext", "c": "ไม่มีอะไรมีประโยชน์ให้ขโมย"}]</script></div>
+<div class="demo"><header><b>sim: ดักฟัง Wi-Fi ร้านกาแฟ</b><span>เปิด/ปิดการป้องกัน แล้วส่ง request</span></header><div class="body">
+<div class="row">
+<label><input id="h-https" type="checkbox"/> เว็บใช้ HTTPS ทุกหน้า</label>
+<label><input id="h-secure" type="checkbox"/> คุกกี้มี flag <code>Secure</code></label>
+<label><input id="h-hsts" type="checkbox"/> ส่ง header HSTS</label>
+</div>
+<div class="row" style="margin-top:10px"><button class="btn on" id="h-go" type="button">เหยื่อเปิด http://bank.test/</button><button class="btn" id="h-clear" type="button">ล้าง</button></div>
+<div class="grid2" style="margin-top:10px">
+<div class="box"><p class="cap">เบราว์เซอร์ของเหยื่อ</p><div class="log" id="h-victim"></div></div>
+<div class="box"><p class="cap r">แพ็กเก็ตที่ผู้โจมตีดักได้</p><div class="log" id="h-attacker"></div></div>
+</div>
+</div></div>
+<p>วิธีป้องกัน ใช้ได้กับทุก stack:</p>
+<ul>
+<li><b>ใช้ HTTPS ทุกที่</b> ใน Rails: <code>config.force_ssl = true</code></li>
+<li>ตั้ง flag ของคุกกี้: <code>Secure</code>, <code>HttpOnly</code>, <code>SameSite=Lax</code></li>
+<li>มีปุ่ม <b>ออกจากระบบ</b> ที่เห็นชัด และทำลาย session ที่ฝั่งเซิร์ฟเวอร์</li>
+<li>ป้องกัน XSS เพราะ XSS ข้ามการป้องกันข้างต้นทั้งหมดได้</li>
+</ul>
+<div class="code">
+<pre data-lang="rails"><span class="c"># config/environments/production.rb</span>
+config.assume_ssl = true      <span class="c"># behind a TLS-terminating load balancer</span>
+config.force_ssl  = true      <span class="c"># HTTPS redirect + HSTS + Secure cookies</span>
+
+<span class="c"># config/initializers/session_store.rb</span>
+Rails.application.config.session_store :cookie_store,
+  key: "__Host-myapp_session", secure: true, same_site: :lax, expire_after: 30.minutes</pre>
+<pre data-lang="node"><span class="c">// Express + express-session</span>
+app.set("trust proxy", 1);                 <span class="c">// behind a load balancer</span>
+app.use(helmet.hsts({ maxAge: 31536000 }));
+app.use(session({
+  secret: process.env.SESSION_SECRET,
+  cookie: { secure: true, httpOnly: true, sameSite: "lax" },
+  resave: false, saveUninitialized: false,
+}));
+app.use((req, res, next) =&gt;              <span class="c">// force HTTPS</span>
+  req.secure ? next() : res.redirect(301, "https://" + req.headers.host + req.url));</pre>
+</div>
+<div class="rp partial"><code>force_ssl</code> จัดการ HTTPS, HSTS และคุกกี้ Secure ให้ (ตรวจว่าเปิดใน <code>production.rb</code>) คุกกี้ session เป็น HttpOnly และ SameSite=Lax อยู่แล้ว ปุ่มออกจากระบบกับ XSS เป็นหน้าที่เรา</div>
+<h2 id="storage">6.3 ข้อมูล session เก็บไว้ที่ไหน</h2>
+<p>ค่าเริ่มต้นของ Rails เก็บ session ในคุกกี้ที่เข้ารหัส สะดวก แต่มีข้อควรรู้:</p>
+<ul>
+
+<li><b>ผู้ใช้มีสำเนาไว้</b> อ่านหรือแก้ไม่ได้ แต่ส่งของเก่ากลับมาได้</li>
+<li><b>เพิกถอนไม่ได้</b> ใช้ได้จนกว่าจะหมดอายุหรือเปลี่ยนคีย์</li>
+<li><b>secret ตัวเดียวคุมทั้งหมด</b> ถ้า <code>secret_key_base</code> รั่ว ใครก็ปลอม session ได้ทุกคน</li>
+</ul>
+<div class="demo"><header><b>sim: ข้างในคุกกี้ session</b><span>เลือกวิธีเก็บ</span></header><div class="body">
+<div class="tabs"><div role="tablist"><button role="tab">ลงนามอย่างเดียว</button><button role="tab">ลงนาม + เข้ารหัส</button><button role="tab">ID ฝั่งเซิร์ฟเวอร์</button></div>
+<div role="tabpanel"><div class="out" id="ck-signed"></div><p class="hint" style="margin-top:8px">ใครก็ถอดออกมาอ่านได้ แค่แก้ไม่ได้</p></div>
+<div role="tabpanel"><div class="out" id="ck-enc"></div><p class="hint" style="margin-top:8px">ค่าเริ่มต้นของ Rails: อ่านไม่ได้และแก้ไม่ได้ แต่ยัง replay ได้ และเพิกถอนไม่ได้ถ้าไม่หมุนคีย์</p></div>
+<div role="tabpanel"><div class="out" id="ck-srv"></div><p class="hint" style="margin-top:8px">คุกกี้เป็นแค่คีย์สุ่มสำหรับค้นหา ข้อมูลอยู่บนเซิร์ฟเวอร์ และการลบแถวทำให้ผู้ใช้ออกจากระบบทันที</p></div>
+</div>
+</div></div>
+<div class="note">หลักง่ายๆ: คุกกี้เก็บแค่ ID ของมีค่าเก็บในฐานข้อมูล</div>
+<div class="rp partial"><code>CookieStore</code> ค่าเริ่มต้นเข้ารหัสแล้ว แต่ replay ได้และเพิกถอนไม่ได้ generator ของ Rails 8 ดีกว่า: เก็บ session เป็นแถวในฐานข้อมูล จึงสั่งให้ออกจากระบบได้</div>
+<h2 id="rotate">6.4 การหมุนเวียนคีย์และอัลกอริทึม</h2>
+<p>สักวันต้องเปลี่ยน secret ถ้าเปลี่ยนทันที ทุกคนหลุดจากระบบ ให้ <b>หมุนเวียน</b> แทน: ลงนามด้วยคีย์ใหม่ แต่ยังรับคีย์เก่าไปสักพัก</p>
+<div class="rp yes"><code>cookies_rotations</code> ทำแบบนี้พอดี: รับคีย์เก่า แล้วอัปเกรดคุกกี้เมื่อผู้ใช้กลับมา</div>
+<div class="code">
+<pre data-lang="rails"><span class="c"># config/initializers/cookie_rotator.rb (Rails guide example)</span>
+<span class="c"># Move signed cookies from SHA1 to SHA256 without logging anyone out:</span>
+<span class="c"># new cookies use SHA256, old SHA1 cookies still work and get upgraded</span>
+Rails.application.config.action_dispatch.signed_cookie_digest = "SHA256"
+Rails.application.config.action_dispatch.cookies_rotations.tap do |cookies|
+  cookies.rotate :signed, digest: "SHA1"
+end
+<span class="c"># the same rotate call can also accept cookies made with an old secret</span></pre>
+<pre data-lang="node"><span class="c">// first secret signs new cookies; the rest are only accepted for verification</span>
+app.use(session({ secret: [process.env.SESSION_SECRET_2025, process.env.SESSION_SECRET_2024] }));</pre>
+</div>
+<h2 id="replay">6.5 การโจมตีแบบ replay กับ session ฝั่ง client</h2>
+<p>สมมติคุกกี้เก็บ 100 เครดิต ผู้ใช้เซฟสำเนาไว้ ใช้จนหมด แล้วเอาคุกกี้เก่ากลับมา ลายเซ็นยังถูกต้อง... ได้ 100 เครดิตคืน ทางแก้: เก็บยอดในฐานข้อมูล</p>
+<div class="demo"><header><b>sim: กลเม็ดเครดิตไม่จำกัด</b><span>ลองกับวิธีเก็บแต่ละแบบ</span></header><div class="body">
+<div class="row"><span>session store:</span><button class="btn on" data-store="cookie" type="button">client-side cookie</button><button class="btn" data-store="db" type="button">credits in database</button></div>
+<div class="row" style="margin-top:10px"><button class="btn" id="rp-save" type="button">1. บันทึกสำเนาคุกกี้</button><button class="btn" id="rp-buy" type="button">2. ซื้อของ (−40)</button><button class="btn red" id="rp-restore" type="button">3. นำคุกกี้ที่บันทึกไว้กลับมา</button><button class="btn" id="rp-reset" type="button">รีเซ็ต</button></div>
+<div class="grid2" style="margin-top:10px"><div class="box"><p class="cap">ยอดที่เซิร์ฟเวอร์เชื่อ</p><div id="rp-bal" style="font-size:30px">100</div></div><div class="box"><p class="cap">คุกกี้ในเบราว์เซอร์</p><div class="out" id="rp-ck"></div></div></div>
+<div class="log" id="rp-log" style="margin-top:10px"></div>
+</div></div>
+<div class="rp no">ไม่มีอะไรกันการ replay คุกกี้ได้ เงิน เครดิต และสิทธิ์ ต้องอยู่ในฐานข้อมูล ไม่ใช่ใน <code>session[]</code></div>
+<h2 id="fixation">6.6 session fixation</h2>
+<p>คราวนี้ผู้โจมตีฝัง session ID ไว้ <i>ก่อน</i> คุณล็อกอิน แล้วใช้ต่อหลังจากนั้น</p>
+<div class="anim" data-actors="Attacker|Victim's browser|bank.test" data-title="session fixation"><script type="application/json">[{"f": 0, "t": 2, "l": "GET /  (anonymous)", "c": "ผู้โจมตีเข้าเว็บและได้ session ใหม่แบบไม่ระบุตัวตน"}, {"f": 2, "t": 0, "l": "Set-Cookie: sid=A7F3", "c": "จด ID ไว้ และรีเฟรชทุกไม่กี่นาทีเพื่อให้ยังใช้ได้"}, {"f": 0, "t": 1, "l": "plant sid=A7F3 (XSS / sibling subdomain / ?sid=)", "k": "a", "c": "หาทางให้เบราว์เซอร์คุณใช้ ID นั้น: ผ่านบั๊ก XSS, subdomain ที่เขาคุม หรือ ID ใน URL"}, {"f": 1, "t": 2, "l": "POST /session  Cookie: sid=A7F3", "c": "เหยื่อล็อกอินตามปกติ"}, {"n": 2, "l": "session A7F3 ← user_id=42", "k": "a", "c": "ถ้าไม่สร้าง ID ใหม่ เซิร์ฟเวอร์จะผูกตัวตนเหยื่อเข้ากับ ID ที่ผู้โจมตีรู้อยู่แล้ว"}, {"f": 0, "t": 2, "l": "GET /account  Cookie: sid=A7F3", "k": "a", "c": "<b>ตอนนี้ผู้โจมตีล็อกอินในนามเหยื่อแล้ว<\/b>"}, {"n": 2, "l": "fix: reset_session at login → sid=Q9X2", "k": "k", "c": "การออก ID ใหม่ตอนล็อกอินทำให้ A7F3 กลายเป็น session ว่างที่ไม่ระบุตัวตน"}, {"f": 0, "t": 2, "l": "GET /account  Cookie: sid=A7F3", "k": "b", "c": "การโจมตีล้มเหลว: A7F3 ไม่ใช่ใครอีกต่อไป"}]</script></div>
+<h3>วิธีป้องกัน</h3>
+<p>ทางแก้: <b>ออก session ID ใหม่ตอนล็อกอิน</b> (และตอนออก) ใน Rails คือ <code>reset_session</code></p>
+<div class="code">
+<pre data-lang="rails">def create
+  if user = User.authenticate_by(params.permit(:email_address, :password))
+    cart = session[:cart]                 <span class="c"># keep what you need</span>
+    <span class="ok">reset_session</span>                         # new session id, old one discarded
+    session[:user_id] = user.id
+    session[:cart] = cart
+    redirect_to root_path
+  end
+end
+<span class="c"># Devise/Warden and the Rails 8 generator already do this on sign-in</span></pre>
+<pre data-lang="node">app.post("/login", async (req, res, next) =&gt; {
+  const user = await verifyCredentials(req.body);
+  if (!user) return res.status(401).send("Invalid email or password.");
+  const cart = req.session.cart;              <span class="c">// keep what you need</span>
+  req.session.regenerate(err =&gt; {             <span class="ok">// new ID, old one destroyed</span>
+    if (err) return next(err);
+    req.session.userId = user.id;
+    req.session.cart = cart;
+    res.redirect("/");
+  });
+});</pre>
+</div>
+
+<div class="rp partial">Devise และ generator ของ Rails 8 ทำให้แล้ว ถ้าเขียนล็อกอินเอง ต้องเรียก <code>reset_session</code></div>
+<h2 id="expiry">6.7 การหมดอายุของ session</h2>
+<p>session ที่ไม่มีวันหมดอายุ ให้เวลาผู้โจมตีไม่จำกัด ให้หมดอายุ <b>ที่เซิร์ฟเวอร์</b> สองแบบ:</p>
+<ul>
+<li><b>Idle</b>: ไม่มีการใช้งาน N นาที ก็ออกจากระบบ</li>
+<li><b>Absolute</b>: ครบ N ชั่วโมง ออกจากระบบเสมอ</li>
+</ul>
+
+<div class="rp no">session ของ Rails ไม่หมดอายุฝั่งเซิร์ฟเวอร์โดยค่าเริ่มต้น ให้เพิ่ม <code>expire_after:</code> และอายุสูงสุดจาก <code>Session#created_at</code></div>
+<div class="demo"><header><b>sim: idle timeout เทียบกับ absolute timeout</b><span>idle 30 นาที · absolute 8 ชม.</span></header><div class="body">
+<div class="row"><button class="btn" data-adv="10" type="button">+10 min idle</button><button class="btn" data-adv="45" type="button">+45 min idle</button><button class="btn" data-ping="1" type="button">user clicks (activity)</button><button class="btn red" data-bot="1" type="button">attacker pings every 20 min for a day</button><button class="btn" id="ex-reset" type="button">ล็อกอินใหม่</button></div>
+<div class="out" id="ex-out" style="margin-top:10px"></div>
+</div></div>
+</div>
+
+<div class="col"><label class="readmark"><input type="checkbox" id="read-06-sessions"> ทำเครื่องหมายว่าอ่านหัวข้อ 06 แล้ว</label><div class="pager"><a href="05b-mfa.html">◀ 05b การยืนยันตัวตนหลายปัจจัย</a><a href="07-csrf.html">07 Cross-Site Request Forgery ▶</a></div></div>
+  </main>
+  <footer class="site">อ้างอิงจาก <a href="https://guides.rubyonrails.org/security.html">Ruby on Rails Security Guide</a> (CC BY-SA 4.0), <a href="https://cheatsheetseries.owasp.org/">OWASP Cheat Sheet Series</a>, <a href="https://owasp.org/Top10/2025/">OWASP Top 10:2025</a> และ <a href="https://infosec.mozilla.org/guidelines/web_security.html">Mozilla Web Security Guidelines</a> เขียนสำหรับทีมพัฒนาของเรา ตัวอย่างโค้ดเพื่อการอธิบาย ข้อความในผลการจำลองบางส่วนยังเป็นภาษาอังกฤษ</footer>
+</div>
+<script src="../assets/site.js?v=92ac7aa3f8"></script>
+<script>
+
+// hijack sim
+function hjLog(id, s) { const el = $(id); el.innerHTML += s + "\n"; el.scrollTop = el.scrollHeight; }
+$("#h-go").onclick = () => {
+  const https = $("#h-https").checked, secure = $("#h-secure").checked, hsts = $("#h-hsts").checked;
+  const ck = "sid=8c1f7e2a9b";
+  if (hsts && https) {
+    hjLog("#h-victim", "browser remembers HSTS → rewrites to https:// before sending");
+    hjLog("#h-attacker", '<span class="g">[TLS] 0x17 0x03 … encrypted bytes, nothing readable</span>');
+  } else {
+    hjLog("#h-victim", "GET http://bank.test/  (plain HTTP, first hop)");
+    if (!secure) hjLog("#h-attacker", `<span class="r">GET / HTTP/1.1\nHost: bank.test\nCookie: ${ck}   ← STOLEN</span>`);
+    else hjLog("#h-attacker", "GET / HTTP/1.1\nHost: bank.test\n<span class='g'>(no cookie: Secure flag keeps it off plain HTTP)</span>");
+    if (https) { hjLog("#h-victim", "301 → https://bank.test/"); hjLog("#h-attacker", '<span class="g">[TLS] encrypted from here on</span>'); }
+    else { hjLog("#h-victim", "200 OK (whole session stays on HTTP)"); hjLog("#h-attacker", '<span class="r">every later request + response readable, including Set-Cookie</span>'); }
+    if (https && !hsts) hjLog("#h-attacker", '<span class="y">note: the first HTTP hop could be intercepted and the redirect stripped (SSL stripping). HSTS closes this.</span>');
+  }
+  hjLog("#h-victim", "—"); hjLog("#h-attacker", "—");
+};
+$("#h-clear").onclick = () => { $("#h-victim").innerHTML = ""; $("#h-attacker").innerHTML = ""; };
+
+// cookie views
+const payload = JSON.stringify({ user_id: 42, role: "member", cart: [17, 23] });
+const b64 = btoa(payload).replace(/=+$/, "");
+$("#ck-signed").innerHTML = `Set-Cookie: session=<span class="k">${b64}</span>.<span class="y">hZ3kQ9vB1xM…</span>\n\nbase64-decode the first part:\n<span class="w">${esc(payload)}</span>\n\nsecond part = HMAC-SHA256(payload, SECRET). Edit the payload and the HMAC no longer matches.`;
+const rnd = n => Array.from(crypto.getRandomValues(new Uint8Array(n))).map(x => "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"[x % 64]).join("");
+$("#ck-enc").innerHTML = `Set-Cookie: _app_session=<span class="k">${rnd(64)}</span>--<span class="y">${rnd(16)}</span>--<span class="d">${rnd(22)}</span>\n\n          ciphertext (AES-256-GCM)              IV           auth tag\n\ndecoding gives random-looking bytes. Only the server's key can open it.`;
+$("#ck-srv").innerHTML = `Set-Cookie: sid=<span class="k">s%3A${rnd(32)}</span>\n\nserver: redis GET sess:${rnd(8)}…\n→ <span class="w">${esc(payload)}</span>`;
+
+// replay sim
+let store_ = "cookie", bal = 100, saved = null, cookieBal = 100;
+function rpRender() { $("#rp-bal").textContent = bal; $("#rp-ck").textContent = store_ === "cookie" ? `session=signed({credits:${cookieBal}})` : `session=signed({user_id:42})`; }
+function rpLog(s) { $("#rp-log").innerHTML += s + "\n"; $("#rp-log").scrollTop = 1e9; }
+$$("[data-store]").forEach(b => b.onclick = () => { store_ = b.dataset.store; $$("[data-store]").forEach(x => x.classList.toggle("on", x === b)); $("#rp-reset").click(); });
+$("#rp-save").onclick = () => { saved = cookieBal; rpLog(`saved a copy of the cookie (${store_ === "cookie" ? "credits:" + saved : "user_id:42"})`); };
+$("#rp-buy").onclick = () => { if (bal < 40) return rpLog('<span class="y">not enough credits</span>'); bal -= 40; if (store_ === "cookie") cookieBal = bal; rpLog(`bought item → ${bal} credits`); rpRender(); };
+$("#rp-restore").onclick = () => {
+  if (saved === null) return rpLog("save a copy first");
+  if (store_ === "cookie") { cookieBal = saved; bal = saved; rpLog(`<span class="r">restored old cookie → signature valid → balance back to ${bal}!</span>`); }
+  else rpLog('<span class="g">restored old cookie → it only says user_id:42 → balance read from DB, still ' + bal + "</span>");
+  rpRender();
+};
+$("#rp-reset").onclick = () => { bal = 100; cookieBal = 100; saved = null; $("#rp-log").innerHTML = ""; rpRender(); };
+rpRender();
+
+// expiry sim
+let ex;
+function exReset() { ex = { now: 0, created: 0, last: 0, alive: true, log: ["09:00 logged in"] }; exRender(); }
+const fmt = m => { const t = 9 * 60 + m; return `${String(Math.floor(t / 60) % 24).padStart(2, "0")}:${String(t % 60).padStart(2, "0")}${t >= 1440 ? " (+1d)" : ""}`; };
+function exCheck() { if (!ex.alive) return; if (ex.now - ex.last > 30) { ex.alive = false; ex.log.push(`${fmt(ex.now)} <span class="y">idle timeout: no activity for ${ex.now - ex.last} min → session deleted</span>`); } else if (ex.now - ex.created > 480) { ex.alive = false; ex.log.push(`${fmt(ex.now)} <span class="y">absolute timeout: session older than 8 h → deleted, must log in again</span>`); } }
+function exRender() { $("#ex-out").innerHTML = ex.log.slice(-8).join("\n") + `\n\nstatus: ${ex.alive ? '<span class="g">ACTIVE</span>' : '<span class="r">EXPIRED</span>'} · age ${Math.floor((ex.now - ex.created) / 60)}h${(ex.now - ex.created) % 60}m · idle ${ex.now - ex.last}m`; }
+$$("[data-adv]").forEach(b => b.onclick = () => { ex.now += +b.dataset.adv; exCheck(); exRender(); });
+$("[data-ping]").onclick = () => { exCheck(); if (ex.alive) { ex.last = ex.now; ex.log.push(`${fmt(ex.now)} request → idle timer reset`); } else ex.log.push(`${fmt(ex.now)} request rejected → login page`); exRender(); };
+$("[data-bot]").onclick = () => { let n = 0; while (ex.alive && n < 72) { ex.now += 20; exCheck(); if (ex.alive) { ex.last = ex.now; n++; } } ex.log.push(`<span class="d">(attacker sent ${n} keep-alive pings)</span>`); exRender(); };
+$("#ex-reset").onclick = exReset; exReset();
+
+</script>
+</body>
+</html>

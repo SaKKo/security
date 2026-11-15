@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="th" data-lang="rails">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Route แบบ RESTful และ Resourceful · Rails Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600&display=swap" rel="stylesheet">
+<link rel="icon" href="../favicon.ico" sizes="32x32">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<link rel="manifest" href="../site.webmanifest">
+<meta name="theme-color" content="#000000">
+<link rel="stylesheet" href="../assets/site.css?v=8f1e007517">
+<script src="../assets/consent.js?v=9320b4a322"></script>
+</head>
+<body data-slug="r09-rest-routes">
+<div class="win">
+  <div class="titlebar"><span class="dots"><i></i><i></i><i></i></span><span class="t">guest@websec: ~/websec/r09-rest-routes/th — zsh — 100×40</span>
+    <a class="by" href="about.html" title="เกี่ยวกับผู้เขียน"><span class="w0">เขียนโดย </span>SaKKo</a>
+    <span class="lsw" role="group" aria-label="ภาษา"><a href="../r09-rest-routes.html" data-setlang="en">EN</a><a href="r09-rest-routes.html" aria-current="true" data-setlang="th">TH</a></span></div>
+  <nav class="top" aria-label="บทเรียน"><a href="index.html#rails" title="หน้าแรก">~/</a>
+<a class="trk" href="index.html#security">#1 ความปลอดภัย</a>
+<a class="trk on" href="r01-rails-api-app.html">#2 rails</a>
+<span class="grp">| พื้นฐาน:</span>
+<a href="r01-rails-api-app.html" title="แอป Rails แบบ API">r01·api-app</a>
+<a href="r02-rails-commands.html" title="คำสั่ง Rails">r02·commands</a>
+<a href="r03-migrations.html" title="Migration">r03·migrations</a>
+<span class="grp">| model:</span>
+<a href="r04-models.html" title="Model และ ApplicationRecord">r04·models</a>
+<a href="r05-model-callbacks.html" title="Model Callback">r05·model-hooks</a>
+<span class="grp">| controller:</span>
+<a href="r06-controllers.html" title="Controller และลำดับชั้นของ API">r06·controllers</a>
+<a href="r07-controller-callbacks.html" title="Controller Callback">r07·controller-hooks</a>
+<a href="r08-where-code-goes.html" title="Controller, Model หรือ Service?">r08·services</a>
+<span class="grp">| api:</span>
+<a href="r09-rest-routes.html" aria-current="page" title="Route แบบ RESTful และ Resourceful">r09·rest-routes</a>
+<a href="r10-testing.html" title="การทดสอบ API">r10·testing</a></nav>
+  <main>
+<div class="col">
+<p class="prompt">guest@websec ~ % <b>man r09-rest-routes</b></p>
+<h1>Route แบบ RESTful และ Resourceful</h1>
+<p class="lede">REST หมายถึง: URL ใช้ตั้งชื่อ<i>สิ่งของ</i> (resource) ส่วน HTTP verb บอกว่าจะทำอะไรกับมัน <code>resources</code> ของ Rails เปลี่ยนแนวคิดนี้เป็น route, action ของ controller และ helper method ได้ในบรรทัดเดียว</p>
+<h2>ห้า action ครอบคลุมเกือบทุกอย่าง</h2><div class="tablewrap"><table><thead><tr><th>verb</th><th>path</th><th>action</th><th>ความหมาย</th><th>สำเร็จ</th></tr></thead><tbody><tr><td class='y'>GET</td><td><code>/client_applications</code></td><td><code>#index</code></td><td>รายการ</td><td>200</td></tr><tr><td class='y'>POST</td><td><code>/client_applications</code></td><td><code>#create</code></td><td>สร้างใหม่</td><td>201</td></tr><tr><td class='y'>GET</td><td><code>/client_applications/:id</code></td><td><code>#show</code></td><td>อ่านหนึ่งรายการ</td><td>200</td></tr><tr><td class='y'>PATCH / PUT</td><td><code>/client_applications/:id</code></td><td><code>#update</code></td><td>แก้ไขหนึ่งรายการ</td><td>200</td></tr><tr><td class='y'>DELETE</td><td><code>/client_applications/:id</code></td><td><code>#destroy</code></td><td>ลบหนึ่งรายการ (สำหรับเรา: soft delete)</td><td>200</td></tr></tbody></table></div><div class="note">แอป API-only ไม่มี <code>new</code> และ <code>edit</code> เพราะ action เหล่านั้นมีไว้ render ฟอร์ม HTML เท่านั้น</div><h2>path ที่ดี และ path ที่ไม่ดี</h2><div class="grid2"><div class="box"><p class="cap">✗</p><pre class="out" style="margin:0">POST /api/getRoles?appId=42
+POST /api/v1/admin/createRole
+GET  /api/v1/admin/deleteUser?id=7
+POST /api/v1/admin/role/update
+GET  /api/v1/admin/RolesForApp/42</pre></div><div class="box"><p class="cap">✓</p><pre class="out" style="margin:0">GET    /api/v1/admin/client_applications/:id/roles
+POST   /api/v1/admin/client_applications/:id/roles
+DELETE /api/v1/admin/users/:id
+PATCH  /api/v1/admin/client_applications/:ca_id/roles/:id
+POST   /api/v1/admin/users/:id/toggle_admin</pre></div></div><ul><li>ใช้คำนามพหูพจน์ <code>snake_case</code> และมีเวอร์ชันใต้ <code>/api/v1</code></li><li>verb คือ HTTP method ห้ามเปลี่ยนข้อมูลด้วย <code>GET</code> เพราะเบราว์เซอร์ proxy และ crawler เรียก GET ซ้ำได้ตามสะดวก</li><li>ความเป็นเจ้าของอยู่ใน path: role <i>ของ</i>แอปพลิเคชันจะซ้อนอยู่ใต้แอปนั้น</li><li>อนุญาตให้มี verb ใน path เฉพาะเมื่อเป็น <b>member action</b> สำหรับการเปลี่ยนสถานะที่ไม่ใช่ CRUD ธรรมดา (<code>toggle_admin</code>, <code>activate</code>)</li></ul><h2>Resourceful routing</h2><div class="code" data-label="ruby · config/routes.rb"><pre>resources :client_applications, only: %i[ index show create update ]   <span class="c"># always list actions</span>
+
+resources :client_applications do
+  resources :roles, only: %i[ index show create update ]                <span class="c"># nested: /client_applications/:client_application_id/roles</span>
+end
+
+resources :users, only: %i[ index show ] do
+  member do
+    post :toggle_admin                       <span class="c"># /users/:id/toggle_admin      → acts on one</span>
+  end
+  collection do
+    get :export                              <span class="c"># /users/export                → acts on the set</span>
+  end
+end
+
+resource :profile, only: %i[ show update ]   <span class="c"># singular: no :id, it's "mine" → profiles#show</span>
+
+namespace :api do                            <span class="c"># path /api/..., module Api::, folder api/, helper api_...</span>
+  namespace :v1 do
+    namespace :admin do
+      resources :users
+    end
+  end
+end</pre></div><div class="rs">ระบุ <code>only:</code> เสมอ route ที่ไม่ได้ใช้คือ route ที่คนอื่นลองยิงได้ และยังกลายเป็นสิทธิ์ใน <code>Permission.all_admin_permissions</code> ด้วย ซ้อนกันไม่เกินหนึ่งชั้น</div><h3>การเปลี่ยนสถานะเป็น member route</h3><p>แต่ละ event ของ AASM ใน model จะกลายเป็น member route แบบ <code>POST</code> และ action ใน controller ที่เรียก event แบบ bang ส่วน UI ของ admin อ่าน <code>actionables</code> จาก JSON เพื่อรู้ว่าต้องแสดงปุ่มไหน:</p><div class="code" data-label="ruby · app/controllers/api/v1/admin/user_roles_controller.rb"><pre><span class="c"># POST /api/v1/admin/users/:user_id/user_roles/:id/activate</span>
+def activate
+  @user_role.activate!                                   <span class="c"># AASM::InvalidTransition → 400</span>
+  render json: { user_role: @user_role.as_admin_json }   <span class="c"># includes actionables: ["inactivate"]</span>
+end</pre></div><p>วิธีนี้ดีกว่า <code>PATCH status=active</code> เพราะกฎการเปลี่ยนสถานะยังอยู่ใน model แต่ละ event มีสิทธิ์ของตัวเอง และ audit log บอกได้ว่าเกิด<i>อะไร</i>ขึ้น</p><h3>route ที่ไม่ใช่ resource</h3><div class="code" data-label="ruby"><pre>namespace :admin do
+  post   "sessions",    to: "sessions#create"    # login       → api_v1_admin_sessions
+  get    "sessions/me", to: "sessions#me"        # who am I    → api_v1_admin_sessions_me
+  delete "sessions",    to: "sessions#destroy"   # logout
+end</pre></div><p>บาง endpoint เป็นการกระทำมากกว่าสิ่งของ (login, ตรวจ token) ให้เขียนด้วย <code>verb "path", to: "controller#action"</code> แล้ว Rails จะตั้งชื่อ helper จาก path ให้</p><h2>สร้าง route แล้วดูผลลัพธ์</h2><div class="demo"><header><b>ตัวสร้าง route</b><span>เปิดปิด option แล้วคลิกที่แถว</span></header><div class="body"><div class="rbuild"><script type="application/json">{"l_scope": "scope", "l_nested": "ซ้อนอยู่ใน users", "l_shape": "รูปแบบ", "l_only": "ใช้ only: (เอาเครื่องหมายออกเพื่อดูทุก action)", "l_click": "คลิกที่แถว route ด้านล่างเพื่อดู helper และบรรทัด test", "helper": "named helper", "test": "ใน integration test"}</script></div></div></div><h2>การอ่าน <code>rails routes</code></h2><div class="term" data-title="zsh — ~/myapp"><script type="application/json">[{"c": "bin/rails routes -g client_application", "o": "                                     Prefix Verb   URI Pattern                                                                    Controller#Action\n      api_v1_admin_client_application_roles GET    /api/v1/admin/client_applications/:client_application_id/roles(.:format)       api/v1/admin/roles#index\n                                            POST   /api/v1/admin/client_applications/:client_application_id/roles(.:format)       api/v1/admin/roles#create\n       api_v1_admin_client_application_role GET    /api/v1/admin/client_applications/:client_application_id/roles/:id(.:format)   api/v1/admin/roles#show\n                                            PATCH  /api/v1/admin/client_applications/:client_application_id/roles/:id(.:format)   api/v1/admin/roles#update\n                                            PUT    /api/v1/admin/client_applications/:client_application_id/roles/:id(.:format)   api/v1/admin/roles#update\napi_v1_admin_client_application_permissions GET    /api/v1/admin/client_applications/:client_application_id/permissions(.:format) api/v1/admin/permissions#index\n           api_v1_admin_client_applications GET    /api/v1/admin/client_applications(.:format)                                    api/v1/admin/client_applications#index\n                                            POST   /api/v1/admin/client_applications(.:format)                                    api/v1/admin/client_applications#create\n            api_v1_admin_client_application GET    /api/v1/admin/client_applications/:id(.:format)                                api/v1/admin/client_applications#show\n                                            PATCH  /api/v1/admin/client_applications/:id(.:format)                                api/v1/admin/client_applications#update\n                                            PUT    /api/v1/admin/client_applications/:id(.:format)                                api/v1/admin/client_applications#update", "n": "คอลัมน์: <b>Prefix<\/b> (ชื่อ helper โดยไม่มี <code>_path<\/code>/<code>_url<\/code> ถ้าว่างคือชื่อเดียวกับแถวบน), <b>Verb<\/b>, <b>URI Pattern<\/b> (<code>:params<\/code> จะกลายเป็น <code>params[:…]<\/code>), <b>Controller#Action<\/b> (ไฟล์ <code>app/controllers/api/v1/admin/roles_controller.rb<\/code> method <code>create<\/code>)"}, {"c": "bin/rails routes -c api/v1/client", "o": "                   Prefix Verb   URI Pattern                          Controller#Action\n api_v1_client_auth_login POST   /api/v1/client/auth/login(.:format)  api/v1/client/auth#login\napi_v1_client_auth_verify GET    /api/v1/client/auth/verify(.:format) api/v1/client/auth#verify\n      api_v1_client_roles GET    /api/v1/client/roles(.:format)       api/v1/client/roles#index\napi_v1_client_permissions GET    /api/v1/client/permissions(.:format) api/v1/client/permissions#index"}, {"c": "bin/rails routes -g toggle --expanded", "o": "--[ Route 1 ]-----------------------------------------------------------\nPrefix            | toggle_admin_api_v1_admin_user\nVerb              | POST\nURI               | /api/v1/admin/users/:id/toggle_admin(.:format)\nController#Action | api/v1/admin/users#toggle_admin\nSource Location   | config/routes.rb:14", "n": "<code>--expanded<\/code> อ่านง่ายกว่าใน terminal แคบๆ และบอกว่าบรรทัดไหนของ <code>routes.rb<\/code> เป็นตัวกำหนด"}, {"c": "bin/rails routes --unused", "o": "Found 1 unused route:\n\n              Prefix Verb   URI Pattern                      Controller#Action\napi_v1_admin_user DELETE /api/v1/admin/users/:id(.:format) api/v1/admin/users#destroy", "n": "แสดง route ที่ action ใน controller ไม่มีอยู่จริง แก้ด้วย <code>only:<\/code>"}]</script></div><h2>named route helper</h2><p>ทุก Prefix กลายเป็นสอง method: <code>…_path</code> (เฉพาะ path) และ <code>…_url</code> (มี host ด้วย) ลองใน console ผ่าน <code>app</code>:</p><div class="term" data-title="zsh — ~/myapp"><script type="application/json">[{"c": "bin/rails c", "o": "Loading development environment (Rails 8.1.0)"}, {"p": "myapp(dev)>", "c": "app.api_v1_admin_users_path", "o": "=> \"/api/v1/admin/users\""}, {"p": "myapp(dev)>", "c": "app.api_v1_admin_users_path(page: 2, per_page: 20)", "o": "=> \"/api/v1/admin/users?page=2&per_page=20\"", "n": "key ที่เกินมาจะกลายเป็น query string"}, {"p": "myapp(dev)>", "c": "app.api_v1_admin_client_application_role_path(client_application_id: \"0193a6f2\", id: \"0193a7b1\")", "o": "=> \"/api/v1/admin/client_applications/0193a6f2/roles/0193a7b1\""}, {"p": "myapp(dev)>", "c": "app.api_v1_admin_client_application_roles_path(ClientApplication.first)", "o": "=> \"/api/v1/admin/client_applications/0193a6f2-.../roles\"", "n": "ส่ง record แบบตามตำแหน่งได้ Rails จะเรียก <code>to_param<\/code> (ซึ่งก็คือ id)"}, {"p": "myapp(dev)>", "c": "app.api_v1_admin_client_application_roles_path", "o": "ActionController::UrlGenerationError: No route matches {:action=>\"index\", :controller=>\"api/v1/admin/roles\"}, missing required keys: [:client_application_id]", "n": "ถ้าลืมส่วนที่จำเป็นจะได้ error ที่ชัดเจน แทนที่จะได้ 404 เงียบๆ จาก string ที่พิมพ์เอง"}, {"p": "myapp(dev)>", "c": "app.toggle_admin_api_v1_admin_user_url(id: 7)", "o": "=> \"http://www.example.com/api/v1/admin/users/7/toggle_admin\""}]</script></div><h2>route ทั้งหมดของเรา</h2><div class="code" data-label="ruby · config/routes.rb (reconstructed)"><pre>Rails.application.routes.draw do
+  get "health", to: "application#health"
+
+  namespace :api do
+    namespace :v1 do
+      namespace :admin do
+        post   "sessions",    to: "sessions#create"
+        get    "sessions/me", to: "sessions#me"
+        delete "sessions",    to: "sessions#destroy"
+
+        resources :users, only: %i[ index show ] do
+          member do
+            post :toggle_admin
+          end
+          resources :user_roles, only: %i[ index create ] do
+            member do
+              post :activate
+              post :inactivate
+            end
+          end
+        end
+
+        resources :client_applications, only: %i[ index show create update ] do
+          resources :roles, only: %i[ index show create update ]
+          resources :permissions, only: %i[ index ]
+        end
+      end
+
+      namespace :client do
+        post "auth/login",  to: "auth#login"
+        get  "auth/verify", to: "auth#verify"
+        resources :roles, only: %i[ index ]
+        resources :permissions, only: %i[ index ]
+      end
+
+      namespace :public do
+        post "two_factors/enroll",  to: "two_factors#enroll"
+        post "two_factors/confirm", to: "two_factors#confirm"
+        post "two_factors/disable", to: "two_factors#disable"
+      end
+    end
+  end
+end</pre></div><div class="quiz" data-a="2"><p>admin ต้องปิดการใช้งาน client application โดยไม่ลบทิ้ง route แบบไหนตรงกับสไตล์ของเรา?</p><div class="opts"><button type="button">GET /client_applications/:id/disable</button><button type="button">POST /disableClientApplication?id=:id</button><button type="button">POST /client_applications/:id/inactivate (member)</button><button type="button">DELETE /client_applications/:id</button></div><p class="explain">การเปลี่ยนสถานะที่ไม่ใช่ CRUD: event ของ AASM ที่เปิดเป็น member route แบบ POST</p></div><div class="quiz" data-a="1"><p>helper ของ <code>GET /api/v1/admin/users/:user_id/user_roles</code> คืออะไร?</p><div class="opts"><button type="button">api_v1_admin_user_roles_url</button><button type="button">api_v1_admin_user_user_roles_url</button><button type="button">user_roles_api_v1_admin_url</button><button type="button">api_v1_admin_users_user_roles_url</button></div><p class="explain">namespace + parent (เอกพจน์) + child (พหูพจน์): <code>api_v1_admin</code> + <code>user</code> + <code>user_roles</code></p></div></div>
+
+<div class="col"><label class="readmark"><input type="checkbox" id="read-r09-rest-routes"> ทำเครื่องหมายว่าอ่านบท r09 แล้ว</label><div class="pager"><a href="r08-where-code-goes.html">◀ r08 Controller, Model หรือ Service?</a><a href="r10-testing.html">r10 การทดสอบ API ▶</a></div></div>
+  </main>
+  <footer class="site">อ้างอิงจาก <a href="https://guides.rubyonrails.org/">Ruby on Rails Guides</a> (CC BY-SA 4.0) เฉพาะส่วนที่ใช้กับแอปแบบ API-only และแนวทางการเขียนโค้ดในโปรเจกต์ของเรา ตัวอย่างโค้ดดัดแปลงจากโค้ดจริงเพื่อใช้สอน</footer>
+</div>
+<script src="../assets/site.js?v=92ac7aa3f8"></script>
+<script>
+
+
+</script>
+<script src="../assets/widgets.js?v=b9f4e038ea"></script>
+</body>
+</html>

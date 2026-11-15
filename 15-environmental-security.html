@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en" data-lang="rails">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>15 Environmental Security · Web Security</title>
+
+<link rel="icon" href="favicon.ico" sizes="32x32">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="site.webmanifest">
+<meta name="theme-color" content="#000000">
+<link rel="stylesheet" href="assets/site.css?v=8f1e007517">
+<script src="assets/consent.js?v=9320b4a322"></script>
+</head>
+<body data-slug="15-environmental-security">
+<div class="win">
+  <div class="titlebar"><span class="dots"><i></i><i></i><i></i></span><span class="t">guest@websec: ~/websec/15-environmental-security — zsh — 100×40</span>
+    <a class="by" href="about.html" title="About the author"><span class="w0">by </span>SaKKo</a>
+    <span class="lsw" role="group" aria-label="Language"><a href="15-environmental-security.html" aria-current="true" data-setlang="en">EN</a><a href="th/15-environmental-security.html" data-setlang="th">TH</a></span>
+    <span class="langsw" role="group" aria-label="Code examples language"><span class="d">code:</span><button type="button" data-l="rails">rails</button><button type="button" data-l="node">node</button></span></div>
+  <nav class="top" aria-label="Sections"><a href="index.html" title="Web Security Field Guide">~/</a>
+<a class="trk on" href="index.html#security">#1 security</a>
+<a class="trk" href="r01-rails-api-app.html">#2 rails</a>
+<span class="grp">|</span>
+<a href="01-introduction.html" title="Introduction">01·introduction</a>
+<a href="02-sql-injection.html" title="SQL Injection">02·sql-injection</a>
+<a href="03-unsafe-query-generation.html" title="Unsafe Query Generation">03·query-shape</a>
+<a href="04-xss-and-other-injection.html" title="XSS and Other Injection">04·xss</a>
+<span class="grp">| accounts:</span>
+<a href="05-authentication.html" title="Authentication">05·auth</a>
+<a href="05b-mfa.html" title="Multi-Factor Authentication">05b·mfa</a>
+<a href="06-sessions.html" title="Sessions">06·sessions</a>
+<a href="07-csrf.html" title="Cross-Site Request Forgery">07·csrf</a>
+<a href="08-user-management.html" title="User Management">08·accounts</a>
+<a href="09-mass-assignment-and-authorization.html" title="Mass Assignment and Authorization">09·authz</a>
+<span class="grp">| browser:</span>
+<a href="10-redirection-and-files.html" title="Redirection and Files">10·files</a>
+<a href="11-http-security-headers.html" title="HTTP Security Headers">11·headers</a>
+<a href="12-transport-cookies-third-party.html" title="Transport, Cookies and Third-Party Scripts">12·cookies-tls</a>
+<span class="grp">| server:</span>
+<a href="13-ssrf.html" title="Server-Side Request Forgery">13·ssrf</a>
+<a href="14-deserialization-and-xxe.html" title="Deserialization and XXE">14·deserialize</a>
+<a href="15-environmental-security.html" aria-current="page" title="Environmental Security">15·secrets</a>
+<a href="16-cryptography.html" title="Cryptography and Data Protection">16·crypto</a>
+<a href="17-dependencies-and-cves.html" title="Dependencies and CVEs">17·dependencies</a>
+<span class="grp">| ops:</span>
+<a href="18-intranet-and-admin.html" title="Intranet and Admin Security">18·admin</a>
+<a href="19-misconfiguration-and-errors.html" title="Misconfiguration and Error Handling">19·misconfig</a>
+<a href="20-insecure-design.html" title="Insecure Design and Business Logic">20·design</a>
+<a href="21-logging-and-incident-response.html" title="Logging, Alerting and Incident Response">21·logging</a>
+<a href="22-additional-resources.html" title="Additional Resources">22·resources</a>
+<span class="grp">| questionnaires:</span>
+<a href="q1-developer-survey.html" title="Developer Security Survey">Q1·developer</a>
+<a href="q2-awareness-survey.html" title="Cyber Threat Awareness Survey">Q2·cyber</a></nav>
+  <main>
+<div class="col">
+<p class="prompt">guest@websec ~ % <b>man 15-environmental-security</b></p>
+<h1>15 · Environmental Security</h1>
+<p class="lede">Server hardening is its own job. But every developer owns one part: the secrets the app runs on. They must never end up where an attacker can read them.</p>
+<h2>What counts as a secret</h2>
+<ul>
+<li>Database URLs and passwords</li>
+<li>The app's signing key (<code>secret_key_base</code>). Whoever has it can forge any session.</li>
+<li>Third-party API keys: payment providers, email services, cloud credentials</li>
+<li>OAuth client secrets, webhook signing secrets, private TLS/SSH keys</li>
+</ul>
+<p>Where they leak: Git commits, Docker images, logs, chat, front-end bundles.</p>
+<h2>Three ways to manage secrets</h2>
+<div class="tabs"><div role="tablist"><button role="tab">1 · environment variables</button><button role="tab">2 · encrypted file in the repo</button><button role="tab">3 · secret manager</button></div>
+<div role="tabpanel">
+<p>Secrets come from env vars set by the platform. Locally, a git-ignored <code>.env</code> file.</p>
+<p>Simple, but no audit trail.</p>
+</div>
+<div role="tabpanel">
+<p>The Rails way: secrets in an encrypted file you can commit (<code>credentials.yml.enc</code>). The key (<code>master.key</code>) stays out of Git.</p>
+<div class="rp yes">Credentials files are encrypted and safe to commit. <code>master.key</code> is git-ignored; servers get <code>RAILS_MASTER_KEY</code>.</div>
+</div>
+<div role="tabpanel">
+<p>A service like Vault or AWS Secrets Manager hands secrets to the app, logs every read, and rotates them.</p>
+
+</div></div>
+<div class="demo"><header><b>sim: encrypted credentials file</b><span>real AES-GCM in your browser</span></header><div class="body">
+<p class="hint">Encrypt some secrets, see what's safe to commit, then try the wrong key.</p>
+<div class="grid2">
+<div><label for="cr-plain">credentials (plaintext, only ever in memory / your editor)</label><textarea id="cr-plain" rows="6">database:
+  password: Pg-7h2!kq9
+stripe:
+  secret_key: sk_live_51Hx9QaLx
+secret_key_base: 9f1c0e7d2a…</textarea></div>
+<div><label>master.key <span class="d">(never committed; store in a password manager / CI secret)</span></label><div class="out" id="cr-key"></div>
+<div class="row" style="margin-top:8px"><button class="btn on" id="cr-enc" type="button">encrypt → credentials.yml.enc</button><button class="btn" id="cr-rekey" type="button">new random key</button></div></div>
+</div>
+<div class="grid2" style="margin-top:10px">
+<div class="box"><p class="cap g">credentials.yml.enc (committed to git)</p><div class="out" id="cr-ct"></div></div>
+<div class="box"><p class="cap">server boot</p><div class="row"><button class="btn" id="cr-dec" type="button">decrypt with master.key</button><button class="btn red" id="cr-bad" type="button">decrypt with wrong key</button></div><div class="out" id="cr-dout" style="margin-top:8px"></div></div>
+</div>
+</div></div>
+<h2>Reading secrets in code</h2>
+<p>Load secrets at startup and <b>crash if one's missing</b>. A silent fallback like <code>"changeme"</code> is how apps end up signing sessions with a known key.</p>
+<div class="code">
+<pre data-lang="rails"><span class="c"># bin/rails credentials:edit --environment production</span>
+<span class="c">#   → config/credentials/production.yml.enc + config/credentials/production.key</span>
+
+Rails.application.credentials.stripe_secret_key!      <span class="c"># raises if blank: fail fast</span>
+Rails.application.credentials.fetch(:database)         <span class="c"># KeyError if missing</span>
+Rails.application.credentials.dig(:aws, :secret_access_key)
+
+ENV.fetch("DATABASE_URL")                              <span class="c"># fetch, don't default</span>
+<span class="bad">ENV["SECRET_KEY_BASE"] || "changeme"</span></pre>
+<pre data-lang="node"><span class="c">// config.js: validate env at boot with zod (or envalid)</span>
+import { z } from "zod";
+const env = z.object({
+  DATABASE_URL: z.string().url(),
+  SESSION_SECRET: z.string().min(32),
+  STRIPE_SECRET_KEY: z.string().startsWith("sk_"),
+}).parse(process.env);          <span class="ok">// throws at startup if anything is missing or malformed</span>
+export default env;
+
+<span class="c">// local dev only: load .env (git-ignored)</span>
+if (process.env.NODE_ENV !== "production") await import("dotenv/config");
+<span class="bad">// never: process.env.SESSION_SECRET || "changeme"</span></pre>
+</div>
+<div class="rp partial"><code>credentials.some_key</code> quietly returns <code>nil</code>. Use <code>credentials.some_key!</code> so a missing secret stops the boot.</div>
+<h2>Is it safe to commit?</h2>
+<div class="demo"><header><b>quiz: sort the files</b><span>click commit or ignore for each</span></header><div class="body">
+<div class="tablewrap"><table id="gi-tbl"></table></div>
+<div class="out" id="gi-score" style="margin-top:10px"></div>
+</div></div>
+<h2>If a secret leaks</h2>
+<p>Deleting the commit doesn't help; bots grab keys within minutes. <b>Rotate the key first.</b> Then add a scanner to pre-commit and CI.</p>
+<div class="anim" data-actors="Developer|Public GitHub|Scraper bot|Payment provider" data-title="A leaked key, minute by minute"><script type="application/json">[{"f": 0, "t": 1, "l": "git push  (sk_live_… in a config file)", "k": "a", "c": "A real key goes into a public commit by accident."}, {"f": 2, "t": 1, "l": "watches every public push", "k": "a", "c": "Bots scan GitHub's public event stream continuously. Leaked cloud and payment keys have been abused within minutes."}, {"f": 2, "t": 3, "l": "charges / API calls with stolen key", "k": "a", "c": "The key is used before anyone notices."}, {"f": 0, "t": 1, "l": "git push --force (commit removed)", "c": "Deleting the commit feels like a fix…"}, {"n": 2, "l": "already has a copy", "k": "a", "c": "…but clones, forks, caches and bots already have it."}, {"f": 0, "t": 3, "l": "revoke key + issue a new one", "k": "k", "c": "<b>Rotation is the only real fix.<\/b> Then add a pre-commit secret scanner and GitHub push protection."}]</script></div>
+<div class="demo"><header><b>sim: secret scanner</b><span>paste a diff or config file</span></header><div class="body">
+<textarea id="sc-in" rows="7">+ const stripe = require("stripe")("sk_live_51HxQ9aL2kJ8mN0pQrStUvWx");
++ AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE
++ github_token: ghp_A1b2C3d4E5f6G7h8I9j0K1l2M3n4O5p6Q7r8
++ DATABASE_URL=postgres://app:Pg-7h2!kq9@db.internal:5432/prod
++ -----BEGIN OPENSSH PRIVATE KEY-----
++ const color = "#28FE14";</textarea>
+<div class="out" id="sc-out" style="margin-top:10px"></div>
+</div></div>
+</div>
+
+<div class="col"><label class="readmark"><input type="checkbox" id="read-15-environmental-security"> mark section 15 as read</label><div class="pager"><a href="14-deserialization-and-xxe.html">◀ 14 Deserialization and XXE</a><a href="16-cryptography.html">16 Cryptography and Data Protection ▶</a></div></div>
+  </main>
+  <footer class="site">Based on the <a href="https://guides.rubyonrails.org/security.html">Ruby on Rails Security Guide</a> (CC BY-SA 4.0), the <a href="https://cheatsheetseries.owasp.org/">OWASP Cheat Sheet Series</a>, the <a href="https://owasp.org/Top10/2025/">OWASP Top 10:2025</a> and <a href="https://infosec.mozilla.org/guidelines/web_security.html">Mozilla's Web Security Guidelines</a>. Written for our dev team; code samples are illustrative.</footer>
+</div>
+<script src="assets/site.js?v=92ac7aa3f8"></script>
+<script>
+
+let key, ct = null, iv;
+const b64 = u8 => btoa(String.fromCharCode(...u8));
+async function newKey() { key = await crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, true, ["encrypt", "decrypt"]); const raw = new Uint8Array(await crypto.subtle.exportKey("raw", key)); $("#cr-key").textContent = Array.from(raw).map(x => x.toString(16).padStart(2, "0")).join(""); ct = null; $("#cr-ct").textContent = "(not encrypted yet)"; $("#cr-dout").textContent = ""; }
+$("#cr-enc").onclick = async () => { iv = crypto.getRandomValues(new Uint8Array(12)); ct = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, new TextEncoder().encode($("#cr-plain").value))); $("#cr-ct").innerHTML = `${b64(ct)}--${b64(iv)}\n<span class="g">✓ safe to commit: unreadable without master.key</span>`; };
+$("#cr-dec").onclick = async () => { if (!ct) return $("#cr-dout").textContent = "encrypt first"; const pt = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ct); $("#cr-dout").innerHTML = '<span class="g">decrypted in memory:</span>\n' + esc(new TextDecoder().decode(pt)); };
+$("#cr-bad").onclick = async () => { if (!ct) return $("#cr-dout").textContent = "encrypt first"; const k2 = await crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, false, ["decrypt"]); try { await crypto.subtle.decrypt({ name: "AES-GCM", iv }, k2, ct); } catch (e) { $("#cr-dout").innerHTML = '<span class="r">OperationError: authentication tag mismatch</span>\nGCM detects the wrong key (and any tampering). App refuses to boot.'; } };
+$("#cr-rekey").onclick = newKey; newKey().then(() => $("#cr-enc").click());
+
+const files = [
+  [".env", "ignore", "real secrets for local dev"], [".env.example", "commit", "placeholders only, documents what's needed"],
+  ["config/credentials.yml.enc", "commit", "encrypted; useless without the key"], ["config/master.key", "ignore", "decrypts everything"],
+  ["secrets.sops.yaml", "commit", "SOPS-encrypted values"], ["docker-compose.yml with POSTGRES_PASSWORD=prod-pass", "ignore", "move the value to an env file or secret"],
+  ["id_ed25519", "ignore", "private SSH key"], ["package-lock.json / poetry.lock", "commit", "lockfiles pin dependency versions (section 12)"],
+  ["firebase-adminsdk-xyz.json", "ignore", "service-account private key"], ["public/config.js with STRIPE_PUBLISHABLE_KEY", "commit", "publishable keys are meant to be public; secret keys are not"]];
+const answers = {};
+function gi() {
+  $("#gi-tbl").innerHTML = "<tr><th>file</th><th>your call</th><th>why</th></tr>" + files.map((f, i) => { const a = answers[i]; return `<tr><td><code>${esc(f[0])}</code></td><td><button class="btn${a === "commit" ? " on" : ""}" data-gi="${i}" data-v="commit" type="button">commit</button> <button class="btn${a === "ignore" ? " on" : ""}" data-gi="${i}" data-v="ignore" type="button">.gitignore</button></td><td>${a ? (a === f[1] ? '<span class="g">✓ </span>' : '<span class="r">✗ </span>') + esc(f[2]) : '<span class="d">?</span>'}</td></tr>`; }).join("");
+  $$("[data-gi]").forEach(b => b.onclick = () => { answers[b.dataset.gi] = b.dataset.v; gi(); });
+  const n = Object.keys(answers).length, right = Object.entries(answers).filter(([i, a]) => files[i][1] === a).length;
+  $("#gi-score").innerHTML = `${right}/${files.length} correct${n < files.length ? ` · ${files.length - n} left` : right === files.length ? ' · <span class="g">perfect</span>' : ""}`;
+}
+gi();
+
+const rules = [["Stripe live secret key", /sk_live_[0-9A-Za-z]{16,}/g], ["AWS access key ID", /\bAKIA[0-9A-Z]{16}\b/g], ["GitHub personal access token", /\bghp_[0-9A-Za-z]{36}\b/g], ["private key block", /-----BEGIN [A-Z ]*PRIVATE KEY-----/g], ["password in connection URL", /[a-z]+:\/\/[^\s:\/]+:[^\s@]+@/gi], ["generic secret assignment", /\b(secret|password|passwd|api_?key|token)\s*[:=]\s*["']?[^\s"']{8,}/gi], ["Slack token", /\bxox[baprs]-[0-9A-Za-z-]{10,}/g]];
+function sc() {
+  const lines = $("#sc-in").value.split("\n"), hits = [];
+  lines.forEach((l, i) => rules.forEach(([n, re]) => { re.lastIndex = 0; if (re.test(l)) hits.push(`<span class="r">line ${i + 1}: ${n}</span>  ${esc(l.slice(0, 60))}${l.length > 60 ? "…" : ""}`); }));
+  $("#sc-out").innerHTML = hits.length ? hits.join("\n") + `\n\n<span class="y">${hits.length} finding(s): commit blocked</span>` : '<span class="g">no secrets detected</span>';
+}
+$("#sc-in").addEventListener("input", sc); sc();
+
+</script>
+</body>
+</html>

@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en" data-lang="rails">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>About the Author · Web Security</title>
+
+<link rel="icon" href="favicon.ico" sizes="32x32">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="site.webmanifest">
+<meta name="theme-color" content="#000000">
+<link rel="stylesheet" href="assets/site.css?v=8f1e007517">
+<script src="assets/consent.js?v=9320b4a322"></script>
+</head>
+<body data-slug="about">
+<div class="win">
+  <div class="titlebar"><span class="dots"><i></i><i></i><i></i></span><span class="t">guest@websec: ~/websec/about — zsh — 100×40</span>
+    <a class="by" href="about.html" aria-current="page" title="About the author"><span class="w0">by </span>SaKKo</a>
+    <span class="lsw" role="group" aria-label="Language"><a href="about.html" aria-current="true" data-setlang="en">EN</a><a href="th/about.html" data-setlang="th">TH</a></span>
+    <span class="langsw" role="group" aria-label="Code examples language"><span class="d">code:</span><button type="button" data-l="rails">rails</button><button type="button" data-l="node">node</button></span></div>
+  <nav class="top" aria-label="Sections"><a href="index.html" title="Web Security Field Guide">~/</a>
+<a class="trk on" href="index.html#security">#1 security</a>
+<a class="trk" href="r01-rails-api-app.html">#2 rails</a>
+<span class="grp">|</span>
+<a href="01-introduction.html" title="Introduction">01·introduction</a>
+<a href="02-sql-injection.html" title="SQL Injection">02·sql-injection</a>
+<a href="03-unsafe-query-generation.html" title="Unsafe Query Generation">03·query-shape</a>
+<a href="04-xss-and-other-injection.html" title="XSS and Other Injection">04·xss</a>
+<span class="grp">| accounts:</span>
+<a href="05-authentication.html" title="Authentication">05·auth</a>
+<a href="05b-mfa.html" title="Multi-Factor Authentication">05b·mfa</a>
+<a href="06-sessions.html" title="Sessions">06·sessions</a>
+<a href="07-csrf.html" title="Cross-Site Request Forgery">07·csrf</a>
+<a href="08-user-management.html" title="User Management">08·accounts</a>
+<a href="09-mass-assignment-and-authorization.html" title="Mass Assignment and Authorization">09·authz</a>
+<span class="grp">| browser:</span>
+<a href="10-redirection-and-files.html" title="Redirection and Files">10·files</a>
+<a href="11-http-security-headers.html" title="HTTP Security Headers">11·headers</a>
+<a href="12-transport-cookies-third-party.html" title="Transport, Cookies and Third-Party Scripts">12·cookies-tls</a>
+<span class="grp">| server:</span>
+<a href="13-ssrf.html" title="Server-Side Request Forgery">13·ssrf</a>
+<a href="14-deserialization-and-xxe.html" title="Deserialization and XXE">14·deserialize</a>
+<a href="15-environmental-security.html" title="Environmental Security">15·secrets</a>
+<a href="16-cryptography.html" title="Cryptography and Data Protection">16·crypto</a>
+<a href="17-dependencies-and-cves.html" title="Dependencies and CVEs">17·dependencies</a>
+<span class="grp">| ops:</span>
+<a href="18-intranet-and-admin.html" title="Intranet and Admin Security">18·admin</a>
+<a href="19-misconfiguration-and-errors.html" title="Misconfiguration and Error Handling">19·misconfig</a>
+<a href="20-insecure-design.html" title="Insecure Design and Business Logic">20·design</a>
+<a href="21-logging-and-incident-response.html" title="Logging, Alerting and Incident Response">21·logging</a>
+<a href="22-additional-resources.html" title="Additional Resources">22·resources</a>
+<span class="grp">| questionnaires:</span>
+<a href="q1-developer-survey.html" title="Developer Security Survey">Q1·developer</a>
+<a href="q2-awareness-survey.html" title="Cyber Threat Awareness Survey">Q2·cyber</a></nav>
+  <main>
+<div class="col">
+<p class="prompt">guest@websec ~ % <b>finger tanasak</b></p>
+<h1>About the Author</h1>
+<p class="lede">This AI generated guide was created by Tanasak Tantitarntong (SaKKo), founder of Geekstart, now part of Ramssol Group Berhad. He's a programmer and teacher based in Bangkok.</p>
+<div class="profile">
+<img src="img/tanasak.jpg" alt="Portrait of Tanasak Tantitarntong" width="180" height="180" loading="lazy">
+<div>
+<dl class="kv">
+<dt>name</dt><dd><b>Tanasak Tantitarntong</b></dd>
+<dt>thai</dt><dd>ธนศักดิ์ ตันติธารทอง</dd>
+<dt>role</dt><dd>Founder &amp; CTO, Geekstart Co., Ltd.</dd>
+<dt>group</dt><dd>Ramssol Group Berhad (Malaysia)</dd>
+<dt>based</dt><dd>Bangkok, Thailand</dd>
+<dt>email</dt><dd><a href="mailto:saklism@gmail.com">saklism@gmail.com</a></dd>
+<dt>web</dt><dd><a href="https://soontobeprogrammer.com/about/">soontobeprogrammer.com</a></dd>
+</dl>
+</div>
+</div>
+<p>Programming and teaching have been his dream since he was young. He founded Geekstart at 28, and in 2024 it was <a href="https://ramssolgroup.com/event/ramssol-group-berhad-has-officially-acquired-geekstart-company-limited/">acquired by Ramssol Group Berhad</a>, a Malaysian tech group. He now leads the technology side of the group's projects. He has taught programming at university, run corporate iOS training, and taught high-school maths, and he still teaches the developers he works with. This guide is part of that.</p>
+
+<h2>Projects</h2>
+<p>Within Ramssol Group he leads the engineering on these projects:</p>
+<ul class="tl">
+<li><span class="yr">fintech</span><span><span class="role"><a href="https://ramssolgroup.com/event/launching-pay-day-now-malaysias-first-earned-wage-access-solution-by-ramssol-group-ambank-group-2/">Pay Day Now</a></span> <span class="sub">Malaysia's first earned wage access solution, launched by Ramssol Group with AmBank Group. Employees can draw part of their earned wages before payday.</span></span></li>
+<li><span class="yr">platform</span><span><span class="role">Ridergate</span></span></li>
+<li><span class="yr">energy</span><span><span class="role">Renewable Energy</span></span></li>
+</ul>
+
+<h2>Experience</h2>
+<ul class="tl">
+<li><span class="yr">2024–now</span><span><span class="role">Tech lead, group projects</span> · <span class="org">Ramssol Group Berhad (Malaysia)</span><span class="sub">Pay Day Now · Ridergate · Renewable Energy</span></span></li>
+<li><span class="yr">2009–now</span><span><span class="role">Founder &amp; CTO</span> · <span class="org">Geekstart Co., Ltd.</span><span class="sub"><a href="https://ramssolgroup.com/event/ramssol-group-berhad-has-officially-acquired-geekstart-company-limited/">Acquired by Ramssol Group Berhad</a>, June 2024</span></span></li>
+<li><span class="yr">2017</span><span><span class="role">Co-Founder</span> · <span class="org">FineCoding Co., Ltd.</span></span></li>
+<li><span class="yr">2015–2018</span><span><span class="role">Lecturer</span> · <span class="org">Mahidol University International College</span><span class="sub">ICCS474 Internet Programming · ICCS340 Web Development</span></span></li>
+<li><span class="yr">2011–2012</span><span><span class="role">Math Teacher, Grade 11/12</span> · <span class="org">Assumption College Thonburi (English Program)</span></span></li>
+<li><span class="yr">2009–2011</span><span><span class="role">iOS Programming Trainer (part-time)</span> · <span class="org">SoftwarePark / True Digital Content and Media</span></span></li>
+<li><span class="yr">2009–2011</span><span><span class="role">System Analyst</span> · <span class="org">ExxonMobil (EMIT)</span></span></li>
+</ul>
+
+<h3>Geekstart clients</h3>
+<div class="tags"><span>CP-Intertrade</span><span>PINE Wealth Solution</span><span>One Asset</span><span>TRUE</span><span>Altitude</span><span>Sansiri</span><span>PLUS Property</span><span>SCG Addventures</span><span>SCG Chemicals</span><span>Innovative Software Consulting</span><span>Ramssol Group</span><span>Honda R&D AP</span><span>Mahidol University International College</span><span>EcartStudio</span></div>
+
+<h2>Education</h2>
+<ul class="tl">
+<li><span class="yr">2004–2008</span><span><span class="role">Computer Science</span> · <span class="org">Mahidol University International College</span></span></li>
+<li><span class="yr">2006–2007</span><span><span class="role">Exchange program</span> · <span class="org">Okayama University, Japan</span></span></li>
+<li><span class="yr">1995–2003</span><span><span class="role">High school</span> · <span class="org">Ekamai International School</span></span></li>
+</ul>
+
+<h2>Languages</h2>
+<dl class="kv">
+<dt>thai</dt><dd>native</dd>
+<dt>english</dt><dd>fluent</dd>
+<dt>japanese</dt><dd>conversational (JLPT N2)</dd>
+</dl>
+</div>
+
+<div class="col"><div class="pager"><a href="index.html">◀ ~/ Web Security Field Guide</a><a href="01-introduction.html">01 Introduction ▶</a></div></div>
+  </main>
+  <footer class="site">Based on the <a href="https://guides.rubyonrails.org/security.html">Ruby on Rails Security Guide</a> (CC BY-SA 4.0), the <a href="https://cheatsheetseries.owasp.org/">OWASP Cheat Sheet Series</a>, the <a href="https://owasp.org/Top10/2025/">OWASP Top 10:2025</a> and <a href="https://infosec.mozilla.org/guidelines/web_security.html">Mozilla's Web Security Guidelines</a>. Written for our dev team; code samples are illustrative.</footer>
+</div>
+<script src="assets/site.js?v=92ac7aa3f8"></script>
+<script>
+
+
+</script>
+</body>
+</html>

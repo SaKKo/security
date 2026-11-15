@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en" data-lang="rails">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Model Callbacks · Rails Guide</title>
+
+<link rel="icon" href="favicon.ico" sizes="32x32">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="site.webmanifest">
+<meta name="theme-color" content="#000000">
+<link rel="stylesheet" href="assets/site.css?v=8f1e007517">
+<script src="assets/consent.js?v=9320b4a322"></script>
+</head>
+<body data-slug="r05-model-callbacks">
+<div class="win">
+  <div class="titlebar"><span class="dots"><i></i><i></i><i></i></span><span class="t">guest@websec: ~/websec/r05-model-callbacks — zsh — 100×40</span>
+    <a class="by" href="about.html" title="About the author"><span class="w0">by </span>SaKKo</a>
+    <span class="lsw" role="group" aria-label="Language"><a href="r05-model-callbacks.html" aria-current="true" data-setlang="en">EN</a><a href="th/r05-model-callbacks.html" data-setlang="th">TH</a></span></div>
+  <nav class="top" aria-label="Lessons"><a href="index.html#rails" title="Home">~/</a>
+<a class="trk" href="index.html#security">#1 security</a>
+<a class="trk on" href="r01-rails-api-app.html">#2 rails</a>
+<span class="grp">| basics:</span>
+<a href="r01-rails-api-app.html" title="A Rails API App">r01·api-app</a>
+<a href="r02-rails-commands.html" title="Rails Commands">r02·commands</a>
+<a href="r03-migrations.html" title="Migrations">r03·migrations</a>
+<span class="grp">| models:</span>
+<a href="r04-models.html" title="Models and ApplicationRecord">r04·models</a>
+<a href="r05-model-callbacks.html" aria-current="page" title="Model Callbacks">r05·model-hooks</a>
+<span class="grp">| controllers:</span>
+<a href="r06-controllers.html" title="Controllers and the API Hierarchy">r06·controllers</a>
+<a href="r07-controller-callbacks.html" title="Controller Callbacks">r07·controller-hooks</a>
+<a href="r08-where-code-goes.html" title="Controllers, Models or Services?">r08·services</a>
+<span class="grp">| api:</span>
+<a href="r09-rest-routes.html" title="RESTful and Resourceful Routes">r09·rest-routes</a>
+<a href="r10-testing.html" title="Testing the API">r10·testing</a></nav>
+  <main>
+<div class="col">
+<p class="prompt">guest@websec ~ % <b>man r05-model-callbacks</b></p>
+<h1>Model Callbacks</h1>
+<p class="lede">Callbacks are methods Active Record calls for you at fixed moments in a record's life: before it's validated, after it's saved, after the transaction commits. Knowing the exact order is the difference between a neat default value and a production bug.</p>
+<h2>Registering a callback</h2><div class="code" data-label="ruby"><pre>class User &lt; ApplicationRecord
+  before_validation :initialize_authentication_token, on: [:create]   <span class="c"># method name + options</span>
+  after_soft_delete :cascade_soft_delete                              <span class="c"># custom callback (see below)</span>
+end
+
+class Role &lt; ApplicationRecord
+  after_commit :broadcast_webhook_event
+  before_save :strip_name, if: :name_changed?                         <span class="c"># conditional</span>
+  after_create_commit -&gt; { Rails.logger.info("role #{id} created") }  # a block works too
+end</pre></div><p>Options: <code>on:</code> (<code>:create</code>, <code>:update</code>, or a custom validation context), <code>if:</code> / <code>unless:</code> (a method name or lambda), <code>prepend: true</code> (run before callbacks declared earlier).</p><h2>Every callback, in order</h2><div class="tablewrap"><table><thead><tr><th>create</th><th>update</th><th>destroy</th></tr></thead><tbody><tr><td><code>before_validation</code></td><td><code>before_validation</code></td><td><code>before_destroy</code></td></tr><tr><td><code>after_validation</code></td><td><code>after_validation</code></td><td><code>around_destroy</code></td></tr><tr><td><code>before_save</code></td><td><code>before_save</code></td><td><code><span class='k'>DELETE</span></code></td></tr><tr><td><code>around_save</code></td><td><code>around_save</code></td><td><code>after_destroy</code></td></tr><tr><td><code>before_create</code></td><td><code>before_update</code></td><td><code>after_commit / after_rollback</code></td></tr><tr><td><code>around_create</code></td><td><code>around_update</code></td><td></td></tr><tr><td><code><span class='k'>INSERT</span></code></td><td><code><span class='k'>UPDATE</span></code></td><td></td></tr><tr><td><code>after_create</code></td><td><code>after_update</code></td><td></td></tr><tr><td><code>after_save</code></td><td><code>after_save</code></td><td></td></tr><tr><td><code>after_commit / after_rollback</code></td><td><code>after_commit / after_rollback</code></td><td></td></tr></tbody></table></div><p>Plus: <code>after_initialize</code> (every <code>new</code> and every record loaded), <code>after_find</code> (every record loaded, before <code>after_initialize</code>), <code>after_touch</code>. Commit shortcuts: <code>after_create_commit</code>, <code>after_update_commit</code>, <code>after_destroy_commit</code>, <code>after_save_commit</code>.</p><div class="demo"><header><b>explorer: which callbacks fire?</b><span>pick an operation and a scenario</span></header><div class="body"><div class="cbx"><script type="application/json">{"ops": [{"id": "create", "label": "Role.new(…).save", "hint": ""}, {"id": "update", "label": "role.update(…)", "hint": ""}, {"id": "destroy", "label": "role.destroy", "hint": ""}, {"id": "soft", "label": "role.soft_delete!", "hint": "Our custom operation from <code>SoftDeletable<\/code>."}, {"id": "columns", "label": "role.update_columns(…)", "hint": ""}, {"id": "touch", "label": "role.touch", "hint": ""}], "scen": [{"id": "ok", "label": "happy path"}, {"id": "invalid", "label": "validation fails"}, {"id": "abort", "label": "before_* throws :abort"}, {"id": "raise", "label": "after_save raises"}], "seq": {"create|ok": {"steps": [{"h": "after_initialize", "x": "<code>Role.new(...)<\/code>"}, {"h": "transaction opens", "k": "tx"}, {"h": "before_validation"}, {"h": "validate", "x": "runs validators and <code>validate :method<\/code>s"}, {"h": "after_validation"}, {"h": "before_save"}, {"h": "around_save", "x": "code before <code>yield<\/code>"}, {"h": "before_create"}, {"h": "around_create", "x": "code before <code>yield<\/code>"}, {"h": "INSERT INTO \"roles\" …", "k": "db"}, {"h": "around_create", "x": "code after <code>yield<\/code>"}, {"h": "after_create"}, {"h": "around_save", "x": "code after <code>yield<\/code>"}, {"h": "after_save"}, {"h": "COMMIT", "k": "tx"}, {"h": "after_commit", "x": "also <code>after_create_commit<\/code> / <code>after_save_commit<\/code>"}], "ret": "save → true · save! → true"}, "create|invalid": {"steps": [{"h": "after_initialize", "x": "<code>Role.new(...)<\/code>"}, {"h": "transaction opens", "k": "tx"}, {"h": "before_validation"}, {"h": "validate", "k": "halt", "x": "errors added → stop"}, {"h": "after_validation"}, {"h": "ROLLBACK: nothing written", "k": "tx"}], "ret": "save → false · save! → raises RecordInvalid (our API: 400)", "bad": true}, "create|abort": {"steps": [{"h": "after_initialize", "x": "<code>Role.new(...)<\/code>"}, {"h": "transaction opens", "k": "tx"}, {"h": "before_validation"}, {"h": "validate", "x": "runs validators and <code>validate :method<\/code>s"}, {"h": "after_validation"}, {"h": "before_save", "k": "halt", "x": "<code>throw :abort<\/code>"}, {"h": "ROLLBACK", "k": "tx"}], "ret": "save → false · save! → raises RecordNotSaved", "bad": true}, "create|raise": {"steps": [{"h": "after_initialize", "x": "<code>Role.new(...)<\/code>"}, {"h": "transaction opens", "k": "tx"}, {"h": "before_validation"}, {"h": "validate", "x": "runs validators and <code>validate :method<\/code>s"}, {"h": "after_validation"}, {"h": "before_save"}, {"h": "around_save", "x": "code before <code>yield<\/code>"}, {"h": "before_create"}, {"h": "around_create", "x": "code before <code>yield<\/code>"}, {"h": "INSERT INTO \"roles\" …", "k": "db"}, {"h": "around_create", "x": "code after <code>yield<\/code>"}, {"h": "after_create"}, {"h": "around_save", "x": "code after <code>yield<\/code>"}, {"h": "after_save", "k": "halt", "x": "raises an exception"}, {"h": "ROLLBACK: the row is undone", "k": "tx"}, {"h": "after_rollback"}], "ret": "exception propagates to the caller", "bad": true}, "update|ok": {"steps": [{"h": "after_find", "x": "<code>Role.find(id)<\/code>"}, {"h": "after_initialize"}, {"h": "transaction opens", "k": "tx"}, {"h": "before_validation"}, {"h": "validate", "x": "runs validators and <code>validate :method<\/code>s"}, {"h": "after_validation"}, {"h": "before_save"}, {"h": "around_save", "x": "code before <code>yield<\/code>"}, {"h": "before_update"}, {"h": "around_update", "x": "code before <code>yield<\/code>"}, {"h": "UPDATE \"roles\" SET …", "k": "db"}, {"h": "around_update", "x": "code after <code>yield<\/code>"}, {"h": "after_update"}, {"h": "around_save", "x": "code after <code>yield<\/code>"}, {"h": "after_save"}, {"h": "COMMIT", "k": "tx"}, {"h": "after_commit", "x": "also <code>after_update_commit<\/code> / <code>after_save_commit<\/code>"}], "ret": "save → true · save! → true"}, "update|invalid": {"steps": [{"h": "after_find", "x": "<code>Role.find(id)<\/code>"}, {"h": "after_initialize"}, {"h": "transaction opens", "k": "tx"}, {"h": "before_validation"}, {"h": "validate", "k": "halt", "x": "errors added → stop"}, {"h": "after_validation"}, {"h": "ROLLBACK: nothing written", "k": "tx"}], "ret": "save → false · save! → raises RecordInvalid (our API: 400)", "bad": true}, "update|abort": {"steps": [{"h": "after_find", "x": "<code>Role.find(id)<\/code>"}, {"h": "after_initialize"}, {"h": "transaction opens", "k": "tx"}, {"h": "before_validation"}, {"h": "validate", "x": "runs validators and <code>validate :method<\/code>s"}, {"h": "after_validation"}, {"h": "before_save", "k": "halt", "x": "<code>throw :abort<\/code>"}, {"h": "ROLLBACK", "k": "tx"}], "ret": "save → false · save! → raises RecordNotSaved", "bad": true}, "update|raise": {"steps": [{"h": "after_find", "x": "<code>Role.find(id)<\/code>"}, {"h": "after_initialize"}, {"h": "transaction opens", "k": "tx"}, {"h": "before_validation"}, {"h": "validate", "x": "runs validators and <code>validate :method<\/code>s"}, {"h": "after_validation"}, {"h": "before_save"}, {"h": "around_save", "x": "code before <code>yield<\/code>"}, {"h": "before_update"}, {"h": "around_update", "x": "code before <code>yield<\/code>"}, {"h": "UPDATE \"roles\" SET …", "k": "db"}, {"h": "around_update", "x": "code after <code>yield<\/code>"}, {"h": "after_update"}, {"h": "around_save", "x": "code after <code>yield<\/code>"}, {"h": "after_save", "k": "halt", "x": "raises an exception"}, {"h": "ROLLBACK: the row is undone", "k": "tx"}, {"h": "after_rollback"}], "ret": "exception propagates to the caller", "bad": true}, "destroy|ok": {"steps": [{"h": "transaction opens", "k": "tx"}, {"h": "before_destroy"}, {"h": "around_destroy", "x": "before <code>yield<\/code>"}, {"h": "DELETE FROM \"roles\" …", "k": "db"}, {"h": "around_destroy", "x": "after <code>yield<\/code>"}, {"h": "after_destroy"}, {"h": "COMMIT", "k": "tx"}, {"h": "after_commit", "x": "also <code>after_destroy_commit<\/code>"}], "ret": "destroy → self (in our app only via hard_destroy!)"}, "destroy|abort": {"steps": [{"h": "transaction opens", "k": "tx"}, {"h": "before_destroy", "k": "halt", "x": "<code>throw :abort<\/code>"}, {"h": "ROLLBACK", "k": "tx"}], "ret": "destroy → false · destroy! → raises RecordNotDestroyed (our API: 400)", "bad": true}, "soft|ok": {"steps": [{"h": "before_soft_delete", "x": "custom, from <code>define_model_callbacks<\/code>"}, {"h": "UPDATE … SET deleted_at (update_columns: no validations, no save callbacks)", "k": "db"}, {"h": "after_soft_delete", "x": "ours: <code>cascade_soft_delete<\/code>"}, {"h": "after_commit", "k": "skip", "x": "<b>does not fire<\/b>: update_columns skips it"}], "ret": "soft_delete! → true"}, "columns|ok": {"steps": [{"h": "UPDATE … SET … (no callbacks, no validations, no updated_at unless you pass it)", "k": "db"}], "ret": "update_columns → true"}, "touch|ok": {"steps": [{"h": "UPDATE … SET updated_at", "k": "db"}, {"h": "after_touch"}, {"h": "after_commit"}], "ret": "touch → true"}}, "ex": {"after_initialize": "ours: <code>SoftDeletable<\/code> checks the table has <code>deleted_at<\/code> (dev/test only)", "before_validation": "ours: <code>ClientApplication#generate_credentials<\/code>, <code>User#initialize_authentication_token<\/code> (both <code>on: :create<\/code>)", "after_commit": "ours: <code>Role#broadcast_webhook_event<\/code> enqueues the webhook job", "after_rollback": "transaction failed; clean up anything you started"}, "l_op": "operation", "l_sc": "scenario"}</script></div></div></div><p>Things to notice: the database write sits in the <i>middle</i>; <code>after_save</code> runs <i>before</i> the commit; a failure anywhere before <code>COMMIT</code> undoes everything; and <code>soft_delete!</code> / <code>update_columns</code> skip almost all of it.</p><h2>Callbacks in our code</h2><h3>before_validation, on: :create</h3><div class="code" data-label="ruby"><pre>class ClientApplication &lt; ApplicationRecord
+  before_validation :generate_credentials, on: :create
+
+  validates :name, :app_key, :api_secret, presence: true
+  validates :app_key, uniqueness: true
+  ...</pre></div><p>Why <code>before_validation</code> and not <code>before_create</code>? Because <code>before_create</code> runs <i>after</i> validation, and the presence check on <code>app_key</code> would fail first. Generate values that validations depend on in <code>before_validation</code>.</p><h3>after_commit</h3><div class="code" data-label="ruby · app/models/role.rb"><pre>class Role &lt; ApplicationRecord
+  after_commit :broadcast_webhook_event
+
+  def broadcast_webhook_event
+    return if client_application.nil?
+
+    event_type = determine_event_type          <span class="c"># created / updated / destroyed</span>
+    return if event_type.nil?
+    <span class="c"># ignore saves where only updated_at changed</span>
+    return if event_type == "role.updated" &amp;&amp; previous_changes.except("updated_at").empty?
+
+    client_application.notify_webhook(event_type, role_payload)   <span class="c"># -&gt; perform_later</span>
+  end
+
+  def determine_event_type
+    if destroyed? || deleted_at.present? then "role.destroyed"
+    elsif previously_new_record? then "role.created"
+    else "role.updated"
+    end
+  end
+end</pre></div><p>Side effects that leave the database (jobs, webhooks, emails) belong in <code>after_commit</code>. In <code>after_save</code> the transaction is still open: the job could start before the row is visible, or the transaction could roll back after the webhook is already sent. <code>previous_changes</code> and <code>previously_new_record?</code> tell you what just happened.</p><div class="warn">Gotcha: <code>soft_delete!</code> writes with <code>update_columns</code>, which skips <code>after_commit</code>. So the <code>"role.destroyed"</code> branch above never runs on a soft delete. If a client must hear about deletions, call <code>broadcast_webhook_event</code> from <code>after_soft_delete</code>. Try <code>role.soft_delete!</code> in the explorer above.</div><h3>Custom callbacks: define_model_callbacks</h3><div class="code" data-label="ruby · app/models/concerns/soft_deletable.rb"><pre>module SoftDeletable
+  included do
+    define_model_callbacks :soft_delete, :restore    <span class="c"># creates before_/around_/after_soft_delete etc.</span>
+    after_soft_delete :execute_cascade_soft_delete
+    after_restore :execute_cascade_restore
+    validate :ensure_unique_attributes_on_restore, on: :restore   <span class="c"># custom validation context</span>
+  end
+
+  def soft_delete!
+    return false if soft_deleted?
+    run_callbacks :soft_delete do                     <span class="c"># before_* ... block ... after_*</span>
+      update_columns(deleted_at: Time.current, updated_at: Time.current)
+    end
+    true
+  end
+
+  def restore(context: :restore)
+    self.deleted_at = nil
+    return false unless valid?(context)               <span class="c"># runs validations tagged on: :restore</span>
+    run_callbacks(:restore) { update_columns(deleted_at: nil, updated_at: Time.current) }
+    true
+  end
+end</pre></div><p><code>define_model_callbacks</code> gives your own operations the same <code>before_/around_/after_</code> hooks as <code>save</code>. Validation contexts (<code>valid?(:restore)</code>) let one validation run only for one operation: here, restoring a user whose username was taken while they were deleted fails cleanly.</p><h3>Normalizing input: a writer, not a callback</h3><div class="code" data-label="ruby · app/models/role.rb"><pre>def permissions=(values)
+  super(Array(values).compact.map(&amp;:to_s).sort)   <span class="c"># always a sorted array of strings</span>
+end</pre></div><p>Overriding the attribute writer normalizes the value the moment it’s assigned, so validations and <code>changed?</code> see the clean value. Rails 7.1+ also has <code>normalizes :email, with: -> { _1.strip.downcase }</code> for the same job.</p><h2>Halting and skipping</h2><div class="code" data-label="ruby"><pre>before_destroy :ensure_not_last_admin
+
+def ensure_not_last_admin
+  return unless is_admin? &amp;&amp; User.where(is_admin: true).count == 1
+  errors.add(:base, "Cannot remove the last admin")
+  throw :abort                     <span class="c"># stops the chain; destroy returns false / destroy! raises</span>
+end</pre></div><p>These methods <b>skip callbacks and validations</b> entirely. Use them on purpose, never by accident:</p><p><code>update_column</code> · <code>update_columns</code> · <code>update_all</code> · <code>delete</code> · <code>delete_all</code> · <code>delete_by</code> · <code>insert</code> / <code>insert_all</code> · <code>upsert</code> / <code>upsert_all</code> · <code>increment!</code> · <code>decrement!</code> · <code>touch_all</code> · <code>update_counters</code></p><h2>Rules of thumb</h2><ul><li>Callbacks should be about <b>this record</b>: defaults, generated keys, normalized values, cascading soft deletes.</li><li>Anything that leaves the process (HTTP, email, webhooks) goes in <code>after_commit</code>, and usually just enqueues a job.</li><li>Never call slow external services in <code>before_*</code> or <code>after_save</code>: they hold the database transaction open.</li><li>If a callback needs to know <i>who</i> did something or <i>which endpoint</i> was called, it belongs in the controller or a service instead.</li></ul><div class="quiz" data-a="2"><p>You need to email the user after their account is created. Which callback?</p><div class="opts"><button type="button">before_create</button><button type="button">after_save</button><button type="button">after_create_commit</button><button type="button">after_initialize</button></div><p class="explain">After commit, the user row is guaranteed to exist for the mail job. Enqueue with <code>deliver_later</code>.</p></div><div class="quiz" data-a="0"><p><code>before_create :set_code</code> sets a value that <code>validates :code, presence: true</code> checks. Saving fails with "Code can't be blank". Why?</p><div class="opts"><button type="button">before_create runs after validation</button><button type="button">before_create never runs on save</button><button type="button">presence doesn't work on strings</button><button type="button">It needs throw :abort</button></div><p class="explain">Move it to <code>before_validation :set_code, on: :create</code>, like <code>generate_credentials</code>.</p></div></div>
+
+<div class="col"><label class="readmark"><input type="checkbox" id="read-r05-model-callbacks"> Mark lesson r05 as read</label><div class="pager"><a href="r04-models.html">◀ r04 Models and ApplicationRecord</a><a href="r06-controllers.html">r06 Controllers and the API Hierarchy ▶</a></div></div>
+  </main>
+  <footer class="site">Based on the <a href="https://guides.rubyonrails.org/">Ruby on Rails Guides</a> (CC BY-SA 4.0), API-only parts, and the conventions in our own codebase. Code samples are adapted from our real code for teaching.</footer>
+</div>
+<script src="assets/site.js?v=92ac7aa3f8"></script>
+<script>
+
+
+</script>
+<script src="assets/widgets.js?v=b9f4e038ea"></script>
+</body>
+</html>

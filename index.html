@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en" data-lang="rails">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Developer Field Guide</title>
+
+<link rel="icon" href="favicon.ico" sizes="32x32">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="site.webmanifest">
+<meta name="theme-color" content="#000000">
+<link rel="stylesheet" href="assets/site.css?v=8f1e007517">
+<script src="assets/consent.js?v=9320b4a322"></script>
+</head>
+<body data-slug="index">
+<div class="win">
+  <div class="titlebar"><span class="dots"><i></i><i></i><i></i></span><span class="t">guest@websec: ~/websec — zsh — 100×40</span>
+    <a class="by" href="about.html" title="About the author"><span class="w0">by </span>SaKKo</a>
+    <span class="lsw" role="group" aria-label="Language"><a href="index.html" aria-current="true" data-setlang="en">EN</a><a href="th/index.html" data-setlang="th">TH</a></span>
+    <span class="langsw" role="group" aria-label="Code examples language"><span class="d">code:</span><button type="button" data-l="rails">rails</button><button type="button" data-l="node">node</button></span></div>
+  <nav class="top" aria-label="Sections"><a href="index.html" aria-current="page" title="Web Security Field Guide">~/</a>
+<a class="trk on" href="index.html#security">#1 security</a>
+<a class="trk" href="r01-rails-api-app.html">#2 rails</a>
+<span class="grp">|</span>
+<a href="01-introduction.html" title="Introduction">01·introduction</a>
+<a href="02-sql-injection.html" title="SQL Injection">02·sql-injection</a>
+<a href="03-unsafe-query-generation.html" title="Unsafe Query Generation">03·query-shape</a>
+<a href="04-xss-and-other-injection.html" title="XSS and Other Injection">04·xss</a>
+<span class="grp">| accounts:</span>
+<a href="05-authentication.html" title="Authentication">05·auth</a>
+<a href="05b-mfa.html" title="Multi-Factor Authentication">05b·mfa</a>
+<a href="06-sessions.html" title="Sessions">06·sessions</a>
+<a href="07-csrf.html" title="Cross-Site Request Forgery">07·csrf</a>
+<a href="08-user-management.html" title="User Management">08·accounts</a>
+<a href="09-mass-assignment-and-authorization.html" title="Mass Assignment and Authorization">09·authz</a>
+<span class="grp">| browser:</span>
+<a href="10-redirection-and-files.html" title="Redirection and Files">10·files</a>
+<a href="11-http-security-headers.html" title="HTTP Security Headers">11·headers</a>
+<a href="12-transport-cookies-third-party.html" title="Transport, Cookies and Third-Party Scripts">12·cookies-tls</a>
+<span class="grp">| server:</span>
+<a href="13-ssrf.html" title="Server-Side Request Forgery">13·ssrf</a>
+<a href="14-deserialization-and-xxe.html" title="Deserialization and XXE">14·deserialize</a>
+<a href="15-environmental-security.html" title="Environmental Security">15·secrets</a>
+<a href="16-cryptography.html" title="Cryptography and Data Protection">16·crypto</a>
+<a href="17-dependencies-and-cves.html" title="Dependencies and CVEs">17·dependencies</a>
+<span class="grp">| ops:</span>
+<a href="18-intranet-and-admin.html" title="Intranet and Admin Security">18·admin</a>
+<a href="19-misconfiguration-and-errors.html" title="Misconfiguration and Error Handling">19·misconfig</a>
+<a href="20-insecure-design.html" title="Insecure Design and Business Logic">20·design</a>
+<a href="21-logging-and-incident-response.html" title="Logging, Alerting and Incident Response">21·logging</a>
+<a href="22-additional-resources.html" title="Additional Resources">22·resources</a>
+<span class="grp">| questionnaires:</span>
+<a href="q1-developer-survey.html" title="Developer Security Survey">Q1·developer</a>
+<a href="q2-awareness-survey.html" title="Cyber Threat Awareness Survey">Q2·cyber</a></nav>
+  <main>
+<div class="col">
+<p class="prompt">guest@websec ~ % <b>cat README</b></p>
+<h1>Developer Field Guide</h1>
+<p class="lede">Training for our Rails team, in two tracks.</p>
+<div class="tracks"><a href="#security"><span class="n">track #1 · 23 topics + 2 questionnaires</span><span class="h">Web Security</span><span class="s">Each topic explains an attack in plain terms, then tells you straight: does Rails handle this, or do we?</span></a><a href="#rails"><span class="n">track #2 · 10 lessons</span><span class="h">Ruby on Rails API Guide</span><span class="s">How we build API-only Rails apps: commands, migrations, models, controllers, services, routes and tests.</span></a></div>
+<pre aria-hidden="true" class="ascii">
+ _       __     __       _____                      _ __
+| |     / /__  / /_     / ___/___  _______  _______(_) /___  __
+| | /| / / _ \/ __ \    \__ \/ _ \/ ___/ / / / ___/ / __/ / / /
+| |/ |/ /  __/ /_/ /   ___/ /  __/ /__/ /_/ / /  / / /_/ /_/ /
+|__/|__/\___/_.___/   /____/\___/\___/\__,_/_/  /_/\__/\__, /
+                                                      /____/
+</pre>
+<h2 id="security">#1 · Web Security: how to use it</h2>
+<ul>
+<li>One topic per page. One or two a week works well for a team session. Go in order: later lessons build on earlier ones.</li>
+<li>Hit <b>▶ play</b> on the animations to watch an attack step by step. Green boxes are little simulations you can poke at.</li>
+<li>Code samples default to <b>Rails</b>. The <code>code:</code> switch in the title bar shows the Node version where one exists.</li>
+<li>Coloured boxes show Rails' status on each topic:</li>
+</ul>
+<div class="rp yes">Rails handles this out of the box. Know what not to undo.</div>
+<div class="rp partial">Rails gives you the tools, but you must enable, configure or finish the job.</div>
+<div class="rp no">Rails does nothing here. It's entirely our code and process.</div>
+</div>
+<div class="group-h">part 1 · start here: injection</div><div class="cards" id="cards-start" style="max-width:1000px;margin:12px auto"></div>
+<div class="group-h">part 2 · accounts and access control</div><div class="cards" id="cards-access" style="max-width:1000px;margin:12px auto"></div>
+<div class="group-h">part 3 · files, browsers and headers</div><div class="cards" id="cards-browser" style="max-width:1000px;margin:12px auto"></div>
+<div class="group-h">part 4 · server side and secrets</div><div class="cards" id="cards-server" style="max-width:1000px;margin:12px auto"></div>
+<div class="group-h">part 5 · operations and design</div><div class="cards" id="cards-ops" style="max-width:1000px;margin:12px auto"></div>
+<div class="group-h">part 6 · questionnaires</div><div class="cards" id="cards-survey" style="max-width:1000px;margin:12px auto"></div>
+<div class="col">
+<h2>OWASP Top 10:2025 at a glance</h2>
+<p>The OWASP Top 10 is the industry's list of the biggest web risks. Here's where each one lives in this guide, and how much Rails helps:</p>
+<div class="tablewrap"><table><thead><tr><th>#</th><th>risk</th><th>Rails</th><th>pages</th></tr></thead><tbody><tr><td><b>A01</b></td><td>Broken Access Control<br/><span class="d" style="font-size:12px">incl. IDOR, BFLA, CSRF, SSRF</span></td><td><span class="pill meh">partial</span><br/><span class="w" style="font-size:12px">CSRF tokens and open-redirect protection on by default; authorization and object scoping are ours</span></td><td><a href="07-csrf.html">07</a> <a href="08-user-management.html">08</a> <a href="09-mass-assignment-and-authorization.html">09</a> <a href="13-ssrf.html">13</a> <a href="18-intranet-and-admin.html">18</a></td></tr><tr><td><b>A02</b></td><td>Security Misconfiguration<br/><span class="d" style="font-size:12px">debug modes, dashboards, defaults, headers</span></td><td><span class="pill meh">partial</span><br/><span class="w" style="font-size:12px">good production defaults; mounted dashboards, hosts, CSP are ours</span></td><td><a href="11-http-security-headers.html">11</a> <a href="12-transport-cookies-third-party.html">12</a> <a href="19-misconfiguration-and-errors.html">19</a></td></tr><tr><td><b>A03</b></td><td>Software Supply Chain Failures<br/><span class="d" style="font-size:12px">vulnerable gems, CDNs, CI</span></td><td><span class="pill bad">your job</span><br/><span class="w" style="font-size:12px">Brakeman in CI for new apps; patching gems and pinning scripts is ours</span></td><td><a href="12-transport-cookies-third-party.html">12</a> <a href="17-dependencies-and-cves.html">17</a></td></tr><tr><td><b>A04</b></td><td>Cryptographic Failures<br/><span class="d" style="font-size:12px">TLS, storage, keys, randomness</span></td><td><span class="pill meh">partial</span><br/><span class="w" style="font-size:12px">force_ssl, encrypted cookies, has_secure_password; field encryption is opt-in</span></td><td><a href="05-authentication.html">05</a> <a href="12-transport-cookies-third-party.html">12</a> <a href="15-environmental-security.html">15</a> <a href="16-cryptography.html">16</a></td></tr><tr><td><b>A05</b></td><td>Injection<br/><span class="d" style="font-size:12px">SQL, XSS, command, header</span></td><td><span class="pill meh">partial</span><br/><span class="w" style="font-size:12px">ERB escaping and AR parameterization by default; raw/html_safe/interpolation are ours</span></td><td><a href="02-sql-injection.html">02</a> <a href="03-unsafe-query-generation.html">03</a> <a href="04-xss-and-other-injection.html">04</a></td></tr><tr><td><b>A06</b></td><td>Insecure Design<br/><span class="d" style="font-size:12px">business logic, races, threat modeling</span></td><td><span class="pill bad">your job</span><br/><span class="w" style="font-size:12px">nothing built in</span></td><td><a href="20-insecure-design.html">20</a></td></tr><tr><td><b>A07</b></td><td>Authentication Failures<br/><span class="d" style="font-size:12px">passwords, sessions, MFA, brute force</span></td><td><span class="pill meh">partial</span><br/><span class="w" style="font-size:12px">auth generator, rate_limit, secure sessions; MFA and lockout are ours</span></td><td><a href="05-authentication.html">05</a> <a href="06-sessions.html">06</a> <a href="08-user-management.html">08</a></td></tr><tr><td><b>A08</b></td><td>Software or Data Integrity Failures<br/><span class="d" style="font-size:12px">deserialization, SRI, unsigned data</span></td><td><span class="pill meh">partial</span><br/><span class="w" style="font-size:12px">JSON cookies and safe YAML by default; Marshal and CDN scripts are ours</span></td><td><a href="12-transport-cookies-third-party.html">12</a> <a href="14-deserialization-and-xxe.html">14</a></td></tr><tr><td><b>A09</b></td><td>Security Logging &amp; Alerting Failures<br/><span class="d" style="font-size:12px">what to log, alerts, response</span></td><td><span class="pill meh">partial</span><br/><span class="w" style="font-size:12px">request logs with filtered params; security events and alerts are ours</span></td><td><a href="08-user-management.html">08</a> <a href="21-logging-and-incident-response.html">21</a></td></tr><tr><td><b>A10</b></td><td>Mishandling of Exceptional Conditions<br/><span class="d" style="font-size:12px">fail-open, errors, limits</span></td><td><span class="pill meh">partial</span><br/><span class="w" style="font-size:12px">generic error pages, transactions roll back; fail-closed logic is ours</span></td><td><a href="19-misconfiguration-and-errors.html">19</a></td></tr></tbody></table></div>
+<h2>The threat model in one picture</h2>
+<p>Almost every attack in this guide targets one of these trust boundaries. Hover or tap a layer.</p>
+<div class="demo"><header><b>trust boundaries</b><span>tap a layer</span></header><div class="body">
+<div class="grid3" id="layers"></div>
+<div class="out" id="layer-out" style="margin-top:12px">Browser → Network → Server → Database. Pick a layer.</div>
+</div></div>
+</div>
+
+<div class="col">
+<h2 id="rails">#2 · Ruby on Rails API Guide</h2>
+<p>How we build API-only Rails apps, based on our real code. Every lesson has terminals you can run, interactive simulators and short quizzes. Go in order: basics → models → controllers → routes and tests.</p>
+</div>
+<div class="group-h">part 1 · basics</div><div class="cards" style="max-width:1000px;margin:12px auto">
+<a class="card" data-slug="r01-rails-api-app" href="r01-rails-api-app.html"><span class="n">lesson r01</span><span class="h">A Rails API App</span><span class="s">What API-only mode is and how our project is laid out</span><span class="st">[ ] unread</span></a>
+<a class="card" data-slug="r02-rails-commands" href="r02-rails-commands.html"><span class="n">lesson r02</span><span class="h">Rails Commands</span><span class="s">server, console, generators, routes, test: see each one run</span><span class="st">[ ] unread</span></a>
+<a class="card" data-slug="r03-migrations" href="r03-migrations.html"><span class="n">lesson r03</span><span class="h">Migrations</span><span class="s">Change the database safely: generate, migrate, roll back</span><span class="st">[ ] unread</span></a>
+</div>
+<div class="group-h">part 2 · models</div><div class="cards" style="max-width:1000px;margin:12px auto">
+<a class="card" data-slug="r04-models" href="r04-models.html"><span class="n">lesson r04</span><span class="h">Models and ApplicationRecord</span><span class="s">Associations, validations, scopes, serializers, state machines</span><span class="st">[ ] unread</span></a>
+<a class="card" data-slug="r05-model-callbacks" href="r05-model-callbacks.html"><span class="n">lesson r05</span><span class="h">Model Callbacks</span><span class="s">Every Active Record hook, in the order it fires</span><span class="st">[ ] unread</span></a>
+</div>
+<div class="group-h">part 3 · controllers and services</div><div class="cards" style="max-width:1000px;margin:12px auto">
+<a class="card" data-slug="r06-controllers" href="r06-controllers.html"><span class="n">lesson r06</span><span class="h">Controllers and the API Hierarchy</span><span class="s">ActionController::API, our base controllers, params, rendering</span><span class="st">[ ] unread</span></a>
+<a class="card" data-slug="r07-controller-callbacks" href="r07-controller-callbacks.html"><span class="n">lesson r07</span><span class="h">Controller Callbacks</span><span class="s">before_action, skip, around, and how a request is filtered</span><span class="st">[ ] unread</span></a>
+<a class="card" data-slug="r08-where-code-goes" href="r08-where-code-goes.html"><span class="n">lesson r08</span><span class="h">Controllers, Models or Services?</span><span class="s">Where each piece of code belongs, and why we use services</span><span class="st">[ ] unread</span></a>
+</div>
+<div class="group-h">part 4 · routes and tests</div><div class="cards" style="max-width:1000px;margin:12px auto">
+<a class="card" data-slug="r09-rest-routes" href="r09-rest-routes.html"><span class="n">lesson r09</span><span class="h">RESTful and Resourceful Routes</span><span class="s">Design API paths, read rails routes, use named helpers</span><span class="st">[ ] unread</span></a>
+<a class="card" data-slug="r10-testing" href="r10-testing.html"><span class="n">lesson r10</span><span class="h">Testing the API</span><span class="s">Fixtures, model tests, and integration tests with named paths</span><span class="st">[ ] unread</span></a>
+</div>
+<div class="col"><div class="pager"><span></span><a href="01-introduction.html">01 Introduction ▶</a></div></div>
+  </main>
+  <footer class="site">Based on the <a href="https://guides.rubyonrails.org/security.html">Ruby on Rails Security Guide</a> (CC BY-SA 4.0), the <a href="https://cheatsheetseries.owasp.org/">OWASP Cheat Sheet Series</a>, the <a href="https://owasp.org/Top10/2025/">OWASP Top 10:2025</a> and <a href="https://infosec.mozilla.org/guidelines/web_security.html">Mozilla's Web Security Guidelines</a>. Written for our dev team; code samples are illustrative.</footer>
+</div>
+<script src="assets/site.js?v=92ac7aa3f8"></script>
+<script>
+
+const CARDS = [{"slug": "01-introduction", "num": "01", "title": "Introduction", "blurb": "Why security is your job, not your framework's", "grp": "start"}, {"slug": "02-sql-injection", "num": "02", "title": "SQL Injection", "blurb": "Start here: how it works, how to find it, how to fix it", "grp": "start"}, {"slug": "03-unsafe-query-generation", "num": "03", "title": "Unsafe Query Generation", "blurb": "When request parsing changes your query's shape", "grp": "start"}, {"slug": "04-xss-and-other-injection", "num": "04", "title": "XSS and Other Injection", "blurb": "XSS, CSS, Markdown, shell and header injection", "grp": "start"}, {"slug": "05-authentication", "num": "05", "title": "Authentication", "blurb": "Storing passwords, logging in, MFA, resets", "grp": "access"}, {"slug": "05b-mfa", "num": "05b", "title": "Multi-Factor Authentication", "blurb": "How TOTP works, and why a home-made random code isn't MFA", "grp": "access"}, {"slug": "06-sessions", "num": "06", "title": "Sessions", "blurb": "Hijacking, fixation, replay and expiry", "grp": "access"}, {"slug": "07-csrf", "num": "07", "title": "Cross-Site Request Forgery", "blurb": "When another site clicks buttons on yours", "grp": "access"}, {"slug": "08-user-management", "num": "08", "title": "User Management", "blurb": "Brute force, takeover, CAPTCHAs, logs, regex, IDOR", "grp": "access"}, {"slug": "09-mass-assignment-and-authorization", "num": "09", "title": "Mass Assignment and Authorization", "blurb": "Who may set which field, and who may do what", "grp": "access"}, {"slug": "10-redirection-and-files", "num": "10", "title": "Redirection and Files", "blurb": "Open redirects, uploads, path traversal", "grp": "browser"}, {"slug": "11-http-security-headers", "num": "11", "title": "HTTP Security Headers", "blurb": "CSP, HSTS, framing, CORS and friends", "grp": "browser"}, {"slug": "12-transport-cookies-third-party", "num": "12", "title": "Transport, Cookies and Third-Party Scripts", "blurb": "TLS, cookie prefixes, mixed content, SRI", "grp": "browser"}, {"slug": "13-ssrf", "num": "13", "title": "Server-Side Request Forgery", "blurb": "When your server fetches a URL for the attacker", "grp": "server"}, {"slug": "14-deserialization-and-xxe", "num": "14", "title": "Deserialization and XXE", "blurb": "Data formats that can run code or read files", "grp": "server"}, {"slug": "15-environmental-security", "num": "15", "title": "Environmental Security", "blurb": "Secrets, keys and config files", "grp": "server"}, {"slug": "16-cryptography", "num": "16", "title": "Cryptography and Data Protection", "blurb": "Hashing vs encryption, keys, randomness, timing", "grp": "server"}, {"slug": "17-dependencies-and-cves", "num": "17", "title": "Dependencies and CVEs", "blurb": "Keeping third-party code patched", "grp": "server"}, {"slug": "18-intranet-and-admin", "num": "18", "title": "Intranet and Admin Security", "blurb": "Protecting the keys to the kingdom", "grp": "ops"}, {"slug": "19-misconfiguration-and-errors", "num": "19", "title": "Misconfiguration and Error Handling", "blurb": "Debug modes, defaults, failing open", "grp": "ops"}, {"slug": "20-insecure-design", "num": "20", "title": "Insecure Design and Business Logic", "blurb": "Race conditions, abuse cases, threat modeling", "grp": "ops"}, {"slug": "21-logging-and-incident-response", "num": "21", "title": "Logging, Alerting and Incident Response", "blurb": "Noticing attacks and responding well", "grp": "ops"}, {"slug": "22-additional-resources", "num": "22", "title": "Additional Resources", "blurb": "Where to keep learning", "grp": "ops"}, {"slug": "q1-developer-survey", "num": "Q1", "title": "Developer Security Survey", "blurb": "Individual knowledge check for the dev team", "grp": "survey"}, {"slug": "q2-awareness-survey", "num": "Q2", "title": "Cyber Threat Awareness Survey", "blurb": "For everyone, including non-technical staff", "grp": "survey"}];
+["start", "access", "browser", "server", "ops", "survey"].forEach(g => {
+  $("#cards-" + g).innerHTML = CARDS.filter(c => c.grp === g).map(c => `<a class="card${g === "survey" ? " survey" : ""}" data-slug="${c.slug}" href="${c.slug}.html"><span class="n">${g === "survey" ? "questionnaire " + c.num : "section " + c.num}</span><span class="h">${c.title}</span><span class="s">${c.blurb}</span><span class="st">${g === "survey" ? "take it ▶" : "[ ] unread"}</span></a>`).join("");
+});
+$$(".card[data-slug]").forEach(c => { if (!c.classList.contains("survey") && store.get("read:" + c.dataset.slug, false)) { c.classList.add("read"); $(".st", c).textContent = "[x] read"; } });
+const layers = {
+ "Browser": ["Where our HTML and JS run, next to the attacker's tabs.", ["04 XSS","07 CSRF","11 CSP, framing, CORS","12 cookies, SRI"]],
+ "Network": ["Wi-Fi, proxies and ISPs between user and server.", ["06 hijacking","11 HSTS","12 TLS"]],
+ "Server": ["Our Rails code, request parsing, files, outbound requests.", ["05 auth","08 accounts","09 authorization","10 files","13 SSRF","14 deserialization","19 errors","20 business logic"]],
+ "Database": ["Where the valuable data lives.", ["02 SQL injection","03 query generation","16 encryption at rest"]],
+ "Secrets": ["Keys, passwords and tokens that unlock everything else.", ["15 environmental security","16 keys"]],
+ "Supply chain & ops": ["Gems, CDNs, CI, logs and the people who respond.", ["12 third-party scripts","17 dependencies","21 logging & response"]]};
+$("#layers").innerHTML = Object.keys(layers).map(k => `<button class="btn" type="button" data-k="${k}">${k}</button>`).join("");
+$$("#layers button").forEach(b => { const f = () => { $$("#layers button").forEach(x => x.classList.toggle("on", x === b)); const [d, s] = layers[b.dataset.k]; $("#layer-out").innerHTML = `<b>${b.dataset.k}</b>: ${d}\n<span class="d">covered in:</span> ${s.map(x => `<span class="k">${x}</span>`).join(" · ")}`; }; b.addEventListener("click", f); b.addEventListener("mouseenter", f); });
+
+</script>
+</body>
+</html>

@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="th" data-lang="rails">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Q1 แบบสำรวจความปลอดภัยสำหรับนักพัฒนา · Web Security</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="icon" href="../favicon.ico" sizes="32x32">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<link rel="manifest" href="../site.webmanifest">
+<meta name="theme-color" content="#000000">
+<link rel="stylesheet" href="../assets/site.css?v=8f1e007517">
+<script src="../assets/consent.js?v=9320b4a322"></script>
+</head>
+<body data-slug="q1-developer-survey">
+<div class="win">
+  <div class="titlebar"><span class="dots"><i></i><i></i><i></i></span><span class="t">guest@websec: ~/websec/q1-developer-survey/th — zsh — 100×40</span>
+    <a class="by" href="about.html" title="เกี่ยวกับผู้เขียน"><span class="w0">เขียนโดย </span>SaKKo</a>
+    <span class="lsw" role="group" aria-label="ภาษา"><a href="../q1-developer-survey.html" data-setlang="en">EN</a><a href="q1-developer-survey.html" aria-current="true" data-setlang="th">TH</a></span>
+    <span class="langsw" role="group" aria-label="Code examples language"><span class="d">โค้ด:</span><button type="button" data-l="rails">rails</button><button type="button" data-l="node">node</button></span></div>
+  <nav class="top" aria-label="Sections"><a href="index.html" title="คู่มือความปลอดภัยเว็บแอปพลิเคชัน">~/</a>
+<a class="trk on" href="index.html#security">#1 ความปลอดภัย</a>
+<a class="trk" href="r01-rails-api-app.html">#2 rails</a>
+<span class="grp">|</span>
+<a href="01-introduction.html" title="บทนำ">01·บทนำ</a>
+<a href="02-sql-injection.html" title="SQL Injection">02·sql</a>
+<a href="03-unsafe-query-generation.html" title="การสร้าง query ที่ไม่ปลอดภัย">03·query</a>
+<a href="04-xss-and-other-injection.html" title="XSS และ injection แบบอื่น">04·xss</a>
+<span class="grp">| บัญชี:</span>
+<a href="05-authentication.html" title="การยืนยันตัวตน">05·auth</a>
+<a href="05b-mfa.html" title="การยืนยันตัวตนหลายปัจจัย">05b·mfa</a>
+<a href="06-sessions.html" title="Session">06·session</a>
+<a href="07-csrf.html" title="Cross-Site Request Forgery">07·csrf</a>
+<a href="08-user-management.html" title="การจัดการผู้ใช้">08·ผู้ใช้</a>
+<a href="09-mass-assignment-and-authorization.html" title="Mass Assignment และ Authorization">09·authz</a>
+<span class="grp">| เบราว์เซอร์:</span>
+<a href="10-redirection-and-files.html" title="Redirect และไฟล์">10·ไฟล์</a>
+<a href="11-http-security-headers.html" title="HTTP Security Header">11·header</a>
+<a href="12-transport-cookies-third-party.html" title="การรับส่งข้อมูล คุกกี้ และสคริปต์บุคคลที่สาม">12·คุกกี้</a>
+<span class="grp">| เซิร์ฟเวอร์:</span>
+<a href="13-ssrf.html" title="Server-Side Request Forgery">13·ssrf</a>
+<a href="14-deserialization-and-xxe.html" title="Deserialization และ XXE">14·deserialize</a>
+<a href="15-environmental-security.html" title="ความปลอดภัยของสภาพแวดล้อม">15·secret</a>
+<a href="16-cryptography.html" title="การเข้ารหัสและการปกป้องข้อมูล">16·crypto</a>
+<a href="17-dependencies-and-cves.html" title="Dependency และ CVE">17·dependency</a>
+<span class="grp">| ดูแลระบบ:</span>
+<a href="18-intranet-and-admin.html" title="ความปลอดภัยของ intranet และ admin">18·admin</a>
+<a href="19-misconfiguration-and-errors.html" title="การตั้งค่าผิดพลาดและการจัดการ error">19·config</a>
+<a href="20-insecure-design.html" title="การออกแบบที่ไม่ปลอดภัยและ business logic">20·design</a>
+<a href="21-logging-and-incident-response.html" title="Logging การแจ้งเตือน และการรับมือเหตุการณ์">21·logging</a>
+<a href="22-additional-resources.html" title="แหล่งข้อมูลเพิ่มเติม">22·แหล่งข้อมูล</a>
+<span class="grp">| แบบสอบถาม:</span>
+<a href="q1-developer-survey.html" aria-current="page" title="แบบสำรวจความปลอดภัยสำหรับนักพัฒนา">Q1·dev</a>
+<a href="q2-awareness-survey.html" title="แบบสำรวจความตระหนักรู้ภัยไซเบอร์">Q2·ทุกคน</a></nav>
+  <main>
+<div class="col">
+<p class="prompt">guest@websec ~ % <b>./q1-developer-survey.sh</b></p>
+<h1>Q1 · แบบสำรวจความปลอดภัยสำหรับนักพัฒนา</h1>
+<p class="lede">50 ข้อครอบคลุมทุกหัวข้อ ตอบจากความจำ ห้ามแอบดู ตอนท้ายจะเห็นเฉลยพร้อมคำอธิบาย</p>
+<div class="note">ใช้เวลาราว 25 นาที ไม่มีการบันทึกหรือส่งข้อมูลไปที่ใด นี่คือการประเมินตัวเองแบบส่วนตัว คำตอบจะหายไปเมื่อออกจากหน้านี้</div>
+<form id="sv-form" onsubmit="return false">
+<div id="sv-qs"></div>
+<div class="sticky-sub"><button class="btn on" disabled="" id="sv-submit" type="button">ส่งคำตอบ</button><button class="btn" id="sv-next" type="button"></button><span class="d" id="sv-prog"></span><div id="sv-map" class="sv-map"></div></div>
+</form>
+<div id="sv-result" style="margin-top:18px"></div>
+</div>
+
+<div class="col"><div class="pager"><a href="22-additional-resources.html">◀ 22 แหล่งข้อมูลเพิ่มเติม</a><a href="q2-awareness-survey.html">Q2 แบบสำรวจความตระหนักรู้ภัยไซเบอร์ ▶</a></div></div>
+  </main>
+  <footer class="site">อ้างอิงจาก <a href="https://guides.rubyonrails.org/security.html">Ruby on Rails Security Guide</a> (CC BY-SA 4.0), <a href="https://cheatsheetseries.owasp.org/">OWASP Cheat Sheet Series</a>, <a href="https://owasp.org/Top10/2025/">OWASP Top 10:2025</a> และ <a href="https://infosec.mozilla.org/guidelines/web_security.html">Mozilla Web Security Guidelines</a> เขียนสำหรับทีมพัฒนาของเรา ตัวอย่างโค้ดเพื่อการอธิบาย ข้อความในผลการจำลองบางส่วนยังเป็นภาษาอังกฤษ</footer>
+</div>
+<script src="../assets/site.js?v=92ac7aa3f8"></script>
+<script>
+
+const DATA = {"kind": "dev", "title": "แบบสำรวจความปลอดภัยสำหรับนักพัฒนา", "t": {"likert": ["เสมอ", "บ่อย", "บางครั้ง", "ไม่เคย"], "answered": "ข้อที่ตอบแล้ว", "score": "คะแนน", "knowledge": "ความรู้", "habits": "นิสัยที่ปลอดภัย", "lvl3": "ดีมาก คุณเข้าใจเนื้อหาเป็นอย่างดี", "lvl2": "พื้นฐานดี ยังมีบางจุดที่ต้องเติม", "lvl1": "ควรใส่ใจเพิ่ม ทบทวนข้อด้านล่าง", "copy": "คัดลอกผลของฉัน", "retake": "ทำใหม่", "copied": "คัดลอกแล้ว", "copyFail": "คัดลอกไม่สำเร็จ"}, "secs": {"01": ["01-introduction", "บทนำ"], "02": ["02-sql-injection", "SQL Injection"], "03": ["03-unsafe-query-generation", "การสร้าง query ที่ไม่ปลอดภัย"], "04": ["04-xss-and-other-injection", "XSS และ injection แบบอื่น"], "05": ["05-authentication", "การยืนยันตัวตน"], "06": ["06-sessions", "Session"], "07": ["07-csrf", "Cross-Site Request Forgery"], "08": ["08-user-management", "การจัดการผู้ใช้"], "09": ["09-mass-assignment-and-authorization", "Mass Assignment และ Authorization"], "10": ["10-redirection-and-files", "Redirect และไฟล์"], "11": ["11-http-security-headers", "HTTP Security Header"], "12": ["12-transport-cookies-third-party", "การรับส่งข้อมูล คุกกี้ และสคริปต์บุคคลที่สาม"], "13": ["13-ssrf", "Server-Side Request Forgery"], "14": ["14-deserialization-and-xxe", "Deserialization และ XXE"], "15": ["15-environmental-security", "ความปลอดภัยของสภาพแวดล้อม"], "16": ["16-cryptography", "การเข้ารหัสและการปกป้องข้อมูล"], "17": ["17-dependencies-and-cves", "Dependency และ CVE"], "18": ["18-intranet-and-admin", "ความปลอดภัยของ intranet และ admin"], "19": ["19-misconfiguration-and-errors", "การตั้งค่าผิดพลาดและการจัดการ error"], "20": ["20-insecure-design", "การออกแบบที่ไม่ปลอดภัยและ business logic"], "21": ["21-logging-and-incident-response", "Logging การแจ้งเตือน และการรับมือเหตุการณ์"], "22": ["22-additional-resources", "แหล่งข้อมูลเพิ่มเติม"]}, "questions": [{"sec": "01", "q": "เฟรมเวิร์กของคุณ escape HTML อัตโนมัติและใส่ CSRF token ให้ ข้อใดเป็นจริง?", "opts": ["ตอนนี้แอปปลอดภัยจาก OWASP Top 10 แล้ว", "คุณต้องกังวลแค่เรื่องฐานข้อมูล", "คุณได้รับการป้องกันจากความผิดพลาดทั่วไปบางอย่าง แต่การควบคุมสิทธิ์ การตั้งค่า dependency และโค้ดที่เขียนเองยังเป็นความรับผิดชอบของคุณ"], "a": 2, "why": "ค่าเริ่มต้นกำจัดบั๊กที่คาดเดาได้ แต่ไม่มีทางรู้ว่าหน้าไหนควรเป็นส่วนตัว เซิร์ฟเวอร์ของคุณทำไฟล์รั่วหรือไม่ หรือไลบรารีที่ติดตั้งเมื่อปีก่อนมี exploit เผยแพร่แล้วหรือยัง", "id": "d00"}, {"sec": "01", "q": "ทำไมงานด้านความปลอดภัยต้องดำเนินต่อหลังเปิดตัว?", "opts": ["search engine จัดอันดับเว็บที่ปลอดภัยสูงกว่า", "มีการค้นพบช่องโหว่ใหม่ในโค้ดและไลบรารีที่คุณส่งมอบไปแล้ว", "ใบรับรอง TLS ทำให้โค้ดช้าลงเรื่อยๆ"], "a": 1, "why": "dependency ที่ปลอดภัยในวันเปิดตัวอาจมี exploit สาธารณะในเดือนถัดไป การติดตาม advisory และอัปเดตเป็นส่วนหนึ่งของการดูแลแอป (ดูหัวข้อ 17)", "id": "d01"}, {"sec": "02", "q": "บรรทัดใดปลอดภัยจาก SQL injection?", "opts": ["<code>db.query(\"SELECT * FROM t WHERE id = \" + Number(id))<\/code>", "<code>db.query(`SELECT * FROM t WHERE name = '${name.replace(\"'\", \"\")}'`)<\/code>", "<code>db.query(\"SELECT * FROM t WHERE name = $1\", [name])<\/code>"], "a": 2, "why": "(a) บังเอิญปลอดภัยกับตัวเลขแต่พึ่งวินัย (b) ลบแค่เครื่องหมายคำพูดตัวแรก (c) เป็นแบบ parameterize: ค่าไม่มีทางถูก parse เป็น SQL", "id": "d14"}, {"sec": "02", "q": "แอปซ่อน error ของฐานข้อมูลทั้งหมด และแสดงแค่ \"ล็อกอินไม่สำเร็จ\" เสมอ SQL injection ในฟอร์มล็อกอินยังถูกโจมตีได้ไหม", "opts": ["ไม่ได้ ผู้โจมตีมองไม่เห็นข้อมูลอะไรเลย", "ได้ blind injection ถามคำถามใช่/ไม่ใช่ผ่านพฤติกรรมหรือเวลาตอบของหน้าเว็บ และดึงข้อมูลออกมาได้ทั้งตาราง", "ได้เฉพาะเมื่อฐานข้อมูลเป็น MySQL"], "a": 1, "why": "การซ่อน error แค่ทำให้โจมตีช้าลง ไม่ได้ทำให้เป็นไปไม่ได้ เครื่องมืออย่าง sqlmap ทำ blind injection ให้อัตโนมัติ ให้ใช้ query แบบ parameterize", "id": "d48"}, {"sec": "02", "q": "โค้ด Rails บรรทัดไหนโดน SQL injection ได้", "opts": ["<code>User.where(email: params[:email])<\/code>", "<code>User.where(\"email = ?\", params[:email])<\/code>", "<code>User.order(\"#{params[:sort]} ASC\")<\/code>"], "a": 2, "why": "เงื่อนไขแบบ hash และ placeholder <code>?<\/code> ส่งค่าเป็น parameter แต่ชื่อคอลัมน์หรือทิศทางการเรียงเป็น parameter ไม่ได้ ให้แปลงจาก allowlist แทน", "id": "d49"}, {"sec": "03", "q": "query ของคุณ parameterize ครบ: <code>WHERE reset_token = $1<\/code> ยังถูกใช้ในทางที่ผิดได้อย่างไร?", "opts": ["ไม่ได้ parameterized query กัน injection ได้ทั้งหมด", "ORM ที่ได้รับ <code>null<\/code> อาจเขียนใหม่เป็น <code>IS NULL<\/code> ซึ่งตรงกับผู้ใช้ทุกคนที่ไม่ได้ขอรีเซ็ต", "ได้แค่ผ่านการโจมตีแบบ UNION"], "a": 1, "why": "parameterization หยุด SQL injection เชิงไวยากรณ์ แต่ query builder ยังเลือก operator ตามชนิดของค่า ให้ตรวจชนิดก่อน", "id": "d20"}, {"sec": "03", "q": "input ใดทำให้การค้นหา MongoDB <code>{ token: req.body.token }<\/code> ตรงกับผู้ใช้ทุกคนที่มี token?", "opts": ["<code>\"' OR 1=1\"<\/code>", "<code>\"*\"<\/code>", "<code>{\"$ne\": null}<\/code>"], "a": 2, "why": "MongoDB ตีความ object ที่มีคีย์ <code>$<\/code> เป็น operator ให้แปลงเป็นสตริงหรือ sanitize คีย์", "id": "d21"}, {"sec": "04", "q": "component ของ React render <code>&lt;a href={user.website}&gt;<\/code> และ JSX escape ให้ ปลอดภัยจาก XSS ไหม?", "opts": ["ไม่ การ escape ไม่หยุด URL แบบ <code>javascript:<\/code> ต้องตรวจ scheme", "ปลอดภัย การ escape ของ JSX ครอบคลุมทุก attribute", "ปลอดภัยเฉพาะเมื่อเว็บใช้ HTTPS"], "a": 0, "why": "การ escape กันไม่ให้ค่าหลุดออกจาก attribute แต่ <code>javascript:alert(1)<\/code> ไม่จำเป็นต้องหลุดออก อนุญาตเฉพาะ URL แบบ http(s)", "id": "d15"}, {"sec": "04", "q": "อะไรทำให้ <code>execFile(\"convert\", [name, …])<\/code> ปลอดภัยกว่า <code>exec(\"convert \" + name)<\/code>?", "opts": ["มัน escape ชื่อไฟล์ด้วย backslash", "ไม่มี shell เข้ามาเกี่ยว <code>;<\/code>, <code>|<\/code> และ <code>$( )<\/code> จึงไม่มีความหมาย", "มันรันด้วยผู้ใช้ที่มีสิทธิ์ต่ำกว่า"], "a": 1, "why": "อาร์กิวเมนต์ถูกส่งตรงไปยังโปรแกรมเป็น array ไม่มี shell มาตีความ metacharacter", "id": "d16"}, {"sec": "04", "q": "ค่าใดยังอันตรายแม้ ERB escape แล้ว?", "opts": ["ชื่อที่แสดงใน &lt;p&gt;", "เว็บไซต์ของผู้ใช้ที่ render เป็น <code>link_to \"site\", user.website<\/code>", "ความคิดเห็นที่แสดงใน attribute title ที่มีเครื่องหมายคำพูด"], "a": 1, "why": "การ escape ไม่หยุด URL แบบ <code>javascript:<\/code> ตรวจว่าลิงก์ขึ้นต้นด้วย http(s)", "id": "d17"}, {"sec": "04", "q": "โค้ดหน้าเว็บทำ <code>el.innerHTML = location.hash.slice(1)<\/code> ทำไมการ escape ฝั่งเซิร์ฟเวอร์หรือ WAF จึงจับการโจมตีไม่ได้?", "opts": ["fragment หลัง # ไม่เคยถูกส่งไปยังเซิร์ฟเวอร์", "WAF ไม่ตรวจ request แบบ GET", "Rails escape hash ให้อัตโนมัติ"], "a": 0, "why": "นี่คือ DOM-based XSS: source (location.hash) → sink อันตราย (innerHTML) ทั้งหมดเกิดในเบราว์เซอร์ ใช้ textContent หรือ Trusted Types", "id": "d18"}, {"sec": "04", "q": "ข้อใดเป็น anti-pattern ของการป้องกัน XSS ตามที่ OWASP ระบุ?", "opts": ["escape ตอน output ตามบริบทนั้นๆ", "ตัวกรอง before_save ทั้งระบบที่ 'ทำความสะอาด' input ทั้งหมด", "sanitize rich text ด้วย allowlist"], "a": 1, "why": "ตัวกรอง input ทั้งระบบ encode ผิดบริบท encode ซ้ำซ้อน และพลาด DOM XSS กับข้อมูลจากระบบอื่น", "id": "d19"}, {"sec": "05", "q": "ทำไม SHA-256 จึงเป็นตัวเลือกที่ไม่ดีสำหรับเก็บรหัสผ่าน?", "opts": ["มันถูกเจาะแล้วและเกิด collision", "มันเร็วเกินไป ผู้โจมตีจึงลองเดาได้หลายพันล้านครั้งต่อวินาที", "ผลลัพธ์ยาวเกินกว่าจะเก็บ"], "a": 1, "why": "SHA-256 ใช้เป็น hash ทั่วไปได้ดี แต่สำหรับรหัสผ่านต้องการความช้าโดยตั้งใจและ salt ต่อผู้ใช้ ซึ่ง bcrypt, scrypt และ Argon2 มีให้", "id": "d02"}, {"sec": "05", "q": "ผู้ใช้ตั้ง passphrase ยาว 100 ตัวอักษร และแอปใช้ bcrypt จะเกิดอะไรขึ้น?", "opts": ["นับแค่ 72 ไบต์แรก จึงควรปฏิเสธ input ที่ยาวเกิน หรือ pre-hash ด้วยวิธีที่บันทึกไว้", "bcrypt throw error ตอนล็อกอิน", "hash จะยาวขึ้น"], "a": 0, "why": "bcrypt ตัด input ที่ 72 ไบต์ Rails จึงปฏิเสธรหัสผ่านที่ยาวกว่านั้น ส่วน Argon2 ไม่มีขีดจำกัดนี้", "id": "d03"}, {"sec": "05", "q": "ทำไม passkey (WebAuthn) ต้านทาน phishing ได้ดีกว่ารหัสจากแอป authenticator?", "opts": ["ยาวกว่า 6 หลัก", "เบราว์เซอร์ลงนาม challenge สำหรับ origin ของเว็บจริง โดเมนปลอมจึงได้ลายเซ็นที่ใช้ไม่ได้", "หมดอายุเร็วกว่า"], "a": 1, "why": "รหัส TOTP ที่พิมพ์ลงเว็บปลอมถูกส่งต่อแบบเรียลไทม์ได้ ลายเซ็นของ passkey ผูกกับ origin เว็บจริงจึงปฏิเสธ", "id": "d04"}, {"sec": "05", "q": "ในแอป Rails 8 ของเรา <code>has_secure_password<\/code> ไม่ได้ทำอะไรให้?", "opts": ["hash รหัสผ่านด้วย bcrypt", "ปฏิเสธรหัสผ่านที่ยาวเกิน 72 ไบต์", "บังคับความยาวขั้นต่ำของรหัสผ่าน"], "a": 2, "why": "เพิ่ม <code>validates :password, length: { minimum: 12 }<\/code> เอง", "id": "d05"}, {"sec": "06", "q": "ขั้นตอนเดียวใดที่หยุด session fixation ได้?", "opts": ["เข้ารหัสคุกกี้ session", "เพิ่ม CAPTCHA ในหน้าล็อกอิน", "ออก session ID ใหม่ตอนล็อกอิน"], "a": 2, "why": "fixation ได้ผลเพราะ ID ก่อนล็อกอินยังอยู่หลังล็อกอิน สร้างใหม่แล้วสำเนาของผู้โจมตีก็ไร้ค่า", "id": "d06"}, {"sec": "06", "q": "คุกกี้ session ลงนามและเข้ารหัสแล้ว ปลอดภัยไหมที่จะเก็บยอดเงินในบัญชีผู้ใช้ไว้ในนั้น?", "opts": ["ปลอดภัย การเข้ารหัสทำให้ผู้ใช้แก้ไม่ได้", "ไม่ปลอดภัย ผู้ใช้ replay คุกกี้เก่าที่ยังใช้ได้เพื่อคืนยอดเก่าได้", "ปลอดภัย ตราบที่ไม่เกิน 4 KB"], "a": 1, "why": "เซิร์ฟเวอร์ลงนามคุกกี้เก่าไว้ด้วย มันจึงยังผ่านการตรวจ ให้เก็บยอดเงินในฐานข้อมูล", "id": "d07"}, {"sec": "07", "q": "แอปมี CSRF token ในทุกฟอร์มและคุกกี้ SameSite=Lax การกระทำ \"ลบบัญชี\" เรียกได้ที่ <code>GET /account/delete<\/code> ได้รับการป้องกันไหม?", "opts": ["ไม่ การตรวจ token ข้าม GET และ Lax ยังส่งคุกกี้กับลิงก์ GET ระดับบนสุด", "ได้ SameSite=Lax บล็อก request ข้ามเว็บทั้งหมด", "ได้ token ครอบคลุมทุก request"], "a": 0, "why": "ลิงก์จากเว็บไหนก็ได้ไปยัง /account/delete จะใช้ได้ ให้ย้ายไปใช้ POST หรือ DELETE", "id": "d08"}, {"sec": "07", "q": "ทำไม evil.test จึงอ่าน CSRF token จากฟอร์มของ bank.test ไม่ได้?", "opts": ["token ถูกเข้ารหัสด้วยรหัสผ่านของผู้ใช้", "token ส่งผ่าน HTTPS เท่านั้น", "same-origin policy ห้ามเว็บหนึ่งอ่าน response ของอีกเว็บ"], "a": 2, "why": "evil.test ทำให้เกิด request ไปยัง bank.test ได้ แต่มองไม่เห็นสิ่งที่ตอบกลับ จึงไม่รู้ token แต่ XSS บน bank.test เปลี่ยนเรื่องนี้", "id": "d09"}, {"sec": "08", "q": "botnet ลองรหัสผ่านของบัญชีเดียวจาก 50,000 IP ไอพีละครั้ง การป้องกันใดชะลอมันได้จริง?", "opts": ["rate limit ต่อ IP", "จำกัดต่อบัญชีพร้อม MFA", "ฟิลด์ honeypot"], "a": 1, "why": "แต่ละ IP อยู่ใต้ขีดจำกัดต่อ IP เสมอ การนับความล้มเหลวต่อบัญชีจับรูปแบบนี้ได้ และ MFA ทำให้รหัสผ่านที่ถูกอย่างเดียวไม่พอ", "id": "d12"}, {"sec": "08", "q": "ใน Ruby <code>\"admin\\n&lt;script&gt;\".match?(/^[a-z]+$/)<\/code> คืนค่า true ไหม?", "opts": ["ใช่: <code>^<\/code> และ <code>$<\/code> ตรงกับทุกการขึ้นบรรทัดใหม่", "ไม่: <code>\\n<\/code> ไม่อยู่ใน <code>[a-z]<\/code>", "เฉพาะเมื่อใช้ flag <code>/m<\/code>"], "a": 0, "why": "ใน Ruby <code>^<\/code> และ <code>$<\/code> เป็น anchor ระดับบรรทัด บรรทัดแรกจึงผ่าน ใช้ <code>\\A<\/code> และ <code>\\z<\/code> เพื่อตรวจทั้ง string ส่วน format validator ของ Rails ถึงกับ raise ถ้าใช้ <code>^<\/code>/<code>$<\/code>", "id": "d13"}, {"sec": "09", "q": "Rails raise <code>ForbiddenAttributesError<\/code> เมื่อส่ง params ดิบให้ <code>update<\/code> อะไรที่นำ mass assignment กลับมา?", "opts": ["<code>params.expect(user: [:name])<\/code>", "<code>params.require(:user).permit!<\/code>", "<code>params.permit(:name, :email)<\/code>"], "a": 1, "why": "<code>permit!<\/code> อนุญาตทุกคีย์ รวมถึง role, admin หรือ account_id", "id": "d30"}, {"sec": "09", "q": "ผู้ใช้ทั่วไปเรียก <code>POST /admin/refunds<\/code> ตรงๆ แล้วใช้ได้ เพราะซ่อนแค่ปุ่ม สิ่งนี้เรียกว่าอะไร?", "opts": ["Broken function-level authorization (BFLA)", "Cross-site request forgery", "Session fixation"], "a": 0, "why": "การซ่อน UI ไม่ใช่ authorization ให้ตรวจสิทธิ์ของผู้ใช้สำหรับฟังก์ชันนั้นที่เซิร์ฟเวอร์", "id": "d31"}, {"sec": "10", "q": "ตัวกรองลบ <code>../<\/code> ทุกตัวออกจากชื่อไฟล์ในรอบเดียว <code>....//secret<\/code> จะกลายเป็นอะไร?", "opts": ["<code>secret<\/code>", "<code>../secret<\/code>", "<code>....secret<\/code>"], "a": 1, "why": "การลบ <code>../<\/code> ข้างในทำให้ตัวอักษรข้างนอกต่อกันเป็น <code>../<\/code> ตัวใหม่ นี่คือเหตุที่ allowlist ชนะ blocklist", "id": "d10"}, {"sec": "10", "q": "การตรวจ redirect แบบใดปลอดภัย?", "opts": ["<code>next.startsWith(\"/\")<\/code>", "<code>next.includes(\"bank.test\")<\/code>", "parse ด้วย URL parser เทียบกับ origin ของคุณ แล้วบังคับให้ origin ที่ได้ตรงกับของคุณ"], "a": 2, "why": "<code>//evil.test<\/code> ขึ้นต้นด้วย \"/\" และเป็น URL แบบ protocol-relative ไปยัง host อื่น <code>bank.test.evil.test<\/code> มี \"bank.test\" อยู่ข้างใน มีแค่การ parse จริงบวกการเทียบ origin แบบตรงตัวที่ใช้ได้", "id": "d11"}, {"sec": "11", "q": "CSP มี <code>script-src 'self' 'unsafe-inline'<\/code> ผู้โจมตีแทรก <code>&lt;script&gt;steal()&lt;/script&gt;<\/code> จะเกิดอะไรขึ้น?", "opts": ["มันรัน เพราะ 'unsafe-inline' อนุญาต inline script ทุกตัว", "ถูกบล็อกเพราะไม่ได้มาจาก 'self'", "รันเฉพาะในโหมด Report-Only"], "a": 0, "why": "'unsafe-inline' ยกเลิกการป้องกัน XSS ของ CSP เกือบทั้งหมด ให้ใช้ nonce หรือ hash", "id": "d22"}, {"sec": "11", "q": "การตั้งค่า CORS แบบใดอันตราย?", "opts": ["<code>Allow-Origin: *<\/code> โดยไม่มี credentials บน API สาธารณะแบบอ่านอย่างเดียว", "allowlist แบบตรงตัวพร้อม credentials", "สะท้อน <code>Origin<\/code> ที่เข้ามากลับไปพร้อม <code>Allow-Credentials: true<\/code>"], "a": 2, "why": "การสะท้อนบวก credentials ทำให้เว็บไหนก็อ่านข้อมูลผู้ใช้ของคุณแบบยืนยันตัวตนแล้วได้ เบราว์เซอร์จึงปฏิเสธ <code>*<\/code> ที่มาพร้อม credentials", "id": "d23"}, {"sec": "12", "q": "เบราว์เซอร์ปฏิเสธคุกกี้ตัวใด?", "opts": ["<code>__Host-sid=…; Secure; Path=/<\/code>", "<code>__Host-sid=…; Secure; Path=/; Domain=example.com<\/code>", "<code>sid=…; Secure; HttpOnly; SameSite=Lax<\/code>"], "a": 1, "why": "prefix __Host- ต้องมี Secure, Path=/ และไม่มี attribute Domain", "id": "d36"}, {"sec": "12", "q": "Subresource Integrity (SRI) ป้องกันอะไร?", "opts": ["CDN ส่งสคริปต์ที่คุณ include ในเวอร์ชันที่ถูกแก้ไข", "SQL injection", "การขโมย session ผ่าน Wi-Fi"], "a": 0, "why": "เบราว์เซอร์คำนวณ hash ของไฟล์ที่ดาวน์โหลด และไม่ยอมรันถ้าไม่ตรงกับ attribute integrity", "id": "d37"}, {"sec": "13", "q": "ฟีเจอร์ของคุณดึงรูปโปรไฟล์จาก URL ที่ผู้ใช้ส่งมา การป้องกัน SSRF ที่สำคัญที่สุดคืออะไร?", "opts": ["บล็อก URL ที่มีคำว่า 'localhost'", "resolve hostname บล็อกช่วง private/link-local ตรึง IP และไม่ตาม redirect", "อนุญาตเฉพาะ URL ที่ลงท้ายด้วย .png"], "a": 1, "why": "การตรวจสตริงถูกหลบได้ด้วย IP แบบเลขฐานสิบ ชื่อ DNS ที่ resolve เป็นที่อยู่ภายใน หรือ redirect ให้ตรวจ IP ที่ resolve แล้ว (หรือใช้ ssrf_filter)", "id": "d32"}, {"sec": "13", "q": "ทำไม <code>http://169.254.169.254/<\/code> จึงเป็นเป้าหมาย SSRF ยอดนิยมบนคลาวด์?", "opts": ["เป็น Rails console ค่าเริ่มต้น", "บริการ instance metadata อาจคืนข้อมูลรับรองคลาวด์ของเซิร์ฟเวอร์", "เป็นหน้า admin ของ load balancer"], "a": 1, "why": "บังคับ IMDSv2 และบล็อกที่อยู่ link-local สำหรับการดึงขาออก", "id": "d33"}, {"sec": "14", "q": "บรรทัดใดอันตรายเมื่อใช้กับข้อมูลจาก request?", "opts": ["<code>JSON.parse(body)<\/code>", "<code>YAML.load(body)<\/code> บน Ruby 3.1+", "<code>Marshal.load(Base64.decode64(params[:state]))<\/code>"], "a": 2, "why": "Marshal (เช่นเดียวกับ YAML.unsafe_load หรือ pickle) สร้าง class อะไรก็ได้และนำไปสู่การรันโค้ด", "id": "d34"}, {"sec": "14", "q": "ด้วยตัวเลือกเริ่มต้น Nokogiri มีช่องโหว่ XXE ไหม?", "opts": ["มี เสมอ", "ไม่มี เว้นแต่มีคนเปิดตัวเลือกอย่าง noent หรือ dtdload", "เฉพาะตอน parse HTML"], "a": 1, "why": "Nokogiri ไม่แทนค่า external entity และไม่ใช้เครือข่ายโดยค่าเริ่มต้น", "id": "d35"}, {"sec": "15", "q": "<code>credentials.yml.enc<\/code> ของ Rails ถูก commit ลง repo อะไรที่ห้าม commit?", "opts": ["ไฟล์ <code>.gitignore<\/code>", "<code>config/master.key<\/code> คีย์ที่ใช้ถอดรหัส", "<code>Gemfile.lock<\/code>"], "a": 1, "why": "ไฟล์ที่เข้ารหัสไร้ประโยชน์ถ้าไม่มีคีย์ commit ทั้งคู่ก็เท่ากับ commit ข้อความเปล่า", "id": "d26"}, {"sec": "15", "q": "คุณ push API key ขึ้น repo สาธารณะ แล้ว force-push ลบออกหนึ่งนาทีต่อมา ต้องทำอะไรต่อ?", "opts": ["เพิกถอนและหมุนเวียนคีย์ทันที แล้วเพิ่มตัวสแกน secret", "ไม่ต้องทำอะไร commit หายไปแล้ว", "เปลี่ยน repo เป็นส่วนตัว"], "a": 0, "why": "ตัวดูดข้อมูลอัตโนมัติเฝ้าดูการ push สาธารณะแบบเรียลไทม์ ให้ถือว่าคีย์ถูกเจาะแล้ว", "id": "d27"}, {"sec": "16", "q": "ข้อใดจริงเกี่ยวกับ Base64?", "opts": ["เป็นการเข้ารหัสแบบเบา", "ใครก็ถอดได้ ไม่ได้ให้ความลับใดๆ", "เป็น hash ทางเดียว"], "a": 1, "why": "encoding มีไว้สำหรับการรับส่ง ไม่ใช่การรักษาความลับ ใช้การเข้ารหัส (เช่น Active Record Encryption) กับฟิลด์ที่ละเอียดอ่อน", "id": "d38"}, {"sec": "16", "q": "ควรเปรียบเทียบลายเซ็น webhook ที่ส่งมากับค่าที่คาดหวังอย่างไร?", "opts": ["<code>sig == expected<\/code>", "<code>ActiveSupport::SecurityUtils.secure_compare(sig, expected)<\/code>", "<code>sig.include?(expected)<\/code>"], "a": 1, "why": "== หยุดที่จุดแรกที่ไม่ตรงและรั่วข้อมูลเวลา secure_compare ใช้เวลาเท่ากันเสมอ", "id": "d39"}, {"sec": "16", "q": "ข้อใดสร้าง token รีเซ็ตรหัสผ่านที่ปลอดภัย?", "opts": ["<code>rand(1_000_000).to_s<\/code>", "<code>SecureRandom.urlsafe_base64(32)<\/code>", "<code>Digest::MD5.hexdigest(user.email + Time.now.to_s)<\/code>"], "a": 1, "why": "ใช้ RNG ทางคริปโตและอย่างน้อย 128 บิต ตัวเลือกอื่นเดาได้", "id": "d40"}, {"sec": "17", "q": "มี CVE ประกาศสำหรับไลบรารีที่เป็น dependency ของ dependency และ manifest ของคุณไม่ได้ระบุมัน คุณได้รับผลกระทบไหม?", "opts": ["ไม่ สำคัญแค่ dependency โดยตรง", "เฉพาะถ้าคุณ import เอง", "อาจจะ มันถูกติดตั้งและรันในแอปของคุณ ตรวจว่าเส้นทางโค้ดที่มีช่องโหว่ถูกเรียกถึงหรือไม่ และอัปเดต"], "a": 2, "why": "dependency ทางอ้อมรันด้วยสิทธิ์เท่ากัน เครื่องมือ audit จึงสแกนทั้ง lockfile", "id": "d28"}, {"sec": "17", "q": "ทำไมควรอัปเดตแบบระมัดระวังทีละแพ็กเกจเมื่อแพตช์?", "opts": ["ส่งการแก้ด้านความปลอดภัยพร้อมการเปลี่ยนแปลงที่ไม่เกี่ยวข้องน้อยที่สุด ทดสอบง่ายและ deploy ได้เร็วอย่างปลอดภัย", "เป็นวิธีเดียวที่อัปเดต dependency ทางอ้อมได้", "การอัปเดตทั้งหมดไม่ติดตั้งแพตช์ความปลอดภัย"], "a": 0, "why": "คุณต้องการแพตช์ขึ้น production วันนี้ การอัปเดตทั้งหมดอาจทำให้กลายเป็นการแก้ของพังที่ไม่เกี่ยวข้องทั้งสัปดาห์", "id": "d29"}, {"sec": "18", "q": "ทำไมการให้บริการหน้า admin ที่ <code>admin.example.com<\/code> แทน <code>example.com/admin<\/code> จึงช่วยได้?", "opts": ["search engine หา subdomain ไม่เจอ", "origin ต่างกันไม่แชร์คุกกี้หรือการเข้าถึง DOM XSS บนเว็บหลักจึงเอื้อมไม่ถึง session ของ admin", "subdomain บังคับ HTTPS อัตโนมัติ"], "a": 1, "why": "same-origin policy แยกทั้งสองออกจากกัน (ระวังอย่าตั้งขอบเขตคุกกี้เป็น <code>.example.com<\/code> ซึ่งจะทำให้แชร์กันอีก)", "id": "d24"}, {"sec": "18", "q": "หัวเรื่องของ ticket ซัพพอร์ตถูก escape บนเว็บสาธารณะ เครื่องมือ admin ปลอดภัยโดยอัตโนมัติไหม?", "opts": ["ปลอดภัย การ escape เกิดตอนบันทึกข้อมูล", "ปลอดภัย admin เป็นผู้ใช้ที่เชื่อถือได้", "ไม่ การ escape เกิดตอน output ทุกที่ที่แสดงข้อมูลต้อง escape เอง"], "a": 2, "why": "escape ตอน output ในทุกเทมเพลตของทุกแอป เครื่องมือภายในมักใช้โค้ดแสดงผลคนละชุด", "id": "d25"}, {"sec": "19", "q": "บริการตรวจสิทธิ์ timeout ขณะตรวจว่าผู้ใช้ลบเรคคอร์ดได้หรือไม่ โค้ดควรทำอย่างไร?", "opts": ["อนุญาต เพราะผู้ใช้น่าจะไม่มีปัญหา", "ปฏิเสธ (fail closed) และรายงาน error", "ลองใหม่ไปเรื่อยๆ"], "a": 1, "why": "การตรวจความปลอดภัยที่ error ต้องปฏิเสธ rescue กว้างๆ ที่คืน true เปลี่ยนการล่มของระบบให้เป็นช่องโหว่", "id": "d41"}, {"sec": "19", "q": "ข้อใดเป็นการตั้งค่าผิดพลาด แม้ค่าเริ่มต้น production ของ Rails จะดีแล้ว?", "opts": ["<code>consider_all_requests_local = false<\/code>", "<code>mount Sidekiq::Web => \"/sidekiq\"<\/code> โดยไม่มี constraint การยืนยันตัวตน", "แสดง <code>public/500.html<\/code> เมื่อเกิด error"], "a": 1, "why": "แดชบอร์ดของคิวงาน feature flag และฐานข้อมูลต้องอยู่หลังการยืนยันตัวตนของ admin", "id": "d42"}, {"sec": "20", "q": "request 'แลกคูปอง' เหมือนกันสองอันมาถึงในเวลาเดียวกัน วิธีใดป้องกันการแลกซ้ำ?", "opts": ["ตรวจ <code>coupon.used?<\/code> แล้วค่อยอัปเดต", "<code>update_all<\/code> แบบ atomic พร้อม <code>WHERE used = false<\/code>, การล็อกแถว หรือ unique index", "validation ในโมเดล <code>validates :used, inclusion: [false]<\/code>"], "a": 1, "why": "ตรวจแล้วค่อยลงมือเกิด race ได้ ให้การอ้างสิทธิ์เป็น atomic ในฐานข้อมูล", "id": "d43"}, {"sec": "20", "q": "request ชำระเงินมี <code>price: 0.01<\/code> สำหรับโน้ตบุ๊ก การออกแบบที่ถูกคืออะไร?", "opts": ["ยอมรับ หน้าเว็บคำนวณมาแล้ว", "ไม่สนใจราคาจาก client และค้นราคาที่ฝั่งเซิร์ฟเวอร์", "ปฏิเสธราคาต่ำกว่า $1"], "a": 1, "why": "อย่าให้ client เป็นผู้ถือกฎทางธุรกิจ เช่น ราคา ส่วนลด หรือขีดจำกัดจำนวน", "id": "d44"}, {"sec": "21", "q": "อะไรที่ไม่ควรปรากฏใน log เลย?", "opts": ["user id ของการล็อกอินที่ล้มเหลว", "รหัสผ่านที่พิมพ์ในการล็อกอินที่ล้มเหลว", "request id"], "a": 1, "why": "รหัสผ่านที่ผิดมักเป็นรหัสจริงที่พิมพ์ผิด filter_parameters ของ Rails ปิดบังให้", "id": "d45"}, {"sec": "21", "q": "ทำไมควรใช้ log แบบมีโครงสร้าง (JSON) กับ security event?", "opts": ["ขนาดเล็กกว่า", "input ที่มีการขึ้นบรรทัดใหม่ปลอมบรรทัด log เพิ่มไม่ได้ และค้นหาเพื่อตั้งการแจ้งเตือนได้", "Rails บังคับ"], "a": 1, "why": "การต่อสตริงดิบทำให้ผู้โจมตีแทรกรายการปลอมได้ ฟิลด์แบบมีโครงสร้างเก็บ input ไว้ในที่ของมัน", "id": "d46"}, {"sec": "21", "q": "ระหว่างเกิดเหตุ หลังยืนยันว่าเกิดอะไรขึ้นแล้ว ต้องทำอะไรก่อน?", "opts": ["เขียน post-mortem", "ควบคุม: บล็อกผู้โจมตี ปิดบัญชี เพิกถอน session", "รอจนกว่าการแก้จะพร้อม"], "a": 1, "why": "หยุดความเสียหายที่กำลังเกิดก่อน ยกระดับเรื่องเร็ว แล้วค่อยกำจัดและกู้คืน", "id": "d47"}]};
+
+const KIND = DATA.kind, T = DATA.t;
+const U = document.documentElement.lang === "th"
+  ? { next: "ไปข้อที่ยังไม่ตอบ ↓", leave: "คำตอบยังไม่ถูกส่ง ถ้าออกจากหน้านี้คำตอบจะหายไป", jump: "ข้อ" }
+  : { next: "next unanswered ↓", leave: "Your answers aren't submitted yet and will be lost if you leave.", jump: "question" };
+const secName = s => (DATA.cats && DATA.cats[s]) || s;
+let submitted = false;
+const ids = () => DATA.questions.map(q => q.id).concat((DATA.habits || []).map(h => h.id));
+const label = id => { const q = DATA.questions.findIndex(x => x.id === id); return q >= 0 ? "Q" + (q + 1) : "H" + ((DATA.habits || []).findIndex(x => x.id === id) + 1); };
+function render() {
+  const out = [];
+  let lastSec = null;
+  DATA.questions.forEach((q, i) => {
+    if (q.sec !== lastSec) { lastSec = q.sec; const s = DATA.secs[q.sec]; out.push(`<h3 id="sec-${q.sec}">${s ? `<a href="${s[0]}.html">${q.sec} · ${esc(s[1])}</a>` : esc(secName(q.sec))}</h3>`); }
+    out.push(`<div class="qcard" id="c-${q.id}"><p class="qh"><span class="sec">Q${i + 1}</span>${q.q}</p>` + q.opts.map((o, j) => `<label class="opt"><input type="radio" name="${q.id}" value="${j}"> <span>${o}</span></label>`).join("") + `<div class="why">${q.why}</div></div>`);
+  });
+  $("#sv-qs").innerHTML = out.join("");
+  if (DATA.habits) {
+    $("#sv-habits").innerHTML = DATA.habits.map((h, i) => `<div class="qcard" id="c-${h.id}"><p class="qh"><span class="sec">H${i + 1}</span>${esc(h.t)}</p><div class="likert">${T.likert.map((l, j) => `<label><input type="radio" name="${h.id}" value="${3 - j}">${l}</label>`).join("")}</div><div class="why">${esc(DATA.tips[i])}</div></div>`).join("");
+  }
+  $$("#sv-form input[type=radio]").forEach(r => r.addEventListener("change", progress));
+  $("#sv-next").textContent = U.next;
+  progress();
+}
+function answers() { const a = {}; ids().forEach(id => { const r = $(`input[name="${id}"]:checked`); if (r) a[id] = +r.value; }); return a; }
+function progress() {
+  const a = answers(), all = ids(), n = Object.keys(a).length;
+  const cur = submitted ? null : all.find(id => !(id in a));
+  $("#sv-prog").textContent = `${n}/${all.length} ${T.answered}`;
+  $("#sv-submit").disabled = submitted || n < all.length;
+  $("#sv-next").hidden = !cur;
+  if (!submitted) {
+    all.forEach(id => { const c = $("#c-" + id); c.classList.toggle("done", id in a); c.classList.toggle("cur", id === cur); });
+    $("#sv-map").innerHTML = all.map(id => `<a href="#c-${id}" class="${id in a ? "done" : id === cur ? "cur" : ""}" title="${U.jump} ${label(id)}">${label(id)}</a>`).join("");
+  }
+}
+function jump(id) {
+  const c = $("#c-" + id); if (!c) return;
+  c.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "center" });
+  const i = $("input:not(:disabled)", c); if (i) i.focus({ preventScroll: true });
+}
+$("#sv-next").addEventListener("click", () => { const a = answers(); jump(ids().find(id => !(id in a))); });
+$("#sv-map").addEventListener("click", e => { const l = e.target.closest("a"); if (!l) return; e.preventDefault(); jump(l.getAttribute("href").slice(3)); });
+function grade(a) {
+  const by = {}; let c = 0;
+  DATA.questions.forEach(q => { by[q.sec] = by[q.sec] || [0, 0]; by[q.sec][1]++; if (a[q.id] === q.a) { by[q.sec][0]++; c++; } });
+  let habit = null;
+  if (DATA.habits) { let s = 0; DATA.habits.forEach(h => { const v = a[h.id] ?? 0; s += h.rev ? 3 - v : v; }); habit = Math.round(s / (DATA.habits.length * 3) * 100); }
+  return { correct: c, total: DATA.questions.length, by, habit };
+}
+function showGrades(a) {
+  const marks = {};
+  DATA.questions.forEach(q => {
+    const card = $("#c-" + q.id); card.classList.remove("cur", "done"); card.classList.add("graded");
+    $$("label.opt", card).forEach((l, j) => { if (j === q.a) l.classList.add("right"); else if (a[q.id] === j) l.classList.add("wrong"); });
+    marks[q.id] = a[q.id] === q.a ? "right" : "wrong";
+  });
+  (DATA.habits || []).forEach(h => {
+    const v = a[h.id] ?? 0, good = h.rev ? 3 - v : v, card = $("#c-" + h.id);
+    card.classList.remove("cur", "done");
+    if (good < 2) card.classList.add("graded");
+    marks[h.id] = good < 2 ? "wrong" : "right";
+  });
+  $$("#sv-form input").forEach(i => i.disabled = true);
+  $("#sv-map").innerHTML = ids().map(id => `<a href="#c-${id}" class="${marks[id]}" title="${U.jump} ${label(id)}">${label(id)}</a>`).join("");
+}
+function summaryHTML(g) {
+  const pct = Math.round(g.correct / g.total * 100);
+  let h = `<div class="tldr" style="margin-top:0"><b style="font-size:20px">${KIND === "dev" ? T.score : T.knowledge}: ${g.correct}/${g.total} (${pct}%)</b>`;
+  if (g.habit !== null) h += `<br><b style="font-size:20px">${T.habits}: ${g.habit}%</b>`;
+  const lvl = g.habit === null ? pct : Math.round((pct + g.habit) / 2);
+  h += `<br>${lvl >= 85 ? `<span class="g">${T.lvl3}</span>` : lvl >= 65 ? `<span class="y">${T.lvl2}</span>` : `<span class="r">${T.lvl1}</span>`}</div>`;
+  h += Object.entries(g.by).map(([s, [c, t]]) => { const nm = DATA.secs[s] ? DATA.secs[s][1] : secName(s); return `<div class="bar"><span>${DATA.secs[s] ? `<a href="${DATA.secs[s][0]}.html">${s} ${esc(nm)}</a>` : esc(nm)}</span><div class="track"><span style="width:${c / t * 100}%;background:${c === t ? "var(--fg)" : c / t >= .5 ? "var(--yellow)" : "var(--red)"}"></span></div><span>${c}/${t}</span></div>`; }).join("");
+  return h;
+}
+function resultText(g) {
+  return `${DATA.title}\n${KIND === "dev" ? T.score : T.knowledge}: ${g.correct}/${g.total}` + (g.habit !== null ? `\n${T.habits}: ${g.habit}%` : "") + "\n" + Object.entries(g.by).map(([s, [c, t]]) => `${DATA.secs[s] ? s + " " + DATA.secs[s][1] : secName(s)}: ${c}/${t}`).join("\n") + `\n${new Date().toISOString().slice(0, 10)}`;
+}
+$("#sv-submit").addEventListener("click", () => {
+  const a = answers(); if (Object.keys(a).length < ids().length) return;
+  submitted = true; progress();
+  const g = grade(a); showGrades(a);
+  $("#sv-result").innerHTML = summaryHTML(g) + `<div class="row" style="margin-top:10px"><button class="btn" id="sv-copy" type="button">${T.copy}</button><button class="btn" id="sv-retake" type="button">${T.retake}</button></div>`;
+  $("#sv-result").scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+  $("#sv-copy").onclick = async () => { try { await navigator.clipboard.writeText(resultText(g)); $("#sv-copy").textContent = T.copied; } catch (e) { $("#sv-copy").textContent = T.copyFail; } };
+  $("#sv-retake").onclick = () => { submitted = false; $("#sv-result").innerHTML = ""; render(); window.scrollTo(0, 0); };
+});
+// links inside the questionnaire open in a new tab, so answers are never lost
+document.querySelector("main").addEventListener("click", e => {
+  const a = e.target.closest("a[href]");
+  if (!a || a.closest(".pager") || a.closest("#sv-map") || a.getAttribute("href").startsWith("#")) return;
+  a.target = "_blank"; a.rel = "noopener";
+});
+window.addEventListener("beforeunload", e => {
+  if (!submitted && Object.keys(answers()).length) { e.preventDefault(); e.returnValue = U.leave; }
+});
+render();
+</script>
+</body>
+</html>

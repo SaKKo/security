@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en" data-lang="rails">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>05b Multi-Factor Authentication · Web Security</title>
+
+<link rel="icon" href="favicon.ico" sizes="32x32">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="site.webmanifest">
+<meta name="theme-color" content="#000000">
+<link rel="stylesheet" href="assets/site.css?v=8f1e007517">
+<script src="assets/consent.js?v=9320b4a322"></script>
+</head>
+<body data-slug="05b-mfa">
+<div class="win">
+  <div class="titlebar"><span class="dots"><i></i><i></i><i></i></span><span class="t">guest@websec: ~/websec/05b-mfa — zsh — 100×40</span>
+    <a class="by" href="about.html" title="About the author"><span class="w0">by </span>SaKKo</a>
+    <span class="lsw" role="group" aria-label="Language"><a href="05b-mfa.html" aria-current="true" data-setlang="en">EN</a><a href="th/05b-mfa.html" data-setlang="th">TH</a></span>
+    <span class="langsw" role="group" aria-label="Code examples language"><span class="d">code:</span><button type="button" data-l="rails">rails</button><button type="button" data-l="node">node</button></span></div>
+  <nav class="top" aria-label="Sections"><a href="index.html" title="Web Security Field Guide">~/</a>
+<a class="trk on" href="index.html#security">#1 security</a>
+<a class="trk" href="r01-rails-api-app.html">#2 rails</a>
+<span class="grp">|</span>
+<a href="01-introduction.html" title="Introduction">01·introduction</a>
+<a href="02-sql-injection.html" title="SQL Injection">02·sql-injection</a>
+<a href="03-unsafe-query-generation.html" title="Unsafe Query Generation">03·query-shape</a>
+<a href="04-xss-and-other-injection.html" title="XSS and Other Injection">04·xss</a>
+<span class="grp">| accounts:</span>
+<a href="05-authentication.html" title="Authentication">05·auth</a>
+<a href="05b-mfa.html" aria-current="page" title="Multi-Factor Authentication">05b·mfa</a>
+<a href="06-sessions.html" title="Sessions">06·sessions</a>
+<a href="07-csrf.html" title="Cross-Site Request Forgery">07·csrf</a>
+<a href="08-user-management.html" title="User Management">08·accounts</a>
+<a href="09-mass-assignment-and-authorization.html" title="Mass Assignment and Authorization">09·authz</a>
+<span class="grp">| browser:</span>
+<a href="10-redirection-and-files.html" title="Redirection and Files">10·files</a>
+<a href="11-http-security-headers.html" title="HTTP Security Headers">11·headers</a>
+<a href="12-transport-cookies-third-party.html" title="Transport, Cookies and Third-Party Scripts">12·cookies-tls</a>
+<span class="grp">| server:</span>
+<a href="13-ssrf.html" title="Server-Side Request Forgery">13·ssrf</a>
+<a href="14-deserialization-and-xxe.html" title="Deserialization and XXE">14·deserialize</a>
+<a href="15-environmental-security.html" title="Environmental Security">15·secrets</a>
+<a href="16-cryptography.html" title="Cryptography and Data Protection">16·crypto</a>
+<a href="17-dependencies-and-cves.html" title="Dependencies and CVEs">17·dependencies</a>
+<span class="grp">| ops:</span>
+<a href="18-intranet-and-admin.html" title="Intranet and Admin Security">18·admin</a>
+<a href="19-misconfiguration-and-errors.html" title="Misconfiguration and Error Handling">19·misconfig</a>
+<a href="20-insecure-design.html" title="Insecure Design and Business Logic">20·design</a>
+<a href="21-logging-and-incident-response.html" title="Logging, Alerting and Incident Response">21·logging</a>
+<a href="22-additional-resources.html" title="Additional Resources">22·resources</a>
+<span class="grp">| questionnaires:</span>
+<a href="q1-developer-survey.html" title="Developer Security Survey">Q1·developer</a>
+<a href="q2-awareness-survey.html" title="Cyber Threat Awareness Survey">Q2·cyber</a></nav>
+  <main>
+<div class="col">
+<p class="prompt">guest@websec ~ % <b>man 05b-mfa</b></p>
+<h1>05b · Multi-Factor Authentication</h1>
+<p class="lede">A second factor means a stolen password is no longer enough. It only works if the factor is really separate from the password, can’t be guessed, and every login path checks it.</p>
+<div class="rp no">Rails has no MFA built in. You pick the pieces: <code>rotp</code> for TOTP, <code>encrypts</code> for the secret, Rack::Attack for rate limits, <code>webauthn</code> for passkeys.</div><div class="tldr">Use an authenticator app (TOTP) or passkeys. Store the TOTP secret encrypted, verify on the server with a small drift window, refuse reused codes, rate-limit attempts, confirm enrolment with a first code, and enforce it in one place that every login path goes through. Don't invent your own "random code" scheme.</div><h2>What counts as a second factor</h2><p>Factors are things you <b>know</b> (password), <b>have</b> (phone, security key) or <b>are</b> (fingerprint). Two passwords are still one factor. The point: an attacker who phished or bought your password still can’t log in.</p><div class="tablewrap"><table><thead><tr><th>method</th><th>strength</th><th>weak spot</th></tr></thead><tbody><tr><td>Passkey / security key (WebAuthn)</td><td><span class="pill safe">best</span></td><td>bound to the real domain, so phishing sites get nothing</td></tr><tr><td>Authenticator app (TOTP)</td><td><span class="pill safe">good</span></td><td>a live phishing page can relay the 6 digits within 30 s</td></tr><tr><td>Push approval</td><td><span class="pill meh">ok</span></td><td>"MFA fatigue": spam prompts until someone taps yes</td></tr><tr><td>SMS / email code</td><td><span class="pill bad">weak</span></td><td>SIM swap, SS7 interception, or the email account is the same one being attacked</td></tr></tbody></table></div><h2>Why not just store a random number and compare it in the controller?</h2><p>It looks like MFA. It’s the most common home-made version we see in reviews:</p><div class="code" data-label="ruby · ✗ don&#x27;t"><pre><span class="c"># ✗ home-made "2FA"</span>
+class Api::V1::SessionsController &lt; Api::V1::AppController
+  def create
+    user = User.find_by!(username: params[:username])
+    raise AppAuthenticationError unless user.authenticate(params[:password])
+    code = rand(100000..999999).to_s
+    user.update!(otp_code: code)                      <span class="c"># plaintext, no expiry</span>
+    update_cookies(:bearer, user.jwt("bearer"))       # session issued already!
+    render json: { success: true, otp: code }         <span class="c"># "the app shows it to the user"</span>
+  end
+
+  def verify_otp
+    if params[:code] == current_user.otp_code         <span class="c"># unlimited tries, reusable</span>
+      current_user.update!(otp_verified: true)        <span class="c"># one flag for all sessions</span>
+      render json: { success: true }
+    else
+      render json: { success: false }, status: :unauthorized
+    end
+  end
+end</pre></div><p>Count the problems, then fix them one by one in the lab below and watch which attacks still work:</p><div class="demo"><header><b>lab: attack the home-made 2FA</b><span>toggle fixes, read the results</span></header><div class="body"><div class="naive"><script type="application/json">{"toggles": [{"id": "channel", "label": "Code goes out by SMS/email, <b>not<\/b> in the API response", "totp": "Code comes from the user's authenticator app; the server never sends one"}, {"id": "random", "label": "<code>SecureRandom.random_number<\/code>, not <code>rand<\/code>", "totp": "Secret is 160 random bits from <code>ROTP::Base32.random<\/code>"}, {"id": "hash", "label": "Store a digest of the code, not the code", "totp": "No code is stored at all; the secret is encrypted (<code>encrypts :otp_secret<\/code>)"}, {"id": "expire", "label": "Code expires after 5 minutes", "totp": "Codes change every 30 seconds by design"}, {"id": "once", "label": "Single use: cleared after success"}, {"id": "limit", "label": "Lock after 5 wrong tries (per account)"}, {"id": "gate", "label": "No session until the code is verified; one check every login path uses"}], "attacks": [{"label": "Attacker has the password and reads the login response", "rules": [{"if": ["totp"], "v": "ok", "t": "nothing to read: the code is on the user's phone"}, {"if": ["channel"], "v": "ok", "t": "the code isn't in the response"}, {"if": [], "v": "no", "t": "the code is right there in the JSON. This is a second password handed to whoever has the first."}]}, {"label": "Skip step two: call other endpoints right after the password step", "rules": [{"if": ["gate"], "v": "ok", "t": "no session exists until the code is verified"}, {"if": [], "v": "no", "t": "the cookie was issued at step one. Any endpoint that forgets to check <code>otp_verified<\/code> is open."}]}, {"label": "Brute-force the 6 digits", "rules": [{"if": ["limit"], "v": "ok", "t": "5 guesses out of 1,000,000: 0.0005%"}, {"if": ["totp"], "v": "meh", "t": "codes rotate, but at 10 tries/s an attacker still wins within days. Rate limiting is still your job."}, {"if": ["expire"], "v": "meh", "t": "~3,000 guesses per 5-minute code at 10/s: ~0.3% per code, and they can ask for a new code"}, {"if": [], "v": "no", "t": "the code never changes; 1,000,000 requests always wins"}]}, {"label": "Read codes from a leaked database backup", "rules": [{"if": ["totp"], "v": "ok", "t": "the secret is encrypted; the key isn't in the backup"}, {"if": ["hash"], "v": "ok", "t": "only digests leak (still: 6 digits hash fast, so keep them short-lived too)"}, {"if": ["expire"], "v": "meh", "t": "codes from the last 5 minutes still work"}, {"if": [], "v": "no", "t": "every user's current code, in plain text, valid forever"}]}, {"label": "Replay a code seen in a log, screenshot or shoulder-surf", "rules": [{"if": ["totp", "once"], "v": "ok", "t": "the time step was already used (<code>after:<\/code> check)"}, {"if": ["totp"], "v": "meh", "t": "works for up to ~60 s unless you reject reused time steps"}, {"if": ["once"], "v": "ok", "t": "cleared after first use"}, {"if": ["expire"], "v": "meh", "t": "works until it expires"}, {"if": [], "v": "no", "t": "works forever"}]}, {"label": "Predict the next code from earlier ones", "rules": [{"if": ["totp"], "v": "ok", "t": "HMAC-SHA1 of a secret you don't have"}, {"if": ["random"], "v": "ok", "t": "cryptographically secure random"}, {"if": [], "v": "meh", "t": "<code>rand<\/code> is a Mersenne Twister: not designed to be unpredictable once someone sees enough outputs"}]}], "presets": [{"id": "naive", "label": "as written above", "on": []}, {"id": "fixed", "label": "all fixes on", "on": ["channel", "random", "hash", "expire", "once", "limit", "gate"]}, {"id": "totp", "label": "TOTP, no replay check / rate limit", "on": ["gate"]}, {"id": "totp2", "label": "TOTP, done properly", "on": ["channel", "random", "hash", "expire", "once", "limit", "gate"]}], "l_design": "design", "l_attack": "attack", "l_result": "result", "l_blocked": "attacks blocked", "l_totpnote": "with TOTP the server stores no code at all, but replay protection, rate limiting and the single gate are still your code"}</script></div></div></div><p>Even with every box ticked, the home-made version is a weaker copy of SMS codes: you now own delivery, expiry, hashing, lockout and the session gate. TOTP removes the stored code entirely, so whole classes of bugs disappear.</p><div class="warn"><b>"In the controller" is part of the bug.</b> We have two login paths (<code>Admin::SessionsController#create</code> and <code>Client::AuthController#login</code>). A check pasted into one controller is a check missing from the other. Keep verification in the model (<code>user.verify_otp</code>) and make every login path call it <i>before</i> any session or token is issued.</div><div class="anim" data-actors="Attacker (has password)|API" data-title="bypass: session issued before step two"><script type="application/json">[{"f": 0, "t": 1, "l": "POST /sessions  username + password", "c": "Step one succeeds."}, {"f": 1, "t": 0, "l": "Set-Cookie: bearer=…  {otp_required: true}", "k": "a", "c": "The bug: a full session cookie is issued <i>before<\/i> the second factor."}, {"n": 0, "l": "ignores the OTP screen", "k": "a", "c": "The attacker never shows the OTP screen. The front end was the only thing enforcing it."}, {"f": 0, "t": 1, "l": "GET /admin/users  Cookie: bearer=…", "k": "a", "c": "Any endpoint that doesn't check <code>otp_verified<\/code> answers."}, {"f": 1, "t": 0, "l": "200 OK: user list", "k": "a", "c": "MFA bypassed without knowing a single digit."}]</script></div><h2>Brute force is about attempts, not digits</h2><p>Six digits is only a million possibilities. What protects it is how many guesses you allow. Play with the numbers:</p><div class="demo"><header><b>calculator: chance an attacker guesses a code</b><span>change the limits</span></header><div class="body"><div class="brute"><script type="application/json">{"rates": [[6, "6 / min"], [60, "60 / min"], [600, "600 / min (10/s)"], [6000, "6,000 / min (100/s)"]], "locks": [[0, "none"], [10, "10 tries per 15 min"], [5, "5 tries per 15 min"], [-10, "lock account after 10"]], "valids": [[1, "1 (exact code)"], [2, "2 (TOTP, drift_behind: 1)"], [3, "3 (TOTP, ±1)"]], "times": [[3600, "1 hour"], [86400, "1 day"], [2592000, "30 days"]], "l_rate": "attacker speed", "l_lock": "rate limit", "l_valid": "codes accepted at once", "l_time": "attack lasts", "l_guesses": "guesses that reach the check", "l_chance": "chance of success", "l_in": "in"}</script></div></div></div><p>No limit at 10/s for a day: almost certain. Five tries per 15 minutes for a month: about 1.4%. Lock the account after 10 bad codes and alert the user: 0.001%. Rate-limit per account <i>and</i> per IP, and count failed OTPs separately from failed passwords.</p><h2>How TOTP works</h2><ol><li>At enrolment the server makes a random <b>secret</b> and shows it once, as a QR code of an <code>otpauth://</code> URI. The phone stores it.</li><li>Both sides compute <code>T = floor(unix_time / 30)</code>.</li><li>Both compute <code>HMAC-SHA1(secret, T)</code> and truncate it to 6 digits (RFC 6238).</li><li>Nothing is sent from server to phone after enrolment. Same secret + same clock = same code.</li></ol><div class="demo"><header><b>live: a real TOTP, computed in your browser</b><span>type the phone's code into the server</span></header><div class="body"><div class="totp"><script type="application/json">{"issuer": "FieldGuide", "l_secret": "shared secret (Base32), shown once at enrolment", "l_new": "new secret", "l_phone": "phone (authenticator app)", "l_skew": "phone clock offset", "l_server": "server (verify_otp)", "l_verify": "verify", "l_paste": "use phone's code", "l_window": "accept", "l_w0": "current step only", "l_w1": "current + previous (drift_behind: 1)", "l_w2": "±1 step", "l_replay": "reject a time step that was already used", "l_ok": "accepted", "l_reject": "rejected: no match in the window", "l_replayed": "rejected: code already used", "l_six": "enter 6 digits", "l_nocrypto": "Your browser blocks Web Crypto here; open this page over https to run the demo."}</script></div></div></div><p>Try it: press <b>use phone’s code</b> twice. The second is refused with replay protection on, accepted with it off. Slide the phone clock to −30 s: <code>drift_behind: 1</code> still accepts; −60 s fails. You can also type the secret into a real authenticator app and watch it show the same code.</p><h2>The two flows</h2><div class="anim" data-actors="User|API|Authenticator app" data-title="enrolment"><script type="application/json">[{"f": 0, "t": 1, "l": "POST /two_factors/enroll", "c": "User is already authenticated with their password."}, {"n": 1, "l": "otp_secret = ROTP::Base32.random (encrypted)", "k": "k", "c": "Secret stored encrypted; <code>otp_required<\/code> stays false."}, {"f": 1, "t": 0, "l": "provisioning_uri → QR code", "c": "Shown once. Never return the secret again after this."}, {"f": 0, "t": 2, "l": "scan", "c": "The app stores the secret."}, {"f": 2, "t": 0, "l": "482 913", "c": "The user reads the first code…"}, {"f": 0, "t": 1, "l": "POST /two_factors/confirm {code}", "c": "…and proves the scan worked."}, {"n": 1, "l": "verify_otp ✓ → otp_required = true", "k": "k", "c": "Only now is MFA switched on. Skip this and a bad scan locks the user out forever."}, {"f": 1, "t": 0, "l": "recovery codes (shown once, stored hashed)", "c": "For a lost phone. Each works once."}]</script></div><div class="anim" data-actors="User|API" data-title="login"><script type="application/json">[{"f": 0, "t": 1, "l": "POST /sessions {username, password, otp}", "c": "Our admin login sends all three at once. (A two-screen UI can use a short-lived \"pending\" token between steps, never a real session.)"}, {"n": 1, "l": "Rack::Attack: ≤ 5 tries / 5 min / username", "k": "k", "c": "Throttled before any work happens."}, {"n": 1, "l": "password ✓", "c": "Factor one."}, {"n": 1, "l": "otp_required? else → setup_url", "c": "Not enrolled? Refuse and send them to enrolment."}, {"n": 1, "l": "verify_otp(otp) ✓ (unused time step)", "k": "k", "c": "Factor two, with replay check."}, {"f": 1, "t": 0, "l": "Set-Cookie: bearer=… (only now)", "c": "The session exists only after both factors pass."}]</script></div><h2>In our Rails code</h2><div class="code" data-label="ruby · app/models/user.rb"><pre>class User &lt; ApplicationRecord
+  encrypts :otp_secret                       <span class="c"># Active Record encryption at rest</span>
+  <span class="c"># ApplicationRecord: has_paper_trail skip: [:otp_secret], as_json drops "otp" columns</span>
+
+  def enable_two_factor!
+    raise AppError.new("Two-factor authentication is already enabled. Disable it first.") if otp_required?
+    self.otp_secret = ROTP::Base32.random
+    self.otp_required = false                <span class="c"># not on until confirmed</span>
+    save!
+  end
+
+  def confirm_two_factor!(code)
+    verify_otp(code) ? update!(otp_required: true) : false
+  end
+
+  def verify_otp(code)
+    return false if otp_secret.blank? || code.blank?
+    !totp.verify(code.to_s.strip, drift_behind: 1).nil?
+  end
+
+  def provisioning_uri
+    totp.provisioning_uri(email.presence || username) if otp_secret.present?
+  end
+
+  def totp
+    @totp ||= ROTP::TOTP.new(otp_secret, issuer: "MyApp")
+  end
+end</pre></div><p>Good already: secret encrypted and kept out of audit logs and JSON; enrolment confirmed with a first code; verification in the model; both login paths refuse users without <code>otp_required?</code> and check the code before issuing a cookie or token. What to add:</p><h3>1. Refuse reused codes</h3><div class="code" data-label="ruby"><pre><span class="c"># migration: add_column :users, :otp_last_used_at, :bigint</span>
+
+def verify_otp(code)
+  return false if otp_secret.blank? || code.blank?
+  ts = totp.verify(code.to_s.strip, drift_behind: 1, after: otp_last_used_at)  <span class="c"># nil if reused</span>
+  return false unless ts
+  update_columns(otp_last_used_at: ts)
+  true
+end</pre></div><h3>2. Rate-limit the OTP check</h3><div class="code" data-label="ruby"><pre><span class="c"># config/initializers/rack_attack.rb</span>
+Rack::Attack.throttle("logins/username", limit: 5, period: 5.minutes) do |req|
+  if req.post? &amp;&amp; ["/api/v1/admin/sessions", "/api/v1/client/auth/login"].include?(req.path)
+    (req.params.dig("user", "username") || req.params["username"]).to_s.downcase.presence
+  end
+end</pre></div><h3>3. Recovery codes, hashed and single-use</h3><div class="code" data-label="ruby"><pre>def generate_recovery_codes!
+  codes = Array.new(10) { SecureRandom.alphanumeric(10).downcase }
+  update!(otp_recovery_digests: codes.map { BCrypt::Password.create(_1) })   <span class="c"># store hashes only</span>
+  codes                                                                       <span class="c"># show once</span>
+end
+
+def use_recovery_code!(code)
+  digest = otp_recovery_digests.find { BCrypt::Password.new(_1) == code.to_s.strip.downcase }
+  digest ? update!(otp_recovery_digests: otp_recovery_digests - [digest]) : false
+end</pre></div><h3>4. Protect the off switch</h3><p><code>disable_two_factor!</code> should require a fresh password <i>and</i> a current code, log an audit event and notify the user by email. An attacker with a stolen session will go straight for it.</p><h2>Checklist</h2><ul><li>TOTP or passkeys; SMS only as a fallback, never email-only for staff</li><li>secret: <code>ROTP::Base32.random</code>, <code>encrypts</code>, excluded from logs, JSON and audit trails, shown only during enrolment</li><li>enrolment switched on only after a correct first code</li><li>verification in the model; every login path calls it before issuing a session or token</li><li>drift window ≤ 1 step; reused time steps rejected</li><li>rate limit per account and per IP; alert on repeated failures</li><li>hashed, single-use recovery codes</li><li>disabling MFA or changing the phone needs re-authentication and sends a notification</li></ul><div class="quiz" data-a="1"><p>The login endpoint returns <code>{ otp: "482913" }</code> so the mobile app can show it. How much security does this second step add?</p><div class="opts"><button type="button">A lot: it's random</button><button type="button">None: whoever has the password receives the code</button><button type="button">Some, if it expires</button><button type="button">Some, if it's hashed in the database</button></div><p class="explain">A second factor must reach the user through something the attacker doesn't control.</p></div><div class="quiz" data-a="1"><p>Why does enrolment ask for a first code before setting <code>otp_required: true</code>?</p><div class="opts"><button type="button">To slow down attackers</button><button type="button">To prove the app stored the secret correctly, so the user isn't locked out</button><button type="button">Because ROTP requires it</button><button type="button">To generate the secret</button></div><p class="explain">A failed scan or a typo in manual entry would otherwise lock the account on the next login.</p></div><div class="quiz" data-a="1"><p>An attacker can make 10 guesses per second with no rate limit. Roughly how long until a 6-digit TOTP falls?</p><div class="opts"><button type="button">Never: it changes every 30 s</button><button type="button">About a day</button><button type="button">About a year</button><button type="button">About a century</button></div><p class="explain">Rotation doesn't help much: each guess has a ~2-in-a-million chance, and 864,000 guesses a day makes success likely. Only rate limiting fixes this.</p></div></div>
+
+<div class="col"><label class="readmark"><input type="checkbox" id="read-05b-mfa"> mark section 05b as read</label><div class="pager"><a href="05-authentication.html">◀ 05 Authentication</a><a href="06-sessions.html">06 Sessions ▶</a></div></div>
+  </main>
+  <footer class="site">Based on the <a href="https://guides.rubyonrails.org/security.html">Ruby on Rails Security Guide</a> (CC BY-SA 4.0), the <a href="https://cheatsheetseries.owasp.org/">OWASP Cheat Sheet Series</a>, the <a href="https://owasp.org/Top10/2025/">OWASP Top 10:2025</a> and <a href="https://infosec.mozilla.org/guidelines/web_security.html">Mozilla's Web Security Guidelines</a>. Written for our dev team; code samples are illustrative.</footer>
+</div>
+<script src="assets/site.js?v=92ac7aa3f8"></script>
+<script src="assets/widgets.js?v=b9f4e038ea"></script>
+<script>
+// ---------- 05b mfa widgets ----------
+const B32 = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+function b32encode(bytes) { let bits = "", out = ""; bytes.forEach(b => bits += b.toString(2).padStart(8, "0")); for (let i = 0; i + 5 <= bits.length; i += 5) out += B32[parseInt(bits.slice(i, i + 5), 2)]; return out; }
+function b32decode(s) { let bits = ""; for (const c of s.replace(/[\s=]/g, "").toUpperCase()) { const v = B32.indexOf(c); if (v >= 0) bits += v.toString(2).padStart(5, "0"); } const out = []; for (let i = 0; i + 8 <= bits.length; i += 8) out.push(parseInt(bits.slice(i, i + 8), 2)); return new Uint8Array(out); }
+async function hotp(keyBytes, counter) {
+  const key = await crypto.subtle.importKey("raw", keyBytes, { name: "HMAC", hash: "SHA-1" }, false, ["sign"]);
+  const msg = new ArrayBuffer(8), dv = new DataView(msg);
+  dv.setUint32(0, Math.floor(counter / 4294967296)); dv.setUint32(4, counter >>> 0);
+  const h = new Uint8Array(await crypto.subtle.sign("HMAC", key, msg)), o = h[h.length - 1] & 15;
+  const bin = ((h[o] & 127) << 24) | (h[o + 1] << 16) | (h[o + 2] << 8) | h[o + 3];
+  return String(bin % 1000000).padStart(6, "0");
+}
+$$(".totp").forEach(w => {
+  const d = JSON.parse($(":scope > script", w).textContent);
+  if (!(window.crypto && crypto.subtle)) { w.insertAdjacentHTML("afterbegin", `<p class="r">${esc(d.l_nocrypto)}</p>`); return; }
+  w.insertAdjacentHTML("afterbegin", `<div class="box"><p class="cap">${esc(d.l_secret)}</p><div class="row"><span class="secret"></span><button class="btn" type="button" data-a="new">${esc(d.l_new)}</button></div><p class="uri"></p></div>
+  <div class="grid2" style="margin-top:10px"><div class="box"><p class="cap">${esc(d.l_phone)}</p><div class="big" aria-live="off">------</div><div class="bar"><span></span></div><div class="d" style="font-size:12px"><span class="left"></span> · T = <span class="tstep"></span></div>
+  <label style="display:block;margin-top:8px">${esc(d.l_skew)}: <b class="skewv">0s</b><input type="range" min="-120" max="120" step="5" value="0" data-k="skew"></label></div>
+  <div class="box"><p class="cap">${esc(d.l_server)}</p><div class="verify"><input type="text" inputmode="numeric" maxlength="6" placeholder="123456" aria-label="code"><button class="btn on" type="button" data-a="verify">${esc(d.l_verify)}</button><button class="btn" type="button" data-a="copy">${esc(d.l_paste)}</button></div>
+  <label style="display:block">${esc(d.l_window)} <select data-k="win" style="width:auto"><option value="0">${esc(d.l_w0)}</option><option value="1" selected>${esc(d.l_w1)}</option><option value="2">${esc(d.l_w2)}</option></select></label>
+  <label style="display:flex;gap:6px;align-items:center;margin-top:6px"><input type="checkbox" data-k="replay" checked> ${esc(d.l_replay)}</label>
+  <div class="log" style="margin-top:8px;max-height:180px" aria-live="polite"></div></div></div>`);
+  let key, secret, used = new Set(), phoneCode = "";
+  const log = $(".log", w), skew = () => +$("[data-k=skew]", w).value;
+  function newSecret() {
+    const b = crypto.getRandomValues(new Uint8Array(20)); secret = b32encode(b); key = b32decode(secret); used = new Set();
+    $(".secret", w).textContent = secret.match(/.{1,4}/g).join(" ");
+    $(".uri", w).textContent = `otpauth://totp/${d.issuer}:alice?secret=${secret}&issuer=${d.issuer}`;
+    log.textContent = ""; tick();
+  }
+  async function tick() {
+    const now = Date.now() / 1000 + skew(), T = Math.floor(now / 30), left = 30 - Math.floor(now % 30);
+    phoneCode = await hotp(key, T);
+    $(".big", w).textContent = phoneCode.slice(0, 3) + " " + phoneCode.slice(3);
+    $(".tstep", w).textContent = T; $(".left", w).textContent = `${left}s`;
+    const bar = $(".bar span", w); bar.style.width = (left / 30 * 100) + "%"; bar.classList.toggle("low", left <= 5);
+    $(".skewv", w).textContent = (skew() > 0 ? "+" : "") + skew() + "s";
+  }
+  async function verify() {
+    const input = $(".verify input", w).value.replace(/\D/g, ""), win = +$("[data-k=win]", w).value, T = Math.floor(Date.now() / 1000 / 30);
+    const steps = win === 0 ? [0] : win === 1 ? [0, -1] : [0, -1, 1];
+    let hit = null;
+    for (const k of steps) if (await hotp(key, T + k) === input) { hit = T + k; break; }
+    let line;
+    if (input.length !== 6) line = `<span class="y">? ${esc(d.l_six)}</span>`;
+    else if (hit === null) line = `<span class="r">✗ ${esc(d.l_reject)}</span>`;
+    else if ($("[data-k=replay]", w).checked && [...used].some(u => u >= hit)) line = `<span class="r">✗ ${esc(d.l_replayed)} (T=${hit})</span>`;
+    else { used.add(hit); line = `<span class="g">✓ ${esc(d.l_ok)} (T=${hit}${hit !== T ? `, ${hit - T}` : ""})</span>`; }
+    log.innerHTML += `${esc(input || "—")} → ${line}\n`; log.scrollTop = log.scrollHeight;
+  }
+  w.addEventListener("click", e => {
+    const b = e.target.closest("button[data-a]"); if (!b) return;
+    if (b.dataset.a === "new") newSecret();
+    if (b.dataset.a === "verify") verify();
+    if (b.dataset.a === "copy") { $(".verify input", w).value = phoneCode; verify(); }
+  });
+  $(".verify input", w).addEventListener("keydown", e => { if (e.key === "Enter") verify(); });
+  $("[data-k=skew]", w).addEventListener("input", tick);
+  newSecret(); setInterval(tick, 1000);
+});
+
+// naive design lab
+$$(".naive").forEach(w => {
+  const d = JSON.parse($(":scope > script", w).textContent);
+  w.insertAdjacentHTML("afterbegin", `<div class="sel-row"><span class="lab">${esc(d.l_design)}</span>${d.presets.map(p => `<button class="btn" type="button" data-p="${p.id}">${esc(p.label)}</button>`).join("")}</div>
+    <div class="tg">${d.toggles.map(x => `<label data-t="${x.id}"><input type="checkbox" data-k="${x.id}"> <span>${x.label}</span></label>`).join("")}</div>
+    <div class="tablewrap"><table><thead><tr><th>${esc(d.l_attack)}</th><th>${esc(d.l_result)}</th></tr></thead><tbody></tbody></table></div><div class="sum"></div>`);
+  let mode = "naive", preset = "naive";
+  const on = k => $(`[data-k=${k}]`, w).checked;
+  function render() {
+    $$("[data-p]", w).forEach(b => b.classList.toggle("on", b.dataset.p === preset));
+    const totp = mode === "totp";
+    d.toggles.forEach(x => { const l = $(`label[data-t=${x.id}]`, w), i = $("input", l), lock = totp && x.totp; l.classList.toggle("na", lock); i.disabled = lock; if (lock) i.checked = true; $("span", l).innerHTML = totp && x.totp ? x.totp : x.label; });
+    const s = Object.fromEntries(d.toggles.map(x => [x.id, on(x.id)]));
+    let blocked = 0;
+    const rows = d.attacks.map(a => {
+      let r;
+      for (const rule of a.rules) { if (rule.if.every(k => k.startsWith("!") ? !s[k.slice(1)] : (k === "totp" ? totp : s[k]))) { r = rule; break; } }
+      if (r.v === "ok") blocked++;
+      return `<tr><td>${a.label}</td><td><span class="${r.v}">${r.v === "ok" ? "✓" : r.v === "no" ? "✗" : "~"} ${r.t}</span></td></tr>`;
+    });
+    $("tbody", w).innerHTML = rows.join("");
+    $(".sum", w).innerHTML = `${esc(d.l_blocked)}: <b>${blocked}/${d.attacks.length}</b>${totp ? " · " + d.l_totpnote : ""}`;
+  }
+  w.addEventListener("click", e => {
+    const b = e.target.closest("button[data-p]"); if (!b) return;
+    preset = b.dataset.p; mode = preset.startsWith("totp") ? "totp" : "naive";
+    const p = d.presets.find(x => x.id === b.dataset.p);
+    d.toggles.forEach(x => { $(`[data-k=${x.id}]`, w).checked = p.on.includes(x.id); });
+    render();
+  });
+  w.addEventListener("change", render);
+  render();
+});
+
+// brute-force calculator
+$$(".brute").forEach(w => {
+  const d = JSON.parse($(":scope > script", w).textContent);
+  const sel = (k, opts, def) => `<select data-k="${k}">${opts.map(o => `<option value="${o[0]}"${o[0] == def ? " selected" : ""}>${esc(o[1])}</option>`).join("")}</select>`;
+  w.insertAdjacentHTML("afterbegin", `<div class="grid3"><label>${esc(d.l_rate)}${sel("rate", d.rates, 600)}</label><label>${esc(d.l_lock)}${sel("lock", d.locks, 0)}</label><label>${esc(d.l_valid)}${sel("valid", d.valids, 1)}</label><label>${esc(d.l_time)}${sel("time", d.times, 86400)}</label></div>
+    <div class="grid2" style="margin-top:12px"><div class="box"><p class="cap">${esc(d.l_guesses)}</p><div class="big g-n"></div></div><div class="box"><p class="cap">${esc(d.l_chance)}</p><div class="big g-p"></div><div class="g-x" style="font-size:13px;color:var(--white)"></div></div></div>`);
+  const fmt = n => n >= 1e6 ? (n / 1e6).toFixed(n >= 1e7 ? 0 : 1) + "M" : n >= 1e3 ? Math.round(n / 1e3) + "k" : String(Math.round(n));
+  function calc() {
+    const rate = +$("[data-k=rate]", w).value, lock = +$("[data-k=lock]", w).value, valid = +$("[data-k=valid]", w).value, time = +$("[data-k=time]", w).value;
+    let guesses = rate * time / 60;
+    if (lock > 0) guesses = Math.min(guesses, lock * Math.max(1, Math.floor(time / 900)));
+    if (lock < 0) guesses = Math.min(guesses, -lock);
+    const p = 1 - Math.pow(1 - valid / 1e6, guesses);
+    $(".g-n", w).textContent = fmt(guesses);
+    const el = $(".g-p", w); el.textContent = p >= 0.995 ? "≈100%" : p >= 0.01 ? (p * 100).toFixed(1) + "%" : p >= 1e-6 ? (p * 100).toFixed(4) + "%" : "<0.0001%";
+    el.className = "big g-p " + (p > 0.05 ? "bad" : p > 0.001 ? "meh" : "");
+    $(".g-x", w).textContent = p > 0 && p < 0.5 ? `≈ 1 ${d.l_in} ${fmt(1 / p)}` : "";
+  }
+  w.addEventListener("change", calc); calc();
+});
+</script>
+</body>
+</html>

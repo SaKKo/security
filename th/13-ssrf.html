@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="th" data-lang="rails">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>13 Server-Side Request Forgery · Web Security</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600&display=swap" rel="stylesheet">
+<link rel="icon" href="../favicon.ico" sizes="32x32">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<link rel="manifest" href="../site.webmanifest">
+<meta name="theme-color" content="#000000">
+<link rel="stylesheet" href="../assets/site.css?v=8f1e007517">
+<script src="../assets/consent.js?v=9320b4a322"></script>
+</head>
+<body data-slug="13-ssrf">
+<div class="win">
+  <div class="titlebar"><span class="dots"><i></i><i></i><i></i></span><span class="t">guest@websec: ~/websec/13-ssrf/th — zsh — 100×40</span>
+    <a class="by" href="about.html" title="เกี่ยวกับผู้เขียน"><span class="w0">เขียนโดย </span>SaKKo</a>
+    <span class="lsw" role="group" aria-label="ภาษา"><a href="../13-ssrf.html" data-setlang="en">EN</a><a href="13-ssrf.html" aria-current="true" data-setlang="th">TH</a></span>
+    <span class="langsw" role="group" aria-label="Code examples language"><span class="d">โค้ด:</span><button type="button" data-l="rails">rails</button><button type="button" data-l="node">node</button></span></div>
+  <nav class="top" aria-label="Sections"><a href="index.html" title="คู่มือความปลอดภัยเว็บแอปพลิเคชัน">~/</a>
+<a class="trk on" href="index.html#security">#1 ความปลอดภัย</a>
+<a class="trk" href="r01-rails-api-app.html">#2 rails</a>
+<span class="grp">|</span>
+<a href="01-introduction.html" title="บทนำ">01·บทนำ</a>
+<a href="02-sql-injection.html" title="SQL Injection">02·sql</a>
+<a href="03-unsafe-query-generation.html" title="การสร้าง query ที่ไม่ปลอดภัย">03·query</a>
+<a href="04-xss-and-other-injection.html" title="XSS และ injection แบบอื่น">04·xss</a>
+<span class="grp">| บัญชี:</span>
+<a href="05-authentication.html" title="การยืนยันตัวตน">05·auth</a>
+<a href="05b-mfa.html" title="การยืนยันตัวตนหลายปัจจัย">05b·mfa</a>
+<a href="06-sessions.html" title="Session">06·session</a>
+<a href="07-csrf.html" title="Cross-Site Request Forgery">07·csrf</a>
+<a href="08-user-management.html" title="การจัดการผู้ใช้">08·ผู้ใช้</a>
+<a href="09-mass-assignment-and-authorization.html" title="Mass Assignment และ Authorization">09·authz</a>
+<span class="grp">| เบราว์เซอร์:</span>
+<a href="10-redirection-and-files.html" title="Redirect และไฟล์">10·ไฟล์</a>
+<a href="11-http-security-headers.html" title="HTTP Security Header">11·header</a>
+<a href="12-transport-cookies-third-party.html" title="การรับส่งข้อมูล คุกกี้ และสคริปต์บุคคลที่สาม">12·คุกกี้</a>
+<span class="grp">| เซิร์ฟเวอร์:</span>
+<a href="13-ssrf.html" aria-current="page" title="Server-Side Request Forgery">13·ssrf</a>
+<a href="14-deserialization-and-xxe.html" title="Deserialization และ XXE">14·deserialize</a>
+<a href="15-environmental-security.html" title="ความปลอดภัยของสภาพแวดล้อม">15·secret</a>
+<a href="16-cryptography.html" title="การเข้ารหัสและการปกป้องข้อมูล">16·crypto</a>
+<a href="17-dependencies-and-cves.html" title="Dependency และ CVE">17·dependency</a>
+<span class="grp">| ดูแลระบบ:</span>
+<a href="18-intranet-and-admin.html" title="ความปลอดภัยของ intranet และ admin">18·admin</a>
+<a href="19-misconfiguration-and-errors.html" title="การตั้งค่าผิดพลาดและการจัดการ error">19·config</a>
+<a href="20-insecure-design.html" title="การออกแบบที่ไม่ปลอดภัยและ business logic">20·design</a>
+<a href="21-logging-and-incident-response.html" title="Logging การแจ้งเตือน และการรับมือเหตุการณ์">21·logging</a>
+<a href="22-additional-resources.html" title="แหล่งข้อมูลเพิ่มเติม">22·แหล่งข้อมูล</a>
+<span class="grp">| แบบสอบถาม:</span>
+<a href="q1-developer-survey.html" title="แบบสำรวจความปลอดภัยสำหรับนักพัฒนา">Q1·dev</a>
+<a href="q2-awareness-survey.html" title="แบบสำรวจความตระหนักรู้ภัยไซเบอร์">Q2·ทุกคน</a></nav>
+  <main>
+<div class="col">
+<p class="prompt">guest@websec ~ % <b>man 13-ssrf</b></p>
+<h1>13 · Server-Side Request Forgery (SSRF)</h1>
+<p class="lede">ฟีเจอร์ไหนก็ตามที่เซิร์ฟเวอร์เราไปดึง URL ของผู้ใช้ (รูปจากลิงก์, webhook, ตัวอย่างลิงก์, render PDF) ถูกใช้ย้อนกลับมาได้ ผู้โจมตีเข้าเครือข่ายภายในเราไม่ได้ แต่เซิร์ฟเวอร์เราเข้าได้ และ SSRF ทำให้มันไปดึงให้เขา</p>
+
+<h2>ผู้โจมตีเล็งอะไร</h2>
+<ul>
+<li><b>Cloud metadata</b> (<code>169.254.169.254</code>) ให้ข้อมูลรับรองคลาวด์ของเซิร์ฟเวอร์ นี่คือเบื้องหลังการเจาะ Capital One ปี 2019</li>
+<li><b>บริการภายใน</b> ที่เชื่อทุกอย่างในเครือข่ายส่วนตัว</li>
+<li>บริการ <b>localhost</b> ในเครื่องเดียวกัน</li>
+
+</ul>
+<div class="anim" data-actors="Attacker|Our Rails app|169.254.169.254 (metadata)" data-title="SSRF สู่ข้อมูลรับรองคลาวด์"><script type="application/json">[{"f": 0, "t": 1, "l": "POST /profile  avatar_url=http://169.254.169.254/latest/meta-data/iam/…", "k": "a", "c": "ฟีเจอร์ \"ตั้งรูปโปรไฟล์จาก URL\" รับ URL อะไรก็ได้"}, {"n": 1, "l": "URI.open(params[:avatar_url])", "k": "a", "c": "เซิร์ฟเวอร์ดึงมันจากภายในเครือข่ายคลาวด์ของเรา"}, {"f": 1, "t": 2, "l": "GET /latest/meta-data/iam/security-credentials/app-role", "k": "a", "c": "บริการ metadata ตอบเฉพาะ request จากเครื่องตัวเอง และ request นี้ก็มาจากเครื่องตัวเองจริงๆ"}, {"f": 2, "t": 1, "l": "{AccessKeyId, SecretAccessKey, Token}", "k": "a", "c": "ข้อมูลรับรองคลาวด์ชั่วคราวของ role ของเซิร์ฟเวอร์"}, {"f": 1, "t": 0, "l": "\"invalid image\" error page showing the body", "k": "a", "c": "ข้อความ error ของเราแสดง response ออกมา <b>ตอนนี้ผู้โจมตีได้ข้อมูลรับรองคลาวด์แล้ว<\/b>"}, {"n": 1, "l": "fix: resolve → block private ranges → pin IP, no redirects; IMDSv2", "k": "k", "c": "ตรวจ IP <i>ที่ resolve แล้ว<\/i> บล็อกช่วงภายใน ไม่ตาม redirect เปิด IMDSv2"}, {"f": 1, "t": 2, "l": "169.254.0.0/16 is link-local: refused", "k": "b", "c": "การดึงไม่เกิดขึ้นเลย"}]</script></div>
+<h2>ทำไม blocklist ง่ายๆ จึงล้มเหลว</h2>
+<p>บล็อกคำว่า "localhost" ในสตริงใช้ไม่ได้ IP เขียนได้หลายแบบ hostname ชี้เข้าภายในได้ และ redirect ก็พาเข้าไปได้ ลองดู:</p>
+<div class="demo"><header><b>sim: ตัวตรวจ URL ก่อนดึง</b><span>ใช้ URL parser จริงของเบราว์เซอร์คุณ</span></header><div class="body">
+<label for="sf-in">URL ที่ผู้ใช้ส่ง</label><input id="sf-in" type="text" value="http://2130706433/admin"/>
+<div class="row" style="margin-top:8px"><span class="d">try:</span>
+<button class="btn" data-sf="https://images.example-cdn.test/cat.png" type="button">normal</button>
+<button class="btn" data-sf="http://127.0.0.1:6379/" type="button">127.0.0.1</button>
+<button class="btn" data-sf="http://2130706433/admin" type="button">decimal IP</button>
+<button class="btn" data-sf="http://0x7f.1/" type="button">hex short form</button>
+<button class="btn" data-sf="http://[::ffff:127.0.0.1]/" type="button">IPv6-mapped</button>
+<button class="btn" data-sf="http://169.254.169.254/latest/meta-data/" type="button">metadata</button>
+<button class="btn" data-sf="http://internal-admin.corp.test/" type="button">internal hostname</button>
+<button class="btn" data-sf="https://harmless.evil.test/redirect" type="button">redirect</button>
+<button class="btn" data-sf="https://rebind.evil.test/" type="button">DNS rebinding</button>
+<button class="btn" data-sf="file:///etc/passwd" type="button">file://</button>
+</div>
+<div class="tablewrap" style="margin-top:10px"><table><thead><tr><th>การตรวจ</th><th>ผลตัดสิน</th><th>สิ่งที่เกิดขึ้นจริง</th></tr></thead><tbody id="sf-out"></tbody></table></div>
+</div></div>
+<h2>วิธีป้องกัน</h2>
+<ol>
+<li><b>เลี่ยงได้ก็เลี่ยง</b>: รับไฟล์อัปโหลดแทน หรือดึงเฉพาะจาก host ที่รู้จัก</li>
+<li>ถ้าเลี่ยงไม่ได้: <b>resolve hostname เอง</b> บล็อก IP ภายใน แล้วเชื่อมต่อไปที่ IP นั้นตรงๆ</li>
+<li><b>อย่าตาม redirect</b> แบบไม่ตรวจ</li>
+<li>ตั้ง timeout สั้น และอย่าแสดง response กลับไปให้ผู้ใช้</li>
+<li>บน AWS บังคับ <b>IMDSv2</b> เพื่อให้ GET ธรรมดาอ่าน metadata ไม่ได้</li>
+</ol>
+<div class="rp no">Rails ไม่ได้ช่วยอะไร ระวัง <code>URI.open(params[…])</code>, HTTP client ที่ใช้ URL ของผู้ใช้ และ <code>attach(io: URI.open(url))</code> gem <code>ssrf_filter</code> ทำส่วนที่ยากให้</div><div class="code">
+<pre data-lang="rails"><span class="c"># Gemfile: gem "ssrf_filter"</span>
+def import_avatar(url)
+  uri = URI.parse(url)
+  raise ArgumentError, "http(s) only" unless %w[http https].include?(uri.scheme)
+  response = SsrfFilter.get(uri, max_redirects: 0)   <span class="c"># resolves, blocks private IPs, pins IP</span>
+  raise "not an image" unless response["content-type"].to_s.start_with?("image/")
+  avatar.attach(io: StringIO.new(response.body), filename: "avatar")
+rescue SsrfFilter::Error, URI::InvalidURIError
+  errors.add(:avatar_url, "can't be fetched")         <span class="c"># generic message, no body echo</span>
+end
+
+<span class="bad">avatar.attach(io: URI.open(params[:avatar_url]), filename: "a")   # SSRF</span></pre>
+<pre data-lang="node"><span class="c">// Node: request-filtering-agent blocks private IPs after DNS resolution.</span>
+<span class="c">// It needs an agent-aware client (node-fetch, axios, got): Node's built-in fetch ignores `agent`.</span>
+import fetch from "node-fetch";
+import { useAgent } from "request-filtering-agent";
+const res = await fetch(url, { agent: useAgent(url), redirect: "manual" });
+<span class="bad">await fetch(req.body.url);    // SSRF</span></pre>
+</div>
+</div>
+
+<div class="col"><label class="readmark"><input type="checkbox" id="read-13-ssrf"> ทำเครื่องหมายว่าอ่านหัวข้อ 13 แล้ว</label><div class="pager"><a href="12-transport-cookies-third-party.html">◀ 12 การรับส่งข้อมูล คุกกี้ และสคริปต์บุคคลที่สาม</a><a href="14-deserialization-and-xxe.html">14 Deserialization และ XXE ▶</a></div></div>
+  </main>
+  <footer class="site">อ้างอิงจาก <a href="https://guides.rubyonrails.org/security.html">Ruby on Rails Security Guide</a> (CC BY-SA 4.0), <a href="https://cheatsheetseries.owasp.org/">OWASP Cheat Sheet Series</a>, <a href="https://owasp.org/Top10/2025/">OWASP Top 10:2025</a> และ <a href="https://infosec.mozilla.org/guidelines/web_security.html">Mozilla Web Security Guidelines</a> เขียนสำหรับทีมพัฒนาของเรา ตัวอย่างโค้ดเพื่อการอธิบาย ข้อความในผลการจำลองบางส่วนยังเป็นภาษาอังกฤษ</footer>
+</div>
+<script src="../assets/site.js?v=92ac7aa3f8"></script>
+<script>
+
+const dns = { "images.example-cdn.test": ["151.101.1.140"], "internal-admin.corp.test": ["10.0.3.7"], "harmless.evil.test": ["93.184.216.34"], "rebind.evil.test": ["93.184.216.34", "127.0.0.1"] };
+const redirects = { "harmless.evil.test": "http://169.254.169.254/latest/meta-data/iam/" };
+function ipv4Class(ip) {
+  const p = ip.split(".").map(Number); if (p.length !== 4 || p.some(isNaN)) return null;
+  if (p[0] === 127) return "loopback"; if (p[0] === 10 || (p[0] === 172 && p[1] >= 16 && p[1] < 32) || (p[0] === 192 && p[1] === 168)) return "private";
+  if (p[0] === 169 && p[1] === 254) return "link-local (cloud metadata)"; if (p[0] === 0) return "reserved"; return "public";
+}
+function classify(host) {
+  const h = host.replace(/^\[|\]$/g, "");
+  if (h === "::1") return "loopback";
+  const m = h.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/i) || h.match(/^::ffff:([0-9a-f]+):([0-9a-f]+)$/i);
+  if (m) { if (m.length === 2) return ipv4Class(m[1]); const a = parseInt(m[1], 16), b = parseInt(m[2], 16); return ipv4Class(`${a >> 8}.${a & 255}.${b >> 8}.${b & 255}`); }
+  return ipv4Class(h);
+}
+function sf() {
+  const raw = $("#sf-in").value; let u;
+  try { u = new URL(raw); } catch (e) { $("#sf-out").innerHTML = '<tr><td colspan="3"><span class="y">not a valid URL</span></td></tr>'; return; }
+  const host = u.hostname, naiveBlocked = /localhost|127\.0\.0\.1|169\.254\.169\.254/i.test(raw);
+  const ips = classify(host) ? [host] : (dns[host] || ["93.184.216.34"]);
+  const first = classify(ips[0]) || "public", last = ips[ips.length - 1], lastCls = classify(last) || "public";
+  const redirect = redirects[host];
+  const internal = c => c && c !== "public";
+  let reality;
+  if (u.protocol === "file:") reality = '<span class="r">reads a local file from the server</span>';
+  else if (redirect) reality = `<span class="r">302 → ${esc(redirect)} → server fetches cloud metadata</span>`;
+  else if (ips.length > 1) reality = `<span class="r">check sees ${ips[0]} (public); fetch re-resolves to ${last} (${lastCls})</span>`;
+  else reality = internal(first) ? `<span class="r">connects to ${esc(ips[0])} (${first})</span>` : `<span class="g">connects to ${esc(ips[0])} (public)</span>`;
+  const harmful = u.protocol === "file:" || redirect || internal(lastCls) || internal(first);
+  const rows = [
+    ["no check", true],
+    ["string blocklist (localhost, 127.0.0.1, 169.254.169.254)", !naiveBlocked],
+    ["resolve once + block private ranges (still follows redirects, re-resolves)", u.protocol.startsWith("http") && !internal(first)],
+    ["http(s) only + resolve + block ranges + pin IP + no redirects", u.protocol.startsWith("http") && !internal(first) && !internal(lastCls) && !redirect]];
+  $("#sf-out").innerHTML = `<tr><td colspan="3" class="w">parsed host: <code>${esc(host)}</code> → resolves to ${ips.map(i => `<code>${esc(i)}</code> (${classify(i) || "public"})`).join(", then ")}</td></tr>` +
+    rows.map(([n, allow], i) => { const strictBlocksRebind = i === 3; const bad = allow && harmful && !(strictBlocksRebind); return `<tr><td>${n}</td><td>${allow ? "fetch" : "refuse"}</td><td>${!allow ? '<span class="g">blocked</span>' : bad ? reality : (harmful ? '<span class="g">blocked (connects only to the vetted IP)</span>' : '<span class="g">fetches the image</span>')}</td></tr>`; }).join("");
+}
+$("#sf-in").addEventListener("input", sf); $$("[data-sf]").forEach(b => b.onclick = () => { $("#sf-in").value = b.dataset.sf; sf(); }); sf();
+
+</script>
+</body>
+</html>

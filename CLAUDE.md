@@ -1,0 +1,1 @@
+Never use /tmp. Put temporary/scratch files in ./.scratch/ inside this project.

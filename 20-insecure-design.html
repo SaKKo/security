@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en" data-lang="rails">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>20 Insecure Design and Business Logic · Web Security</title>
+
+<link rel="icon" href="favicon.ico" sizes="32x32">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="site.webmanifest">
+<meta name="theme-color" content="#000000">
+<link rel="stylesheet" href="assets/site.css?v=8f1e007517">
+<script src="assets/consent.js?v=9320b4a322"></script>
+</head>
+<body data-slug="20-insecure-design">
+<div class="win">
+  <div class="titlebar"><span class="dots"><i></i><i></i><i></i></span><span class="t">guest@websec: ~/websec/20-insecure-design — zsh — 100×40</span>
+    <a class="by" href="about.html" title="About the author"><span class="w0">by </span>SaKKo</a>
+    <span class="lsw" role="group" aria-label="Language"><a href="20-insecure-design.html" aria-current="true" data-setlang="en">EN</a><a href="th/20-insecure-design.html" data-setlang="th">TH</a></span>
+    <span class="langsw" role="group" aria-label="Code examples language"><span class="d">code:</span><button type="button" data-l="rails">rails</button><button type="button" data-l="node">node</button></span></div>
+  <nav class="top" aria-label="Sections"><a href="index.html" title="Web Security Field Guide">~/</a>
+<a class="trk on" href="index.html#security">#1 security</a>
+<a class="trk" href="r01-rails-api-app.html">#2 rails</a>
+<span class="grp">|</span>
+<a href="01-introduction.html" title="Introduction">01·introduction</a>
+<a href="02-sql-injection.html" title="SQL Injection">02·sql-injection</a>
+<a href="03-unsafe-query-generation.html" title="Unsafe Query Generation">03·query-shape</a>
+<a href="04-xss-and-other-injection.html" title="XSS and Other Injection">04·xss</a>
+<span class="grp">| accounts:</span>
+<a href="05-authentication.html" title="Authentication">05·auth</a>
+<a href="05b-mfa.html" title="Multi-Factor Authentication">05b·mfa</a>
+<a href="06-sessions.html" title="Sessions">06·sessions</a>
+<a href="07-csrf.html" title="Cross-Site Request Forgery">07·csrf</a>
+<a href="08-user-management.html" title="User Management">08·accounts</a>
+<a href="09-mass-assignment-and-authorization.html" title="Mass Assignment and Authorization">09·authz</a>
+<span class="grp">| browser:</span>
+<a href="10-redirection-and-files.html" title="Redirection and Files">10·files</a>
+<a href="11-http-security-headers.html" title="HTTP Security Headers">11·headers</a>
+<a href="12-transport-cookies-third-party.html" title="Transport, Cookies and Third-Party Scripts">12·cookies-tls</a>
+<span class="grp">| server:</span>
+<a href="13-ssrf.html" title="Server-Side Request Forgery">13·ssrf</a>
+<a href="14-deserialization-and-xxe.html" title="Deserialization and XXE">14·deserialize</a>
+<a href="15-environmental-security.html" title="Environmental Security">15·secrets</a>
+<a href="16-cryptography.html" title="Cryptography and Data Protection">16·crypto</a>
+<a href="17-dependencies-and-cves.html" title="Dependencies and CVEs">17·dependencies</a>
+<span class="grp">| ops:</span>
+<a href="18-intranet-and-admin.html" title="Intranet and Admin Security">18·admin</a>
+<a href="19-misconfiguration-and-errors.html" title="Misconfiguration and Error Handling">19·misconfig</a>
+<a href="20-insecure-design.html" aria-current="page" title="Insecure Design and Business Logic">20·design</a>
+<a href="21-logging-and-incident-response.html" title="Logging, Alerting and Incident Response">21·logging</a>
+<a href="22-additional-resources.html" title="Additional Resources">22·resources</a>
+<span class="grp">| questionnaires:</span>
+<a href="q1-developer-survey.html" title="Developer Security Survey">Q1·developer</a>
+<a href="q2-awareness-survey.html" title="Cyber Threat Awareness Survey">Q2·cyber</a></nav>
+  <main>
+<div class="col">
+<p class="prompt">guest@websec ~ % <b>man 20-insecure-design</b></p>
+<h1>20 · Insecure Design and Business Logic</h1>
+<p class="lede">Some bugs aren't coding mistakes. The code does exactly what the spec said, but nobody asked "what would an attacker do?". No scanner finds these.</p>
+<h2>20.1 Design flaws vs implementation bugs</h2>
+<p>The design itself is unsafe, even if the code is perfect:</p>
+<ul>
+<li>The cart trusts the price sent by the browser.</li>
+<li>Coupons can be stacked, or reused by sending the same request twice at once.</li>
+<li>Quantity can be negative, turning a purchase into a refund.</li>
+<li>A multi-step checkout lets you call "confirm" without "pay".</li>
+
+
+<li>An expensive operation (report export, SMS sending) has no per-user limit.</li>
+</ul>
+<h2>20.2 Threat modeling in 20 minutes</h2>
+<p>Sounds heavy, but it's just four questions for any feature kickoff:</p>
+<ol><li><b>What are we working on?</b> Sketch the data flow: who sends what, where it's stored, which services are involved.</li><li><b>What can go wrong?</b> Walk through STRIDE (below) for each arrow and box.</li><li><b>What are we going to do about it?</b> Decide a mitigation, accept the risk, or change the design.</li><li><b>Did we do a good job?</b> Revisit after launch and after incidents.</li></ol>
+<div class="demo"><header><b>sim: STRIDE a feature</b><span>pick a feature, reveal threats</span></header><div class="body">
+<div class="row"><label for="st-f">feature</label><select id="st-f" style="width:auto"><option value="gift">gift-card redemption</option><option value="invite">team invitations</option><option value="export">CSV export of customers</option></select></div>
+<div class="tablewrap" style="margin-top:10px"><table id="st-tbl"></table></div>
+</div></div>
+<p>Write <b>abuse cases</b> next to user stories: "As an attacker, I want to use the same coupon 50 times." Each one becomes a test.</p>
+<h2>20.3 Race conditions</h2>
+<p>"Is the coupon unused? Then use it" has a gap between check and act. Fire 20 requests at once and several slip through. Gift cards get redeemed twice, balances overdrawn.</p>
+<div class="anim" data-actors="Attacker|Request A|Request B|Database" data-title="Double-spending a coupon"><script type="application/json">[{"f": 0, "t": 1, "l": "POST /redeem  code=SAVE50", "k": "a", "c": "The attacker fires two identical requests at the same moment."}, {"f": 0, "t": 2, "l": "POST /redeem  code=SAVE50", "k": "a", "c": "Both arrive within milliseconds and run on different threads or servers."}, {"f": 1, "t": 3, "l": "SELECT used FROM coupons → false", "c": "Request A checks: unused."}, {"f": 2, "t": 3, "l": "SELECT used FROM coupons → false", "k": "a", "c": "Request B checks before A has written anything: also unused."}, {"f": 1, "t": 3, "l": "UPDATE used=true; credit $50", "c": "A applies the discount."}, {"f": 2, "t": 3, "l": "UPDATE used=true; credit $50", "k": "a", "c": "B applies it too. <b>One coupon, two credits.<\/b>"}, {"n": 3, "l": "fix: row lock / atomic UPDATE … WHERE used=false / unique index", "k": "k", "c": "Make the check and the write one atomic step, so only one request can win."}]</script></div>
+<div class="demo"><header><b>sim: concurrent redemptions</b><span>fire N requests at once</span></header><div class="body">
+<div class="row"><label for="rc-n">parallel requests</label><input id="rc-n" max="50" min="2" style="width:90px" type="number" value="10"/>
+<span>protection:</span><label><input checked="" name="rc-mode" type="radio" value="none"/> check-then-update</label><label><input name="rc-mode" type="radio" value="lock"/> with_lock</label><label><input name="rc-mode" type="radio" value="atomic"/> atomic UPDATE … WHERE</label><label><input name="rc-mode" type="radio" value="unique"/> unique index on redemptions</label>
+<button class="btn red" id="rc-go" type="button">fire ▶</button></div>
+<div class="log" id="rc-out" style="margin-top:10px"></div>
+</div></div>
+<h2>20.4 Never trust the client with business rules</h2>
+<div class="demo"><header><b>sim: checkout request</b><span>edit what the browser sends</span></header><div class="body">
+<div class="grid2"><div><label for="bz-in">POST /orders</label><textarea id="bz-in" rows="5">{"items": [{"sku": "LAPTOP-15", "qty": 1, "price": 0.01}, {"sku": "MOUSE", "qty": -3, "price": 25}]}</textarea>
+<div style="margin-top:8px"><label><input id="bz-price" type="checkbox"/> server looks up price from the catalog</label><br/><label><input id="bz-qty" type="checkbox"/> server validates qty is 1–10</label></div></div>
+<div><p class="cap">order the server creates</p><div class="out" id="bz-out"></div></div></div>
+</div></div>
+<div class="rp no">All on us. Use row locks (<code>with_lock</code>), atomic updates, unique indexes and DB check constraints. Model validations alone can race.</div><div class="code">
+<pre data-lang="rails"><span class="c"># atomic: only one request can flip used from false to true</span>
+claimed = Coupon.where(code: params[:code], used: false).update_all(used: true, used_by_id: Current.user.id)
+return render(status: :conflict, plain: "Already used") if claimed.zero?
+
+<span class="c"># or lock the row for the whole check-and-act</span>
+coupon.with_lock do
+  raise AlreadyUsed if coupon.used?
+  coupon.update!(used: true)
+  Current.user.credit!(coupon.amount)
+end
+
+<span class="c"># database as the final guard</span>
+add_index :redemptions, [:coupon_id], unique: true
+add_check_constraint :order_items, "qty BETWEEN 1 AND 10", name: "qty_range"
+
+<span class="c"># never take prices from the request</span>
+item.price = Product.find_by!(sku: line[:sku]).price</pre>
+</div>
+</div>
+
+<div class="col"><label class="readmark"><input type="checkbox" id="read-20-insecure-design"> mark section 20 as read</label><div class="pager"><a href="19-misconfiguration-and-errors.html">◀ 19 Misconfiguration and Error Handling</a><a href="21-logging-and-incident-response.html">21 Logging, Alerting and Incident Response ▶</a></div></div>
+  </main>
+  <footer class="site">Based on the <a href="https://guides.rubyonrails.org/security.html">Ruby on Rails Security Guide</a> (CC BY-SA 4.0), the <a href="https://cheatsheetseries.owasp.org/">OWASP Cheat Sheet Series</a>, the <a href="https://owasp.org/Top10/2025/">OWASP Top 10:2025</a> and <a href="https://infosec.mozilla.org/guidelines/web_security.html">Mozilla's Web Security Guidelines</a>. Written for our dev team; code samples are illustrative.</footer>
+</div>
+<script src="assets/site.js?v=92ac7aa3f8"></script>
+<script>
+
+const stride = {
+  gift: [["Spoofing", "Redeem a card on another user's account by changing account_id", "derive account from session"], ["Tampering", "Change the card value in the request", "look up value server-side"], ["Repudiation", "\"I never redeemed it\"", "audit log with user, IP, time"], ["Information disclosure", "Error says \"card already used by bob@…\"", "generic errors"], ["Denial of service", "Brute-force card codes until valid ones are found", "long random codes + rate limit + lockout"], ["Elevation of privilege", "Redeem the same card twice concurrently", "atomic claim / unique index"]],
+  invite: [["Spoofing", "Accept an invite meant for someone else's email", "bind invite to email, verify on accept"], ["Tampering", "Change role=member to role=owner in the accept link", "store role server-side, signed token"], ["Repudiation", "Who invited this external user?", "log inviter and acceptor"], ["Information disclosure", "Invite form reveals whether an email already has an account", "same response either way"], ["Denial of service", "Send thousands of invite emails (spam via your domain)", "per-team rate limit"], ["Elevation of privilege", "A member invites someone as admin", "policy: only admins grant admin"]],
+  export: [["Spoofing", "Export link works for anyone who has the URL", "require login + signed, expiring URL"], ["Tampering", "Change ?account_id= to export another tenant", "scope to current tenant"], ["Repudiation", "Who exported all customers last night?", "audit log + alert on large exports"], ["Information disclosure", "CSV includes fields the role shouldn't see; formula injection (=HYPERLINK) in cells", "per-role columns; escape leading = + - @"], ["Denial of service", "Export 5 million rows synchronously", "background job, row limits"], ["Elevation of privilege", "Support role triggers admin-only export endpoint", "function-level authorization"]]};
+function st() { const f = $("#st-f").value; $("#st-tbl").innerHTML = "<tr><th>STRIDE</th><th>what could go wrong</th><th>mitigation</th></tr>" + stride[f].map(r => `<tr><td><b>${r[0][0]}</b>${r[0].slice(1)}</td><td>${esc(r[1])}</td><td class="w">${esc(r[2])}</td></tr>`).join(""); }
+$("#st-f").addEventListener("change", st); st();
+$("#rc-go").onclick = () => {
+  const n = Math.min(50, Math.max(2, +$("#rc-n").value || 10)), mode = $("input[name=rc-mode]:checked").value;
+  const log = []; let used = false, credits = 0;
+  if (mode === "none") {
+    const passed = Math.min(n, 2 + Math.floor(Math.random() * Math.max(1, n * 0.6)));
+    for (let i = 1; i <= n; i++) { if (i <= passed) { log.push(`req ${String(i).padStart(2)}: SELECT used → false … UPDATE … <span class="r">+$50</span>`); credits += 50; } else log.push(`req ${String(i).padStart(2)}: SELECT used → true → 409`); }
+  } else {
+    for (let i = 1; i <= n; i++) {
+      const how = { lock: "SELECT … FOR UPDATE (waits for lock)", atomic: "UPDATE coupons SET used=true WHERE code=… AND used=false", unique: "INSERT INTO redemptions (coupon_id) …" }[mode];
+      if (!used) { used = true; credits += 50; log.push(`req ${String(i).padStart(2)}: ${how} → <span class="g">wins, +$50</span>`); }
+      else log.push(`req ${String(i).padStart(2)}: ${how} → ${mode === "atomic" ? "0 rows updated" : mode === "unique" ? "UniqueViolation" : "sees used=true"} → 409`);
+    }
+  }
+  log.sort(() => Math.random() - .5);
+  $("#rc-out").innerHTML = log.join("\n") + `\n\n<b>total credited: $${credits}</b> ${credits > 50 ? '<span class="r">(coupon worth $50 redeemed ' + credits / 50 + " times)</span>" : '<span class="g">(exactly once)</span>'}`;
+};
+const catalog = { "LAPTOP-15": 1299, "MOUSE": 25 };
+function bz() {
+  let b; try { b = JSON.parse($("#bz-in").value); } catch (e) { $("#bz-out").innerHTML = '<span class="y">invalid JSON</span>'; return; }
+  const usePrice = $("#bz-price").checked, checkQty = $("#bz-qty").checked; let total = 0; const lines = [], errs = [];
+  (b.items || []).forEach(it => {
+    const real = catalog[it.sku]; if (real === undefined) { errs.push(`unknown sku ${esc(it.sku)}`); return; }
+    if (checkQty && !(Number.isInteger(it.qty) && it.qty >= 1 && it.qty <= 10)) { errs.push(`${esc(it.sku)}: qty must be 1–10`); return; }
+    const price = usePrice ? real : Number(it.price), line = price * it.qty; total += line;
+    lines.push(`${esc(it.sku).padEnd(10)} ${String(it.qty).padStart(3)} × $${price.toFixed(2)} = ${line < 0 ? '<span class="r">' : price < real ? '<span class="r">' : ""}$${line.toFixed(2)}${line < 0 || price < real ? "</span>" : ""}`);
+  });
+  $("#bz-out").innerHTML = (errs.length ? errs.map(e => '<span class="g">422 ' + e + "</span>").join("\n") + "\n\n" : "") + lines.join("\n") + `\n\ntotal charged: ${total < 1299 && lines.length ? '<span class="r">$' + total.toFixed(2) + "</span>" : "$" + total.toFixed(2)}` + (total < 0 ? '\n<span class="r">negative total: the store pays the attacker</span>' : "");
+}
+$("#bz-in").addEventListener("input", bz); ["#bz-price", "#bz-qty"].forEach(s => $(s).addEventListener("change", bz)); bz();
+
+</script>
+</body>
+</html>

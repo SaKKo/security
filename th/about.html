@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="th" data-lang="rails">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>เกี่ยวกับผู้เขียน · Web Security</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600&display=swap" rel="stylesheet">
+<link rel="icon" href="../favicon.ico" sizes="32x32">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<link rel="manifest" href="../site.webmanifest">
+<meta name="theme-color" content="#000000">
+<link rel="stylesheet" href="../assets/site.css?v=8f1e007517">
+<script src="../assets/consent.js?v=9320b4a322"></script>
+</head>
+<body data-slug="about">
+<div class="win">
+  <div class="titlebar"><span class="dots"><i></i><i></i><i></i></span><span class="t">guest@websec: ~/websec/about/th — zsh — 100×40</span>
+    <a class="by" href="about.html" aria-current="page" title="เกี่ยวกับผู้เขียน"><span class="w0">เขียนโดย </span>SaKKo</a>
+    <span class="lsw" role="group" aria-label="ภาษา"><a href="../about.html" data-setlang="en">EN</a><a href="about.html" aria-current="true" data-setlang="th">TH</a></span>
+    <span class="langsw" role="group" aria-label="Code examples language"><span class="d">โค้ด:</span><button type="button" data-l="rails">rails</button><button type="button" data-l="node">node</button></span></div>
+  <nav class="top" aria-label="Sections"><a href="index.html" title="คู่มือความปลอดภัยเว็บแอปพลิเคชัน">~/</a>
+<a class="trk on" href="index.html#security">#1 ความปลอดภัย</a>
+<a class="trk" href="r01-rails-api-app.html">#2 rails</a>
+<span class="grp">|</span>
+<a href="01-introduction.html" title="บทนำ">01·บทนำ</a>
+<a href="02-sql-injection.html" title="SQL Injection">02·sql</a>
+<a href="03-unsafe-query-generation.html" title="การสร้าง query ที่ไม่ปลอดภัย">03·query</a>
+<a href="04-xss-and-other-injection.html" title="XSS และ injection แบบอื่น">04·xss</a>
+<span class="grp">| บัญชี:</span>
+<a href="05-authentication.html" title="การยืนยันตัวตน">05·auth</a>
+<a href="05b-mfa.html" title="การยืนยันตัวตนหลายปัจจัย">05b·mfa</a>
+<a href="06-sessions.html" title="Session">06·session</a>
+<a href="07-csrf.html" title="Cross-Site Request Forgery">07·csrf</a>
+<a href="08-user-management.html" title="การจัดการผู้ใช้">08·ผู้ใช้</a>
+<a href="09-mass-assignment-and-authorization.html" title="Mass Assignment และ Authorization">09·authz</a>
+<span class="grp">| เบราว์เซอร์:</span>
+<a href="10-redirection-and-files.html" title="Redirect และไฟล์">10·ไฟล์</a>
+<a href="11-http-security-headers.html" title="HTTP Security Header">11·header</a>
+<a href="12-transport-cookies-third-party.html" title="การรับส่งข้อมูล คุกกี้ และสคริปต์บุคคลที่สาม">12·คุกกี้</a>
+<span class="grp">| เซิร์ฟเวอร์:</span>
+<a href="13-ssrf.html" title="Server-Side Request Forgery">13·ssrf</a>
+<a href="14-deserialization-and-xxe.html" title="Deserialization และ XXE">14·deserialize</a>
+<a href="15-environmental-security.html" title="ความปลอดภัยของสภาพแวดล้อม">15·secret</a>
+<a href="16-cryptography.html" title="การเข้ารหัสและการปกป้องข้อมูล">16·crypto</a>
+<a href="17-dependencies-and-cves.html" title="Dependency และ CVE">17·dependency</a>
+<span class="grp">| ดูแลระบบ:</span>
+<a href="18-intranet-and-admin.html" title="ความปลอดภัยของ intranet และ admin">18·admin</a>
+<a href="19-misconfiguration-and-errors.html" title="การตั้งค่าผิดพลาดและการจัดการ error">19·config</a>
+<a href="20-insecure-design.html" title="การออกแบบที่ไม่ปลอดภัยและ business logic">20·design</a>
+<a href="21-logging-and-incident-response.html" title="Logging การแจ้งเตือน และการรับมือเหตุการณ์">21·logging</a>
+<a href="22-additional-resources.html" title="แหล่งข้อมูลเพิ่มเติม">22·แหล่งข้อมูล</a>
+<span class="grp">| แบบสอบถาม:</span>
+<a href="q1-developer-survey.html" title="แบบสำรวจความปลอดภัยสำหรับนักพัฒนา">Q1·dev</a>
+<a href="q2-awareness-survey.html" title="แบบสำรวจความตระหนักรู้ภัยไซเบอร์">Q2·ทุกคน</a></nav>
+  <main>
+<div class="col">
+<p class="prompt">guest@websec ~ % <b>finger tanasak</b></p>
+<h1>เกี่ยวกับผู้เขียน</h1>
+<p class="lede">คู่มือนี้ถูกสร้างขึ้นด้วย AI โดย ธนศักดิ์ ตันติธารทอง (SaKKo) ผู้ก่อตั้ง Geekstart ซึ่งปัจจุบันอยู่ภายใต้ Ramssol Group Berhad เป็นโปรแกรมเมอร์และผู้สอน ประจำกรุงเทพฯ</p>
+<div class="profile">
+<img src="../img/tanasak.jpg" alt="รูปของ ธนศักดิ์ ตันติธารทอง" width="180" height="180" loading="lazy">
+<div>
+<dl class="kv">
+<dt>ชื่อ</dt><dd><b>ธนศักดิ์ ตันติธารทอง</b></dd>
+<dt>english</dt><dd>Tanasak Tantitarntong</dd>
+<dt>ตำแหน่ง</dt><dd>ผู้ก่อตั้งและ CTO บริษัท Geekstart จำกัด</dd>
+<dt>กลุ่มบริษัท</dt><dd>Ramssol Group Berhad (มาเลเซีย)</dd>
+<dt>ที่อยู่</dt><dd>กรุงเทพฯ ประเทศไทย</dd>
+<dt>อีเมล</dt><dd><a href="mailto:saklism@gmail.com">saklism@gmail.com</a></dd>
+<dt>เว็บ</dt><dd><a href="https://soontobeprogrammer.com/about/">soontobeprogrammer.com</a></dd>
+</dl>
+</div>
+</div>
+<p>การเขียนโปรแกรมและการสอนเป็นความฝันตั้งแต่เด็ก ก่อตั้ง Geekstart ตอนอายุ 28 และในปี 2024 Geekstart <a href="https://ramssolgroup.com/event/ramssol-group-berhad-has-officially-acquired-geekstart-company-limited/">ถูกเข้าซื้อกิจการโดย Ramssol Group Berhad</a> กลุ่มบริษัทเทคโนโลยีจากมาเลเซีย ปัจจุบันดูแลงานด้านเทคโนโลยีทั้งหมดของโปรเจกต์ในกลุ่ม เคยสอนเขียนโปรแกรมในมหาวิทยาลัย เป็นวิทยากรอบรม iOS ให้องค์กร และสอนคณิตศาสตร์ระดับมัธยมปลาย ปัจจุบันยังคงสอนนักพัฒนาที่ทำงานด้วยกัน และคู่มือนี้ก็เป็นส่วนหนึ่งของการสอนนั้น</p>
+
+<h2>โปรเจกต์</h2>
+<p>ใน Ramssol Group ดูแลงานวิศวกรรมของโปรเจกต์เหล่านี้:</p>
+<ul class="tl">
+<li><span class="yr">fintech</span><span><span class="role"><a href="https://ramssolgroup.com/event/launching-pay-day-now-malaysias-first-earned-wage-access-solution-by-ramssol-group-ambank-group-2/">Pay Day Now</a></span> <span class="sub">บริการ Earned Wage Access รายแรกของมาเลเซีย เปิดตัวโดย Ramssol Group ร่วมกับ AmBank Group ให้พนักงานเบิกค่าจ้างที่ทำงานไปแล้วบางส่วนก่อนวันเงินเดือนออก</span></span></li>
+<li><span class="yr">platform</span><span><span class="role">Ridergate</span></span></li>
+<li><span class="yr">energy</span><span><span class="role">Renewable Energy</span></span></li>
+</ul>
+
+<h2>ประสบการณ์ทำงาน</h2>
+<ul class="tl">
+<li><span class="yr">2024–ปัจจุบัน</span><span><span class="role">หัวหน้าทีมเทคโนโลยี โปรเจกต์ในกลุ่ม</span> · <span class="org">Ramssol Group Berhad (มาเลเซีย)</span><span class="sub">Pay Day Now · Ridergate · Renewable Energy</span></span></li>
+<li><span class="yr">2009–ปัจจุบัน</span><span><span class="role">ผู้ก่อตั้งและ CTO</span> · <span class="org">บริษัท Geekstart จำกัด</span><span class="sub"><a href="https://ramssolgroup.com/event/ramssol-group-berhad-has-officially-acquired-geekstart-company-limited/">ถูกเข้าซื้อกิจการโดย Ramssol Group Berhad</a> มิถุนายน 2024</span></span></li>
+<li><span class="yr">2017</span><span><span class="role">ผู้ร่วมก่อตั้ง</span> · <span class="org">บริษัท FineCoding จำกัด</span></span></li>
+<li><span class="yr">2015–2018</span><span><span class="role">อาจารย์</span> · <span class="org">วิทยาลัยนานาชาติ มหาวิทยาลัยมหิดล</span><span class="sub">ICCS474 Internet Programming · ICCS340 Web Development</span></span></li>
+<li><span class="yr">2011–2012</span><span><span class="role">ครูคณิตศาสตร์ ม.5/ม.6</span> · <span class="org">โรงเรียนอัสสัมชัญธนบุรี (English Program)</span></span></li>
+<li><span class="yr">2009–2011</span><span><span class="role">วิทยากรสอน iOS Programming (พาร์ตไทม์)</span> · <span class="org">SoftwarePark / True Digital Content and Media</span></span></li>
+<li><span class="yr">2009–2011</span><span><span class="role">System Analyst</span> · <span class="org">ExxonMobil (EMIT)</span></span></li>
+</ul>
+
+<h3>ลูกค้าของ Geekstart</h3>
+<div class="tags"><span>CP-Intertrade</span><span>PINE Wealth Solution</span><span>One Asset</span><span>TRUE</span><span>Altitude</span><span>Sansiri</span><span>PLUS Property</span><span>SCG Addventures</span><span>SCG Chemicals</span><span>Innovative Software Consulting</span><span>Ramssol Group</span><span>Honda R&D AP</span><span>Mahidol University International College</span><span>EcartStudio</span></div>
+
+<h2>การศึกษา</h2>
+<ul class="tl">
+<li><span class="yr">2004–2008</span><span><span class="role">วิทยาการคอมพิวเตอร์</span> · <span class="org">วิทยาลัยนานาชาติ มหาวิทยาลัยมหิดล</span></span></li>
+<li><span class="yr">2006–2007</span><span><span class="role">นักศึกษาแลกเปลี่ยน</span> · <span class="org">Okayama University ประเทศญี่ปุ่น</span></span></li>
+<li><span class="yr">1995–2003</span><span><span class="role">มัธยมศึกษา</span> · <span class="org">Ekamai International School</span></span></li>
+</ul>
+
+<h2>ภาษา</h2>
+<dl class="kv">
+<dt>ไทย</dt><dd>ภาษาแม่</dd>
+<dt>อังกฤษ</dt><dd>คล่อง</dd>
+<dt>ญี่ปุ่น</dt><dd>สื่อสารได้ (JLPT N2)</dd>
+</dl>
+</div>
+
+<div class="col"><div class="pager"><a href="index.html">◀ ~/ หน้าแรก</a><a href="01-introduction.html">01 บทนำ ▶</a></div></div>
+  </main>
+  <footer class="site">อ้างอิงจาก <a href="https://guides.rubyonrails.org/security.html">Ruby on Rails Security Guide</a> (CC BY-SA 4.0), <a href="https://cheatsheetseries.owasp.org/">OWASP Cheat Sheet Series</a>, <a href="https://owasp.org/Top10/2025/">OWASP Top 10:2025</a> และ <a href="https://infosec.mozilla.org/guidelines/web_security.html">Mozilla Web Security Guidelines</a> เขียนสำหรับทีมพัฒนาของเรา ตัวอย่างโค้ดเพื่อการอธิบาย ข้อความในผลการจำลองบางส่วนยังเป็นภาษาอังกฤษ</footer>
+</div>
+<script src="../assets/site.js?v=92ac7aa3f8"></script>
+<script>
+
+
+</script>
+</body>
+</html>

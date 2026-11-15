@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en" data-lang="rails">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>17 Dependencies and CVEs · Web Security</title>
+
+<link rel="icon" href="favicon.ico" sizes="32x32">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="site.webmanifest">
+<meta name="theme-color" content="#000000">
+<link rel="stylesheet" href="assets/site.css?v=8f1e007517">
+<script src="assets/consent.js?v=9320b4a322"></script>
+</head>
+<body data-slug="17-dependencies-and-cves">
+<div class="win">
+  <div class="titlebar"><span class="dots"><i></i><i></i><i></i></span><span class="t">guest@websec: ~/websec/17-dependencies-and-cves — zsh — 100×40</span>
+    <a class="by" href="about.html" title="About the author"><span class="w0">by </span>SaKKo</a>
+    <span class="lsw" role="group" aria-label="Language"><a href="17-dependencies-and-cves.html" aria-current="true" data-setlang="en">EN</a><a href="th/17-dependencies-and-cves.html" data-setlang="th">TH</a></span>
+    <span class="langsw" role="group" aria-label="Code examples language"><span class="d">code:</span><button type="button" data-l="rails">rails</button><button type="button" data-l="node">node</button></span></div>
+  <nav class="top" aria-label="Sections"><a href="index.html" title="Web Security Field Guide">~/</a>
+<a class="trk on" href="index.html#security">#1 security</a>
+<a class="trk" href="r01-rails-api-app.html">#2 rails</a>
+<span class="grp">|</span>
+<a href="01-introduction.html" title="Introduction">01·introduction</a>
+<a href="02-sql-injection.html" title="SQL Injection">02·sql-injection</a>
+<a href="03-unsafe-query-generation.html" title="Unsafe Query Generation">03·query-shape</a>
+<a href="04-xss-and-other-injection.html" title="XSS and Other Injection">04·xss</a>
+<span class="grp">| accounts:</span>
+<a href="05-authentication.html" title="Authentication">05·auth</a>
+<a href="05b-mfa.html" title="Multi-Factor Authentication">05b·mfa</a>
+<a href="06-sessions.html" title="Sessions">06·sessions</a>
+<a href="07-csrf.html" title="Cross-Site Request Forgery">07·csrf</a>
+<a href="08-user-management.html" title="User Management">08·accounts</a>
+<a href="09-mass-assignment-and-authorization.html" title="Mass Assignment and Authorization">09·authz</a>
+<span class="grp">| browser:</span>
+<a href="10-redirection-and-files.html" title="Redirection and Files">10·files</a>
+<a href="11-http-security-headers.html" title="HTTP Security Headers">11·headers</a>
+<a href="12-transport-cookies-third-party.html" title="Transport, Cookies and Third-Party Scripts">12·cookies-tls</a>
+<span class="grp">| server:</span>
+<a href="13-ssrf.html" title="Server-Side Request Forgery">13·ssrf</a>
+<a href="14-deserialization-and-xxe.html" title="Deserialization and XXE">14·deserialize</a>
+<a href="15-environmental-security.html" title="Environmental Security">15·secrets</a>
+<a href="16-cryptography.html" title="Cryptography and Data Protection">16·crypto</a>
+<a href="17-dependencies-and-cves.html" aria-current="page" title="Dependencies and CVEs">17·dependencies</a>
+<span class="grp">| ops:</span>
+<a href="18-intranet-and-admin.html" title="Intranet and Admin Security">18·admin</a>
+<a href="19-misconfiguration-and-errors.html" title="Misconfiguration and Error Handling">19·misconfig</a>
+<a href="20-insecure-design.html" title="Insecure Design and Business Logic">20·design</a>
+<a href="21-logging-and-incident-response.html" title="Logging, Alerting and Incident Response">21·logging</a>
+<a href="22-additional-resources.html" title="Additional Resources">22·resources</a>
+<span class="grp">| questionnaires:</span>
+<a href="q1-developer-survey.html" title="Developer Security Survey">Q1·developer</a>
+<a href="q2-awareness-survey.html" title="Cyber Threat Awareness Survey">Q2·cyber</a></nav>
+  <main>
+<div class="col">
+<p class="prompt">guest@websec ~ % <b>npm audit</b></p>
+<h1>17 · Dependencies and CVEs</h1>
+<p class="lede">An app pulls in hundreds of libraries, all running with full power. When one gets a known hole, attackers start scanning within days.</p>
+<h2>Nobody updates your dependencies for you</h2>
+<p>When a library ships a security fix, nothing changes in our app until <i>we</i> update. Until then, the lockfile keeps installing the old, vulnerable version.</p>
+<div class="rp tool">Run <code>bundler-audit</code> and <code>brakeman</code>, turn on Dependabot, and stay on a Rails version that still gets security fixes.</div>
+<h2>CVEs and advisories, briefly</h2>
+<ul>
+<li>A <b>CVE</b> is just an ID for one known vulnerability.</li>
+<li>Advisory databases say which versions are affected.</li>
+<li>Severity scores help, but what matters is whether we actually use the broken code.</li>
+</ul>
+<h2>Updating safely: change as little as possible</h2>
+<p>Update just the broken package, not everything. A small change ships today; a big one turns into a week of fixing unrelated breakage.</p>
+<div class="tablewrap"><table><thead><tr><th>ecosystem</th><th>find vulnerable packages</th><th>update one package conservatively</th></tr></thead><tbody>
+<tr><td>Ruby / Bundler</td><td><code>bundle audit</code></td><td><code>bundle update --conservative rack</code></td></tr>
+<tr><td>Node / npm</td><td><code>npm audit</code></td><td><code>npm update lodash</code> or <code>npm install lodash@4.17.21</code></td></tr>
+<tr><td>Node / pnpm, yarn</td><td><code>pnpm audit</code>, <code>yarn npm audit</code></td><td><code>pnpm update lodash</code>, <code>yarn up lodash</code></td></tr>
+<tr><td>PHP / Composer</td><td><code>composer audit</code></td><td><code>composer update guzzlehttp/guzzle --with-dependencies</code></td></tr>
+<tr><td>any</td><td>OSV-Scanner, Snyk, Trivy</td><td>Dependabot / Renovate open one PR per update</td></tr>
+</tbody></table></div>
+<div class="demo"><header><b>sim: patching a transitive CVE</b><span>illustrative versions and advisory</span></header><div class="body">
+<pre class="plain" id="dp-tree"></pre>
+<div class="row" style="margin-top:10px"><button class="btn" id="dp-audit" type="button">run audit</button><button class="btn on" id="dp-cons" type="button">conservative update of qs</button><button class="btn red" id="dp-all" type="button">update everything</button><button class="btn" id="dp-reset" type="button">reset</button></div>
+<div class="out" id="dp-out" style="margin-top:10px"></div>
+</div></div>
+<div class="anim" data-actors="Gem maintainer|Advisory DB|Attackers|Dependabot|Our app" data-title="From disclosure to exploit"><script type="application/json">[{"f": 0, "t": 1, "l": "patched release + advisory", "c": "A fix ships and an advisory with a CVE ID is published."}, {"f": 2, "t": 0, "l": "diff the patch", "k": "a", "c": "Attackers read the fix to work out the bug. Public exploits often follow within days."}, {"f": 2, "t": 4, "l": "scan the internet for the old version", "k": "a", "c": "Automated scanners look for apps still running it."}, {"f": 3, "t": 4, "l": "PR: bump gem 2.3.1 → 2.3.2", "k": "k", "c": "Dependabot or bundler-audit tells us the same day."}, {"n": 4, "l": "bundle update --conservative gem", "k": "k", "c": "A one-gem update: tests pass and we deploy the same afternoon."}, {"f": 2, "t": 4, "l": "exploit attempt", "k": "b", "c": "The attack arrives after the patch. <b>Speed of patching is the defense.<\/b>"}]</script></div>
+<h2>Version ranges decide what "update" means</h2>
+<p>Versions go <code>MAJOR.MINOR.PATCH</code>. Patches fix bugs, majors may break things. Your version range decides how far an update can move:</p>
+<div class="demo"><header><b>sim: which versions does this range allow?</b><span>npm / Composer / Cargo semantics</span></header><div class="body">
+<div class="row"><label for="sv-in">range</label><input id="sv-in" style="width:160px" type="text" value="^4.17.15"/>
+<button class="btn" data-sv="^4.17.15" type="button">^4.17.15</button><button class="btn" data-sv="~4.17.15" type="button">~4.17.15</button><button class="btn" data-sv="4.17.15" type="button">4.17.15</button><button class="btn" data-sv="&gt;=4.17.21" type="button">&gt;=4.17.21</button><button class="btn" data-sv="^0.2.3" type="button">^0.2.3</button></div>
+<div class="out" id="sv-out" style="margin-top:10px"></div>
+<p class="hint" style="margin-top:8px">Bundler's <code>~&gt; 4.17</code> works like npm's <code>^4.17</code>.</p>
+</div></div>
+<h2>A dependency hygiene checklist</h2>
+<ul>
+<li><b>Commit the lockfile.</b></li>
+<li><b>Automate it</b>: Dependabot plus an audit step in CI.</li>
+<li><b>Follow Rails security announcements.</b></li>
+<li><b>Update little and often.</b> A year behind is hard to patch in a hurry.</li>
+<li><b>Be picky about new gems.</b> Watch for look-alike names.</li>
+<li><b>Install from the lockfile</b> in CI and production.</li>
+</ul>
+</div>
+
+<div class="col"><label class="readmark"><input type="checkbox" id="read-17-dependencies-and-cves"> mark section 17 as read</label><div class="pager"><a href="16-cryptography.html">◀ 16 Cryptography and Data Protection</a><a href="18-intranet-and-admin.html">18 Intranet and Admin Security ▶</a></div></div>
+  </main>
+  <footer class="site">Based on the <a href="https://guides.rubyonrails.org/security.html">Ruby on Rails Security Guide</a> (CC BY-SA 4.0), the <a href="https://cheatsheetseries.owasp.org/">OWASP Cheat Sheet Series</a>, the <a href="https://owasp.org/Top10/2025/">OWASP Top 10:2025</a> and <a href="https://infosec.mozilla.org/guidelines/web_security.html">Mozilla's Web Security Guidelines</a>. Written for our dev team; code samples are illustrative.</footer>
+</div>
+<script src="assets/site.js?v=92ac7aa3f8"></script>
+<script>
+
+const init = () => ({ express: "4.18.2", "body-parser": "1.20.1", qs: "6.11.0", jsonwebtoken: "9.0.0", mongoose: "7.6.0", axios: "1.5.0" });
+let v = init(), audited = false;
+function tree() {
+  const vuln = v.qs === "6.11.0";
+  const q = n => vuln && n === "qs" ? `<span class="r">qs@${v.qs}  ← CVE (prototype pollution, high)</span>` : `${n}@${v[n]}`;
+  $("#dp-tree").innerHTML = `my-app\n├── express@${v.express}\n│   └── body-parser@${v["body-parser"]}\n│       └── ${q("qs")}\n├── jsonwebtoken@${v.jsonwebtoken}\n├── mongoose@${v.mongoose}\n└── axios@${v.axios}`;
+}
+$("#dp-audit").onclick = () => { audited = true; $("#dp-out").innerHTML = v.qs === "6.11.0" ? '<span class="r">1 high severity vulnerability</span>\n  qs  &lt;6.11.1  prototype pollution\n  path: express › body-parser › qs\n  fix available: qs@6.11.2 (within body-parser\'s range ^6.11.0)' : '<span class="g">found 0 vulnerabilities</span>'; };
+$("#dp-cons").onclick = () => { v.qs = "6.11.2"; tree(); $("#dp-out").innerHTML = '$ npm update qs\nchanged 1 package\n  qs 6.11.0 → 6.11.2\n\n<span class="g">tests pass · diff is one line in the lockfile · deploy now</span>'; };
+$("#dp-all").onclick = () => { v = { express: "5.1.0", "body-parser": "2.2.0", qs: "6.14.0", jsonwebtoken: "9.0.2", mongoose: "8.15.0", axios: "1.10.0" }; tree(); $("#dp-out").innerHTML = '$ npm install express@latest mongoose@latest … (everything)\nchanged 214 packages\n  express 4 → 5 (major: removed app.del, changed path matching)\n  mongoose 7 → 8 (major: removed callbacks, changed defaults)\n\n<span class="y">CVE fixed, but 37 tests now fail. The security patch is stuck behind a migration.</span>'; };
+$("#dp-reset").onclick = () => { v = init(); tree(); $("#dp-out").textContent = ""; };
+tree();
+
+const versions = ["4.17.14", "4.17.15", "4.17.20", "4.17.21", "4.18.0", "4.19.2", "5.0.0", "0.2.3", "0.2.9", "0.3.0"];
+const cmp = (a, b) => { const x = a.split(".").map(Number), y = b.split(".").map(Number); for (let i = 0; i < 3; i++) if (x[i] !== y[i]) return x[i] - y[i]; return 0; };
+function sat(r, ver) {
+  r = r.trim(); let m;
+  if ((m = r.match(/^\^(\d+)\.(\d+)\.(\d+)$/))) { const [M, mi, p] = m.slice(1).map(Number), lo = `${M}.${mi}.${p}`, hi = M > 0 ? `${M + 1}.0.0` : mi > 0 ? `0.${mi + 1}.0` : `0.0.${p + 1}`; return cmp(ver, lo) >= 0 && cmp(ver, hi) < 0; }
+  if ((m = r.match(/^~(\d+)\.(\d+)\.(\d+)$/))) { const [M, mi, p] = m.slice(1).map(Number); return cmp(ver, `${M}.${mi}.${p}`) >= 0 && cmp(ver, `${M}.${mi + 1}.0`) < 0; }
+  if ((m = r.match(/^>=\s*(\d+\.\d+\.\d+)$/))) return cmp(ver, m[1]) >= 0;
+  if ((m = r.match(/^(\d+\.\d+\.\d+)$/))) return cmp(ver, m[1]) === 0;
+  return null;
+}
+function sv() {
+  const r = $("#sv-in").value, res = versions.map(x => [x, sat(r, x)]);
+  if (res[0][1] === null) { $("#sv-out").innerHTML = '<span class="y">supported forms: ^1.2.3, ~1.2.3, 1.2.3, >=1.2.3</span>'; return; }
+  const note = { "4.17.21": "security fix", "5.0.0": "breaking changes", "0.3.0": "0.x minor = breaking" };
+  $("#sv-out").innerHTML = res.map(([x, ok]) => `${ok ? '<span class="g">[✓]</span>' : '<span class="d">[ ]</span>'} ${x.padEnd(8)}${note[x] ? ' <span class="' + (x === "4.17.21" ? "k" : "y") + '">' + note[x] + "</span>" : ""}`).join("\n") +
+    (sat(r, "4.17.21") === false && sat(r, "4.17.15") ? '\n\n<span class="r">this range can never receive the 4.17.21 security fix. Loosen or bump it.</span>' : "");
+}
+$("#sv-in").addEventListener("input", sv); $$("[data-sv]").forEach(b => b.onclick = () => { $("#sv-in").value = b.dataset.sv; sv(); }); sv();
+
+</script>
+</body>
+</html>

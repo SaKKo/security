@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="th" data-lang="rails">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Controller และลำดับชั้นของ API · Rails Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600&display=swap" rel="stylesheet">
+<link rel="icon" href="../favicon.ico" sizes="32x32">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<link rel="manifest" href="../site.webmanifest">
+<meta name="theme-color" content="#000000">
+<link rel="stylesheet" href="../assets/site.css?v=8f1e007517">
+<script src="../assets/consent.js?v=9320b4a322"></script>
+</head>
+<body data-slug="r06-controllers">
+<div class="win">
+  <div class="titlebar"><span class="dots"><i></i><i></i><i></i></span><span class="t">guest@websec: ~/websec/r06-controllers/th — zsh — 100×40</span>
+    <a class="by" href="about.html" title="เกี่ยวกับผู้เขียน"><span class="w0">เขียนโดย </span>SaKKo</a>
+    <span class="lsw" role="group" aria-label="ภาษา"><a href="../r06-controllers.html" data-setlang="en">EN</a><a href="r06-controllers.html" aria-current="true" data-setlang="th">TH</a></span></div>
+  <nav class="top" aria-label="บทเรียน"><a href="index.html#rails" title="หน้าแรก">~/</a>
+<a class="trk" href="index.html#security">#1 ความปลอดภัย</a>
+<a class="trk on" href="r01-rails-api-app.html">#2 rails</a>
+<span class="grp">| พื้นฐาน:</span>
+<a href="r01-rails-api-app.html" title="แอป Rails แบบ API">r01·api-app</a>
+<a href="r02-rails-commands.html" title="คำสั่ง Rails">r02·commands</a>
+<a href="r03-migrations.html" title="Migration">r03·migrations</a>
+<span class="grp">| model:</span>
+<a href="r04-models.html" title="Model และ ApplicationRecord">r04·models</a>
+<a href="r05-model-callbacks.html" title="Model Callback">r05·model-hooks</a>
+<span class="grp">| controller:</span>
+<a href="r06-controllers.html" aria-current="page" title="Controller และลำดับชั้นของ API">r06·controllers</a>
+<a href="r07-controller-callbacks.html" title="Controller Callback">r07·controller-hooks</a>
+<a href="r08-where-code-goes.html" title="Controller, Model หรือ Service?">r08·services</a>
+<span class="grp">| api:</span>
+<a href="r09-rest-routes.html" title="Route แบบ RESTful และ Resourceful">r09·rest-routes</a>
+<a href="r10-testing.html" title="การทดสอบ API">r10·testing</a></nav>
+  <main>
+<div class="col">
+<p class="prompt">guest@websec ~ % <b>man r06-controllers</b></p>
+<h1>Controller และลำดับชั้นของ API</h1>
+<p class="lede">controller แปลง HTTP request หนึ่งครั้งเป็น JSON response หนึ่งครั้ง controller ของเราสั้น เพราะแต่ละชั้นของลำดับ class รับงานไปคนละอย่าง</p>
+<div class="tldr">action ของ controller ควร: โหลด record (จำกัดเฉพาะที่ผู้เรียกมีสิทธิ์เห็น) ส่ง params ที่กรองแล้วให้ model หรือ service และ render JSON ตามรูปแบบของ model ส่วน auth, การตรวจสิทธิ์ และการจัดรูป error ได้มาจากการสืบทอด ไม่ต้องเขียนในแต่ละ controller</div><h2>ลำดับชั้นของ class</h2><div class="code" data-label="text"><pre>ActionController::API
+└── ApplicationController                 health check, paginate, sort, safe render
+    └── Api::AppController                cookies + rescue_from → JSON errors
+        └── Api::V1::AppController        version seam (empty today)
+            ├── Api::V1::Admin::AppController    cookie login + permission check
+            │   ├── Api::V1::Admin::RolesController
+            │   ├── Api::V1::Admin::UsersController
+            │   └── Api::V1::Admin::SessionsController (skips login for create)
+            ├── Api::V1::Client::AppController   X-App-Key + signed JWT
+            │   ├── Api::V1::Client::RolesController
+            │   └── Api::V1::Client::AuthController
+            └── Api::V1::Public::AppController   no auth
+                └── Api::V1::Public::TwoFactorsController</pre></div><div class="demo"><header><b>แต่ละชั้นเพิ่มอะไร</b><span>คลิกที่ class</span></header><div class="body"><div class="pick"><script type="application/json">[{"k": "ApplicationController", "d": "<p>controller เดียวที่สืบทอด <code>ActionController::API<\/code> ได้โดยตรง เก็บสิ่งที่ทุก endpoint อาจต้องใช้:<\/p><ul><li><code>health<\/code> สำหรับ load balancer<\/li><li><code>paginate<\/code> และ <code>sort_with_mapping<\/code> (private helper)<\/li><li>การ override <code>render<\/code> ที่แทนข้อความ error ที่มี SQL/stack trace ด้วยข้อความทั่วไปบน production<\/li><li><code>append_info_to_payload<\/code> เพื่อเพิ่ม IP, user agent และ user id ใน log ของ request<\/li><\/ul><pre class=\"out\" style=\"margin:0\">def sort_with_mapping(main_result, key_mapping)\n  sort_params = params.permit(:sort_field, :sort_order)\n  field = key_mapping[sort_params[:sort_field]]   # only mapped columns\n  ...\nend<\/pre>"}, {"k": "Api::AppController", "d": "<p>แปลง exception เป็น JSON ทุก error response ใน API มีรูปแบบเดียวกัน: <code>{ success: false, type:, error: }<\/code> (และ <code>details<\/code> สำหรับ validation error) รวมถึงเพิ่ม cookie กลับมา (<code>include ActionController::Cookies<\/code>) พร้อม helper <code>update_cookies<\/code> / <code>fetch_cookies<\/code> ที่เข้ารหัสเสมอ<\/p><pre class=\"out\" style=\"margin:0\">rescue_from AppError, with: :handle_app_error                       # 400\nrescue_from AppAuthenticationError, with: :handle_authentication_error # 401\nrescue_from AppPermissionDenied, with: :handle_forbidden_error       # 403\nrescue_from ActiveRecord::RecordNotFound, with: :handle_not_found_error # 404\nrescue_from ActiveRecord::RecordInvalid, with: :handle_record_invalid_error # 400\nrescue_from ActionController::ParameterMissing, with: :handle_other_error  # 400\nrescue_from AASM::InvalidTransition, with: :handle_invalid_transition_error # 400\nrescue_from JWT::DecodeError, with: :jwt_failed                     # 401<\/pre>"}, {"k": "Api::V1::AppController", "d": "<p>ตั้งใจให้ว่างไว้ ถ้าวันหนึ่งต้องมี <code>/api/v2<\/code> ที่รูปแบบ error หรือ pagination ต่างออกไป <code>Api::V2::AppController<\/code> จะเปลี่ยนได้โดยไม่แตะ endpoint ของ v1 เลย<\/p>"}, {"k": "Api::V1::Admin::AppController", "d": "<p>ทุกอย่างที่ endpoint ของ admin ต้องมีก่อน action จะทำงาน: ตัวป้องกัน CSRF สำหรับ cookie auth (<code>X-Requested-With<\/code>), โหลดและต่ออายุ user ที่ login จาก cookie ที่เข้ารหัส, ติดป้ายประวัติการแก้ไข และตรวจ <code>\"controller#action\"<\/code> กับสิทธิ์ของ user บท r07 จะไล่ดู chain นี้ทีละขั้น<\/p>"}, {"k": "Api::V1::Client::AppController", "d": "<p>แบบ server-to-server: อ่าน <code>X-App-Key<\/code> หา <code>ClientApplication<\/code> ตรวจ JWT ใน <code>X-App-Secret<\/code> ด้วย secret ของแอปนั้น แล้วเปิดให้ใช้ <code>current_client_application<\/code> controller ฝั่ง client ดึงข้อมูลผ่านตัวนี้ทั้งหมด แอปหนึ่งจึงอ่าน role ของแอปอื่นไม่ได้<\/p>"}, {"k": "Api::V1::Public::AppController", "d": "<p>ไม่มีการยืนยันตัวตน แต่ยังได้การจัดการ error เป็น JSON มีจำนวน endpoint สาธารณะให้น้อยและเรียบง่ายที่สุด<\/p>"}, {"k": "Admin::RolesController", "d": "<p>controller ปลายทาง: รู้เรื่อง role อย่างเดียว ไม่เคยตรวจ login หรือจัดรูป error และลืมทำไม่ได้ เพราะ class แม่ทำให้แล้ว<\/p>"}]</script></div></div></div><div class="rs">เมื่อสร้าง controller ให้เปลี่ยน class แม่เป็น <code>…::AppController</code> ที่ถูกต้องทันที controller ปลายทางที่สืบทอด <code>ApplicationController</code> คือ bug ด้านความปลอดภัย: ไม่มี login ไม่มีการตรวจสิทธิ์</div><h2>โครงสร้างของ resource controller</h2><div class="code" data-label="ruby · app/controllers/api/v1/admin/roles_controller.rb"><pre>class Api::V1::Admin::RolesController &lt; Api::V1::Admin::AppController
+  before_action :set_client_application                 <span class="c"># parent from the URL</span>
+  before_action :set_role, only: %i[ show update ]      <span class="c"># the record, scoped to the parent</span>
+
+  <span class="c"># GET /api/v1/admin/client_applications/:client_application_id/roles</span>
+  def index
+    result = @client_application.roles
+    total_count = result.count
+    key_mapping = {
+      "created_at" =&gt; "created_at",
+    }
+    result = sort_with_mapping(result, key_mapping) if result.present?
+    result, total_pages = paginate(result)
+    render json: { roles: result.map(&amp;:as_admin_json), total_pages:, total_count: }
+  end
+
+  def show
+    render json: { role: @role.as_admin_json }
+  end
+
+  def create
+    @role = Role.new(role_params)
+    @role.save!                                         <span class="c"># raises → rescue_from → 400</span>
+    render json: { role: @role.as_admin_json }, status: :created
+  end
+
+  def update
+    @role.update!(role_params)
+    render json: { role: @role.as_admin_json }
+  end
+
+  private
+
+  def set_client_application
+    @client_application = ClientApplication.find(params[:client_application_id])
+  end
+
+  def set_role
+    @role = @client_application.roles.find(params[:id])   <span class="c"># not Role.find!</span>
+  end
+
+  def role_params
+    p = params.require(:role).permit(:name, :description, :status, permissions: [])
+    p[:client_application_id] = @client_application.id if action_name == "create"
+    p
+  end
+end</pre></div><div class="tablewrap"><table><thead><tr><th>รูปแบบ</th><th>เหตุผล</th></tr></thead><tbody><tr><td><code>set_* before_actions</code></td><td>โหลด record ครั้งเดียวก่อน action <code>find</code> raise → 404 อัตโนมัติ</td></tr><tr><td><code>@client_application.roles.find</code></td><td>ดึงผ่าน parent: id ของ role จากแอปอื่นจะได้ 404 ไม่รั่วไหล (IDOR)</td></tr><tr><td><code>save! / update!</code></td><td>ไม่มี <code>if/else</code> ถ้าล้มเหลวจะ raise แล้วกลายเป็น JSON 400 มาตรฐาน</td></tr><tr><td><code>require(:role).permit(…)</code></td><td>whitelist field ที่อื่นใน body ถูกตัดทิ้ง (mass assignment)</td></tr><tr><td><code>p[:client_application_id] = …</code></td><td>parent มาจาก URL ที่ผู้ใช้ได้รับอนุญาตแล้ว ไม่ใช่จาก body</td></tr><tr><td><code>as_admin_json</code></td><td>model เป็นผู้กำหนดรูปแบบ JSON ส่วน controller เลือกว่าจะใช้แบบไหน</td></tr><tr><td><code>{ roles:, total_pages:, total_count: }</code></td><td>ทุกรายการมีรูปแบบเดียวกัน front end จึงใช้ component ตารางตัวเดียวได้</td></tr></tbody></table></div><h2>ดูการตอบสนองจริง</h2><div class="term" data-title="zsh — ~/myapp"><script type="application/json">[{"c": "curl -s -X POST localhost:3000/api/v1/admin/client_applications/$APP/roles -b cookies.txt -H 'X-Requested-With: XMLHttpRequest' -H 'Content-Type: application/json' -d '{\"role\":{\"name\":\"Content Manager\",\"permissions\":[\"read_articles\"]}}'", "o": "{\"role\":{\"id\":\"0193a7b1-...\",\"name\":\"Content Manager\",\"client_application_id\":\"0193a6f2-...\",\"description\":\"\",\"status\":\"active\",\"permissions\":[\"read_articles\"],...}}", "n": "201 Created ค่า <code>client_application_id<\/code> มาจาก URL ไม่ใช่ body"}, {"c": "curl -s -X POST localhost:3000/api/v1/admin/client_applications/$APP/roles -b cookies.txt -H 'X-Requested-With: XMLHttpRequest' -H 'Content-Type: application/json' -d '{\"role\":{\"name\":\"\"}}'", "o": "{\"success\":false,\"type\":\"ActiveRecord::RecordInvalid\",\"error\":\"Validation failed: Name can't be blank\",\"details\":{\"name\":[\"can't be blank\"]}}", "n": "400 <code>save!<\/code> raise ออกมา แล้ว <code>rescue_from<\/code> render รูปแบบมาตรฐาน พร้อม <code>details<\/code> ราย field สำหรับฟอร์ม"}, {"c": "curl -s -X POST localhost:3000/api/v1/admin/client_applications/$APP/roles -b cookies.txt -H 'X-Requested-With: XMLHttpRequest' -H 'Content-Type: application/json' -d '{\"name\":\"no wrapper\"}'", "o": "{\"success\":false,\"type\":\"ActionController::ParameterMissing\",\"error\":\"param is missing or the value is empty or invalid: role\"}", "n": "400 จาก <code>params.require(:role)<\/code>"}, {"c": "curl -s localhost:3000/api/v1/admin/client_applications/not-a-real-id/roles -b cookies.txt", "o": "{\"success\":false,\"type\":\"ActiveRecord::RecordNotFound\",\"error\":\"Couldn't find ClientApplication with 'id'=\\\"not-a-real-id\\\"\"}", "n": "404 จาก <code>set_client_application<\/code> action ไม่ได้ทำงานเลย"}]</script></div><h2>สรุปเรื่อง params</h2><div class="code" data-label="ruby"><pre>params[:id]                                   <span class="c"># from the path: /users/:id</span>
+params[:page]                                 <span class="c"># from the query string: ?page=2</span>
+params.require(:role)                         <span class="c"># JSON body {"role": {...}}; raises if missing</span>
+      .permit(:name, :status, permissions: [])# arrays need [] ; nested hashes need { }
+params.permit(:sort_field, :sort_order)       <span class="c"># optional query params, no require</span>
+params[:info].to_bool                         <span class="c"># query values are strings</span>
+action_name                                   <span class="c"># "create", "update", ...</span></pre></div><h2>status code ที่เราใช้</h2><div class="tablewrap"><table><thead><tr><th>status</th><th>เมื่อ</th><th>มาจาก</th></tr></thead><tbody><tr><td><code>200 :ok</code></td><td>อ่าน / แก้ไขสำเร็จ</td><td><code>render json:</code></td></tr><tr><td><code>201 :created</code></td><td>สร้างสำเร็จ</td><td><code>render json:, status: :created</code></td></tr><tr><td><code>400 :bad_request</code></td><td>ข้อมูลไม่ถูกต้อง ขาด param หรือเปลี่ยนสถานะไม่ได้</td><td><code>AppError, RecordInvalid, ParameterMissing, AASM::InvalidTransition</code></td></tr><tr><td><code>401 :unauthorized</code></td><td>ไม่ได้ login / token ไม่ถูกต้อง</td><td><code>AppAuthenticationError, JWT errors</code></td></tr><tr><td><code>403 :forbidden</code></td><td>login แล้วแต่ไม่มีสิทธิ์</td><td><code>AppPermissionDenied</code></td></tr><tr><td><code>404 :not_found</code></td><td>ไม่มี record นี้ (หรือไม่ใช่ของคุณ)</td><td><code>ActiveRecord::RecordNotFound</code></td></tr></tbody></table></div><div class="quiz" data-a="1"><p>ผู้ใช้เรียก <code>GET /client_applications/A/roles/R</code> โดยที่ role R เป็นของแอป B จะเกิดอะไรขึ้นกับ <code>set_role</code> ของเรา?</p><div class="opts"><button type="button">200 พร้อม role R</button><button type="button">404 เพราะการค้นหาจำกัดอยู่ในแอป A</button><button type="button">403</button><button type="button">500</button></div><p class="explain"><code>@client_application.roles.find(id)</code> เพิ่ม <code>WHERE client_application_id = A</code> ถ้าใช้ <code>Role.find(id)</code> จะได้ 200 ซึ่งคือ bug แบบ IDOR</p></div><div class="quiz" data-a="1"><p><code>client_application_id</code> ของ role ใหม่ควรมาจากไหน?</p><div class="opts"><button type="button"><code>permit(:client_application_id)</code> จาก body</button><button type="button">record แม่จาก URL ตั้งค่าใน <code>role_params</code></button><button type="button">hidden field ในฟอร์ม</button><button type="button">ค่า default ของ model</button></div><p class="explain">ผู้ใช้ได้รับอนุญาตสำหรับ parent ใน URL แล้ว ถ้า permit id จาก body เขาจะสร้าง role ในแอปไหนก็ได้</p></div></div>
+
+<div class="col"><label class="readmark"><input type="checkbox" id="read-r06-controllers"> ทำเครื่องหมายว่าอ่านบท r06 แล้ว</label><div class="pager"><a href="r05-model-callbacks.html">◀ r05 Model Callback</a><a href="r07-controller-callbacks.html">r07 Controller Callback ▶</a></div></div>
+  </main>
+  <footer class="site">อ้างอิงจาก <a href="https://guides.rubyonrails.org/">Ruby on Rails Guides</a> (CC BY-SA 4.0) เฉพาะส่วนที่ใช้กับแอปแบบ API-only และแนวทางการเขียนโค้ดในโปรเจกต์ของเรา ตัวอย่างโค้ดดัดแปลงจากโค้ดจริงเพื่อใช้สอน</footer>
+</div>
+<script src="../assets/site.js?v=92ac7aa3f8"></script>
+<script>
+
+
+</script>
+<script src="../assets/widgets.js?v=b9f4e038ea"></script>
+</body>
+</html>

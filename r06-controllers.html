@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en" data-lang="rails">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Controllers and the API Hierarchy · Rails Guide</title>
+
+<link rel="icon" href="favicon.ico" sizes="32x32">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="site.webmanifest">
+<meta name="theme-color" content="#000000">
+<link rel="stylesheet" href="assets/site.css?v=8f1e007517">
+<script src="assets/consent.js?v=9320b4a322"></script>
+</head>
+<body data-slug="r06-controllers">
+<div class="win">
+  <div class="titlebar"><span class="dots"><i></i><i></i><i></i></span><span class="t">guest@websec: ~/websec/r06-controllers — zsh — 100×40</span>
+    <a class="by" href="about.html" title="About the author"><span class="w0">by </span>SaKKo</a>
+    <span class="lsw" role="group" aria-label="Language"><a href="r06-controllers.html" aria-current="true" data-setlang="en">EN</a><a href="th/r06-controllers.html" data-setlang="th">TH</a></span></div>
+  <nav class="top" aria-label="Lessons"><a href="index.html#rails" title="Home">~/</a>
+<a class="trk" href="index.html#security">#1 security</a>
+<a class="trk on" href="r01-rails-api-app.html">#2 rails</a>
+<span class="grp">| basics:</span>
+<a href="r01-rails-api-app.html" title="A Rails API App">r01·api-app</a>
+<a href="r02-rails-commands.html" title="Rails Commands">r02·commands</a>
+<a href="r03-migrations.html" title="Migrations">r03·migrations</a>
+<span class="grp">| models:</span>
+<a href="r04-models.html" title="Models and ApplicationRecord">r04·models</a>
+<a href="r05-model-callbacks.html" title="Model Callbacks">r05·model-hooks</a>
+<span class="grp">| controllers:</span>
+<a href="r06-controllers.html" aria-current="page" title="Controllers and the API Hierarchy">r06·controllers</a>
+<a href="r07-controller-callbacks.html" title="Controller Callbacks">r07·controller-hooks</a>
+<a href="r08-where-code-goes.html" title="Controllers, Models or Services?">r08·services</a>
+<span class="grp">| api:</span>
+<a href="r09-rest-routes.html" title="RESTful and Resourceful Routes">r09·rest-routes</a>
+<a href="r10-testing.html" title="Testing the API">r10·testing</a></nav>
+  <main>
+<div class="col">
+<p class="prompt">guest@websec ~ % <b>man r06-controllers</b></p>
+<h1>Controllers and the API Hierarchy</h1>
+<p class="lede">A controller turns one HTTP request into one JSON response. Ours are short because each layer of the class hierarchy takes one job off their hands.</p>
+<div class="tldr">A controller action should: load records (scoped to what the caller may see), pass whitelisted params to a model or service, and render a model's JSON shape. Auth, permissions and error formatting are inherited, not written in each controller.</div><h2>The class hierarchy</h2><div class="code" data-label="text"><pre>ActionController::API
+└── ApplicationController                 health check, paginate, sort, safe render
+    └── Api::AppController                cookies + rescue_from → JSON errors
+        └── Api::V1::AppController        version seam (empty today)
+            ├── Api::V1::Admin::AppController    cookie login + permission check
+            │   ├── Api::V1::Admin::RolesController
+            │   ├── Api::V1::Admin::UsersController
+            │   └── Api::V1::Admin::SessionsController (skips login for create)
+            ├── Api::V1::Client::AppController   X-App-Key + signed JWT
+            │   ├── Api::V1::Client::RolesController
+            │   └── Api::V1::Client::AuthController
+            └── Api::V1::Public::AppController   no auth
+                └── Api::V1::Public::TwoFactorsController</pre></div><div class="demo"><header><b>what each layer adds</b><span>click a class</span></header><div class="body"><div class="pick"><script type="application/json">[{"k": "ApplicationController", "d": "<p>The only controller allowed to inherit <code>ActionController::API<\/code> directly. Holds things every endpoint might need:<\/p><ul><li><code>health<\/code> for load balancers<\/li><li><code>paginate<\/code> and <code>sort_with_mapping<\/code> (private helpers)<\/li><li>a <code>render<\/code> override that replaces SQL/stack-trace error text with a generic message in production<\/li><li><code>append_info_to_payload<\/code> to add IP, user agent and user id to request logs<\/li><\/ul><pre class=\"out\" style=\"margin:0\">def sort_with_mapping(main_result, key_mapping)\n  sort_params = params.permit(:sort_field, :sort_order)\n  field = key_mapping[sort_params[:sort_field]]   # only mapped columns\n  ...\nend<\/pre>"}, {"k": "Api::AppController", "d": "<p>Turns exceptions into JSON. Every error response in the API has the same envelope: <code>{ success: false, type:, error: }<\/code> (plus <code>details<\/code> for validation errors). Also adds cookies back (<code>include ActionController::Cookies<\/code>) with <code>update_cookies<\/code> / <code>fetch_cookies<\/code> helpers that always encrypt.<\/p><pre class=\"out\" style=\"margin:0\">rescue_from AppError, with: :handle_app_error                       # 400\nrescue_from AppAuthenticationError, with: :handle_authentication_error # 401\nrescue_from AppPermissionDenied, with: :handle_forbidden_error       # 403\nrescue_from ActiveRecord::RecordNotFound, with: :handle_not_found_error # 404\nrescue_from ActiveRecord::RecordInvalid, with: :handle_record_invalid_error # 400\nrescue_from ActionController::ParameterMissing, with: :handle_other_error  # 400\nrescue_from AASM::InvalidTransition, with: :handle_invalid_transition_error # 400\nrescue_from JWT::DecodeError, with: :jwt_failed                     # 401<\/pre>"}, {"k": "Api::V1::AppController", "d": "<p>Empty on purpose. When we need <code>/api/v2<\/code> with a different error format or pagination, <code>Api::V2::AppController<\/code> changes it without touching any v1 endpoint.<\/p>"}, {"k": "Api::V1::Admin::AppController", "d": "<p>Everything an admin endpoint needs before the action runs: a CSRF guard for cookie auth (<code>X-Requested-With<\/code>), load and refresh the logged-in user from the encrypted cookie, tag audit history, and check <code>\"controller#action\"<\/code> against the user's permissions. Lesson r07 walks through this chain.<\/p>"}, {"k": "Api::V1::Client::AppController", "d": "<p>Server-to-server: reads <code>X-App-Key<\/code>, finds the <code>ClientApplication<\/code>, verifies the <code>X-App-Secret<\/code> JWT with that app's own secret, and exposes <code>current_client_application<\/code>. Client controllers scope everything through it, so one app can never read another's roles.<\/p>"}, {"k": "Api::V1::Public::AppController", "d": "<p>No authentication, but still inherits the JSON error handling. Keep public endpoints few and boring.<\/p>"}, {"k": "Admin::RolesController", "d": "<p>A leaf controller: it only knows about roles. It never checks login or formats errors. It can't forget to, because the parent does it.<\/p>"}]</script></div></div></div><div class="rs">When you generate a controller, change its parent to the right <code>…::AppController</code> immediately. A leaf controller inheriting <code>ApplicationController</code> is a security bug: no login, no permission check.</div><h2>Anatomy of a resource controller</h2><div class="code" data-label="ruby · app/controllers/api/v1/admin/roles_controller.rb"><pre>class Api::V1::Admin::RolesController &lt; Api::V1::Admin::AppController
+  before_action :set_client_application                 <span class="c"># parent from the URL</span>
+  before_action :set_role, only: %i[ show update ]      <span class="c"># the record, scoped to the parent</span>
+
+  <span class="c"># GET /api/v1/admin/client_applications/:client_application_id/roles</span>
+  def index
+    result = @client_application.roles
+    total_count = result.count
+    key_mapping = {
+      "created_at" =&gt; "created_at",
+    }
+    result = sort_with_mapping(result, key_mapping) if result.present?
+    result, total_pages = paginate(result)
+    render json: { roles: result.map(&amp;:as_admin_json), total_pages:, total_count: }
+  end
+
+  def show
+    render json: { role: @role.as_admin_json }
+  end
+
+  def create
+    @role = Role.new(role_params)
+    @role.save!                                         <span class="c"># raises → rescue_from → 400</span>
+    render json: { role: @role.as_admin_json }, status: :created
+  end
+
+  def update
+    @role.update!(role_params)
+    render json: { role: @role.as_admin_json }
+  end
+
+  private
+
+  def set_client_application
+    @client_application = ClientApplication.find(params[:client_application_id])
+  end
+
+  def set_role
+    @role = @client_application.roles.find(params[:id])   <span class="c"># not Role.find!</span>
+  end
+
+  def role_params
+    p = params.require(:role).permit(:name, :description, :status, permissions: [])
+    p[:client_application_id] = @client_application.id if action_name == "create"
+    p
+  end
+end</pre></div><div class="tablewrap"><table><thead><tr><th>pattern</th><th>why</th></tr></thead><tbody><tr><td><code>set_* before_actions</code></td><td>load records once, before the action; <code>find</code> raises → 404 automatically</td></tr><tr><td><code>@client_application.roles.find</code></td><td>scope through the parent: a role id from another app is a 404, not a leak (IDOR)</td></tr><tr><td><code>save! / update!</code></td><td>no <code>if/else</code>; failures raise and become the standard 400 JSON</td></tr><tr><td><code>require(:role).permit(…)</code></td><td>whitelist; anything else in the body is dropped (mass assignment)</td></tr><tr><td><code>p[:client_application_id] = …</code></td><td>the parent comes from the URL the user was authorized for, never from the body</td></tr><tr><td><code>as_admin_json</code></td><td>the model decides the JSON shape; the controller picks which one</td></tr><tr><td><code>{ roles:, total_pages:, total_count: }</code></td><td>every list has the same envelope, so the front end has one table component</td></tr></tbody></table></div><h2>See it respond</h2><div class="term" data-title="zsh — ~/myapp"><script type="application/json">[{"c": "curl -s -X POST localhost:3000/api/v1/admin/client_applications/$APP/roles -b cookies.txt -H 'X-Requested-With: XMLHttpRequest' -H 'Content-Type: application/json' -d '{\"role\":{\"name\":\"Content Manager\",\"permissions\":[\"read_articles\"]}}'", "o": "{\"role\":{\"id\":\"0193a7b1-...\",\"name\":\"Content Manager\",\"client_application_id\":\"0193a6f2-...\",\"description\":\"\",\"status\":\"active\",\"permissions\":[\"read_articles\"],...}}", "n": "201 Created. <code>client_application_id<\/code> came from the URL, not the body."}, {"c": "curl -s -X POST localhost:3000/api/v1/admin/client_applications/$APP/roles -b cookies.txt -H 'X-Requested-With: XMLHttpRequest' -H 'Content-Type: application/json' -d '{\"role\":{\"name\":\"\"}}'", "o": "{\"success\":false,\"type\":\"ActiveRecord::RecordInvalid\",\"error\":\"Validation failed: Name can't be blank\",\"details\":{\"name\":[\"can't be blank\"]}}", "n": "400. <code>save!<\/code> raised; <code>rescue_from<\/code> rendered the standard envelope with field <code>details<\/code> for the form."}, {"c": "curl -s -X POST localhost:3000/api/v1/admin/client_applications/$APP/roles -b cookies.txt -H 'X-Requested-With: XMLHttpRequest' -H 'Content-Type: application/json' -d '{\"name\":\"no wrapper\"}'", "o": "{\"success\":false,\"type\":\"ActionController::ParameterMissing\",\"error\":\"param is missing or the value is empty or invalid: role\"}", "n": "400 from <code>params.require(:role)<\/code>."}, {"c": "curl -s localhost:3000/api/v1/admin/client_applications/not-a-real-id/roles -b cookies.txt", "o": "{\"success\":false,\"type\":\"ActiveRecord::RecordNotFound\",\"error\":\"Couldn't find ClientApplication with 'id'=\\\"not-a-real-id\\\"\"}", "n": "404 from <code>set_client_application<\/code>. The action never ran."}]</script></div><h2>Params, briefly</h2><div class="code" data-label="ruby"><pre>params[:id]                                   <span class="c"># from the path: /users/:id</span>
+params[:page]                                 <span class="c"># from the query string: ?page=2</span>
+params.require(:role)                         <span class="c"># JSON body {"role": {...}}; raises if missing</span>
+      .permit(:name, :status, permissions: [])# arrays need [] ; nested hashes need { }
+params.permit(:sort_field, :sort_order)       <span class="c"># optional query params, no require</span>
+params[:info].to_bool                         <span class="c"># query values are strings</span>
+action_name                                   <span class="c"># "create", "update", ...</span></pre></div><h2>Status codes we use</h2><div class="tablewrap"><table><thead><tr><th>status</th><th>when</th><th>comes from</th></tr></thead><tbody><tr><td><code>200 :ok</code></td><td>read / update succeeded</td><td><code>render json:</code></td></tr><tr><td><code>201 :created</code></td><td>create succeeded</td><td><code>render json:, status: :created</code></td></tr><tr><td><code>400 :bad_request</code></td><td>invalid data, missing param, bad state transition</td><td><code>AppError, RecordInvalid, ParameterMissing, AASM::InvalidTransition</code></td></tr><tr><td><code>401 :unauthorized</code></td><td>not logged in / bad token</td><td><code>AppAuthenticationError, JWT errors</code></td></tr><tr><td><code>403 :forbidden</code></td><td>logged in but not allowed</td><td><code>AppPermissionDenied</code></td></tr><tr><td><code>404 :not_found</code></td><td>no such record (or not yours)</td><td><code>ActiveRecord::RecordNotFound</code></td></tr></tbody></table></div><div class="quiz" data-a="1"><p>A user calls <code>GET /client_applications/A/roles/R</code> where role R belongs to app B. What happens with our <code>set_role</code>?</p><div class="opts"><button type="button">200 with role R</button><button type="button">404, because the lookup is scoped to app A</button><button type="button">403</button><button type="button">500</button></div><p class="explain"><code>@client_application.roles.find(id)</code> adds <code>WHERE client_application_id = A</code>. With <code>Role.find(id)</code> it would be 200: an IDOR bug.</p></div><div class="quiz" data-a="1"><p>Where should the <code>client_application_id</code> of a new role come from?</p><div class="opts"><button type="button"><code>permit(:client_application_id)</code> from the body</button><button type="button">The URL's parent record, set in <code>role_params</code></button><button type="button">A hidden form field</button><button type="button">The model's default</button></div><p class="explain">The user was authorized for the parent in the URL. Permitting the id from the body would let them create roles in any app.</p></div></div>
+
+<div class="col"><label class="readmark"><input type="checkbox" id="read-r06-controllers"> Mark lesson r06 as read</label><div class="pager"><a href="r05-model-callbacks.html">◀ r05 Model Callbacks</a><a href="r07-controller-callbacks.html">r07 Controller Callbacks ▶</a></div></div>
+  </main>
+  <footer class="site">Based on the <a href="https://guides.rubyonrails.org/">Ruby on Rails Guides</a> (CC BY-SA 4.0), API-only parts, and the conventions in our own codebase. Code samples are adapted from our real code for teaching.</footer>
+</div>
+<script src="assets/site.js?v=92ac7aa3f8"></script>
+<script>
+
+
+</script>
+<script src="assets/widgets.js?v=b9f4e038ea"></script>
+</body>
+</html>

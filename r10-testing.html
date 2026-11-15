@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en" data-lang="rails">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Testing the API · Rails Guide</title>
+
+<link rel="icon" href="favicon.ico" sizes="32x32">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="site.webmanifest">
+<meta name="theme-color" content="#000000">
+<link rel="stylesheet" href="assets/site.css?v=8f1e007517">
+<script src="assets/consent.js?v=9320b4a322"></script>
+</head>
+<body data-slug="r10-testing">
+<div class="win">
+  <div class="titlebar"><span class="dots"><i></i><i></i><i></i></span><span class="t">guest@websec: ~/websec/r10-testing — zsh — 100×40</span>
+    <a class="by" href="about.html" title="About the author"><span class="w0">by </span>SaKKo</a>
+    <span class="lsw" role="group" aria-label="Language"><a href="r10-testing.html" aria-current="true" data-setlang="en">EN</a><a href="th/r10-testing.html" data-setlang="th">TH</a></span></div>
+  <nav class="top" aria-label="Lessons"><a href="index.html#rails" title="Home">~/</a>
+<a class="trk" href="index.html#security">#1 security</a>
+<a class="trk on" href="r01-rails-api-app.html">#2 rails</a>
+<span class="grp">| basics:</span>
+<a href="r01-rails-api-app.html" title="A Rails API App">r01·api-app</a>
+<a href="r02-rails-commands.html" title="Rails Commands">r02·commands</a>
+<a href="r03-migrations.html" title="Migrations">r03·migrations</a>
+<span class="grp">| models:</span>
+<a href="r04-models.html" title="Models and ApplicationRecord">r04·models</a>
+<a href="r05-model-callbacks.html" title="Model Callbacks">r05·model-hooks</a>
+<span class="grp">| controllers:</span>
+<a href="r06-controllers.html" title="Controllers and the API Hierarchy">r06·controllers</a>
+<a href="r07-controller-callbacks.html" title="Controller Callbacks">r07·controller-hooks</a>
+<a href="r08-where-code-goes.html" title="Controllers, Models or Services?">r08·services</a>
+<span class="grp">| api:</span>
+<a href="r09-rest-routes.html" title="RESTful and Resourceful Routes">r09·rest-routes</a>
+<a href="r10-testing.html" aria-current="page" title="Testing the API">r10·testing</a></nav>
+  <main>
+<div class="col">
+<p class="prompt">guest@websec ~ % <b>man r10-testing</b></p>
+<h1>Testing the API</h1>
+<p class="lede">We test with Minitest, the Rails default. Model tests check rules; integration tests call real endpoints through named route helpers and check status and JSON.</p>
+<h2>Layout</h2><div class="code" data-label="text"><pre>test/
+├── test_helper.rb                     <span class="c"># loads Rails, fixtures :all, parallel workers</span>
+├── support/admin_integration_test.rb  <span class="c"># base class for admin endpoint tests</span>
+├── fixtures/*.yml                     <span class="c"># sample rows, one file per table</span>
+├── models/role_test.rb                <span class="c"># ActiveSupport::TestCase</span>
+├── services/token_service_test.rb
+└── controllers/api/v1/admin/roles_controller_test.rb   <span class="c"># ActionDispatch::IntegrationTest</span></pre></div><div class="code" data-label="ruby · test/test_helper.rb"><pre>ENV["RAILS_ENV"] ||= "test"
+require_relative "../config/environment"
+require "rails/test_help"
+require_relative "support/admin_integration_test"
+
+module ActiveSupport
+  class TestCase
+    parallelize(workers: :number_of_processors)
+    fixtures :all
+  end
+end</pre></div><h2>Fixtures</h2><div class="code" data-label="yaml"><pre><span class="c"># test/fixtures/client_applications.yml</span>
+one:
+  name: HR Portal
+  app_key: key_one
+  api_secret: secret_one
+
+<span class="c"># test/fixtures/roles.yml</span>
+one:
+  client_application: one          <span class="c"># refer to another fixture by label; Rails fills the uuid</span>
+  name: MyString1
+  status: active</pre></div><p>Every test starts with these rows loaded, inside a transaction that is rolled back afterwards. Read them with <code>roles(:one)</code>, <code>client_applications(:one)</code>.</p><h2>A model test</h2><div class="code" data-label="ruby · test/models/role_test.rb"><pre>require "test_helper"
+
+class RoleTest &lt; ActiveSupport::TestCase
+  def setup
+    @client_app = client_applications(:one)
+    @client_app.permissions.create!(name: "reports:view")
+  end
+
+  test "is invalid when permissions contain strings not in client_application.permissions" do
+    role = @client_app.roles.new(name: "intruder", permissions: ["reports:view", "admin:destroy"])
+
+    assert_not role.valid?
+    assert_includes role.errors[:permissions], "contains invalid permissions: admin:destroy"
+  end
+end</pre></div><h2>An integration test</h2><div class="code" data-label="ruby · test/controllers/api/v1/admin/roles_controller_test.rb"><pre>require "test_helper"
+
+class Api::V1::Admin::RolesControllerTest &lt; AdminIntegrationTest
+  setup do
+    @admin_user = users(:one)
+    @client_application = client_applications(:one)
+    @role_one = roles(:one)
+  end
+
+  <span class="c"># ============================================================================</span>
+  <span class="c"># POST #create</span>
+  <span class="c"># ============================================================================</span>
+
+  test "POST #create creates a role and sets client_application_id from the URL" do
+    sign_in_as_admin(@admin_user) do
+      assert_difference -&gt; { @client_application.roles.count }, 1 do
+        post api_v1_admin_client_application_roles_url(client_application_id: @client_application.id),
+             params: { role: { name: "Content Manager", permissions: [] } }
+      end
+
+      assert_response :created
+      json_response = JSON.parse(response.body)
+      created_role = Role.find(json_response["role"]["id"])
+      assert_equal @client_application.id, created_role.client_application_id
+      assert_equal created_role.as_admin_json.as_json, json_response["role"]
+    end
+  end
+
+  test "POST #create returns 400 when the role key is missing" do
+    sign_in_as_admin(@admin_user) do
+      post api_v1_admin_client_application_roles_url(client_application_id: @client_application.id),
+           params: { name: "Direct Param" }
+
+      assert_response :bad_request
+      assert_equal "ActionController::ParameterMissing", response.parsed_body["type"]
+    end
+  end
+end</pre></div><div class="tablewrap"><table><thead><tr><th>piece</th><th>what it does</th></tr></thead><tbody><tr><td><code>post …_url(…), params:, headers:</code></td><td>sends a real request through routing, middleware, filters and the action</td></tr><tr><td><code>assert_response :created</code></td><td>checks the status (<code>:ok</code>, <code>:not_found</code>, <code>:bad_request</code>…)</td></tr><tr><td><code>JSON.parse(response.body) / response.parsed_body</code></td><td>the JSON as a Hash with string keys</td></tr><tr><td><code>assert_difference -&gt; { … }, 1 do</code></td><td>proves a row was (or wasn't, with <code>assert_no_difference</code>) created</td></tr><tr><td><code>record.reload</code></td><td>re-read after an update to check what was saved</td></tr><tr><td><code>x.as_admin_json.as_json</code></td><td>compare with the model's own serializer, so tests don't hard-code every field</td></tr></tbody></table></div><h2>Named paths inside tests</h2><p>Integration tests include the route helpers, so use them instead of typing URL strings. Pick any route below to get the helper call and a test line, with required ids filled from the path:</p><div class="demo"><header><b>route → helper → test</b><span>click a row</span></header><div class="body"><div class="rfind"><script type="application/json">{"rows": [{"name": "health", "verb": "GET", "path": "/health(.:format)", "ca": "application#health"}, {"name": "api_v1_admin_sessions", "verb": "POST", "path": "/api/v1/admin/sessions(.:format)", "ca": "api/v1/admin/sessions#create", "params": "{ user: { username: \"alice\", password: \"secret\", otp: \"123456\" } }", "expect": "created"}, {"name": "api_v1_admin_sessions_me", "verb": "GET", "path": "/api/v1/admin/sessions/me(.:format)", "ca": "api/v1/admin/sessions#me"}, {"name": "api_v1_admin_sessions", "verb": "DELETE", "path": "/api/v1/admin/sessions(.:format)", "ca": "api/v1/admin/sessions#destroy", "hide": true}, {"name": "toggle_admin_api_v1_admin_user", "verb": "POST", "path": "/api/v1/admin/users/:id/toggle_admin(.:format)", "ca": "api/v1/admin/users#toggle_admin"}, {"name": "activate_api_v1_admin_user_user_role", "verb": "POST", "path": "/api/v1/admin/users/:user_id/user_roles/:id/activate(.:format)", "ca": "api/v1/admin/user_roles#activate"}, {"name": "inactivate_api_v1_admin_user_user_role", "verb": "POST", "path": "/api/v1/admin/users/:user_id/user_roles/:id/inactivate(.:format)", "ca": "api/v1/admin/user_roles#inactivate"}, {"name": "api_v1_admin_user_user_roles", "verb": "GET", "path": "/api/v1/admin/users/:user_id/user_roles(.:format)", "ca": "api/v1/admin/user_roles#index"}, {"name": "api_v1_admin_user_user_roles", "verb": "POST", "path": "/api/v1/admin/users/:user_id/user_roles(.:format)", "ca": "api/v1/admin/user_roles#create", "params": "{ user_role: { role_id: @role.id } }", "expect": "created"}, {"name": "api_v1_admin_users", "verb": "GET", "path": "/api/v1/admin/users(.:format)", "ca": "api/v1/admin/users#index"}, {"name": "api_v1_admin_user", "verb": "GET", "path": "/api/v1/admin/users/:id(.:format)", "ca": "api/v1/admin/users#show"}, {"name": "api_v1_admin_client_application_roles", "verb": "GET", "path": "/api/v1/admin/client_applications/:client_application_id/roles(.:format)", "ca": "api/v1/admin/roles#index"}, {"name": "api_v1_admin_client_application_roles", "verb": "POST", "path": "/api/v1/admin/client_applications/:client_application_id/roles(.:format)", "ca": "api/v1/admin/roles#create", "params": "{ role: { name: \"Content Manager\", permissions: [\"read_articles\"] } }", "expect": "created"}, {"name": "api_v1_admin_client_application_role", "verb": "GET", "path": "/api/v1/admin/client_applications/:client_application_id/roles/:id(.:format)", "ca": "api/v1/admin/roles#show"}, {"name": "api_v1_admin_client_application_role", "verb": "PATCH", "path": "/api/v1/admin/client_applications/:client_application_id/roles/:id(.:format)", "ca": "api/v1/admin/roles#update", "params": "{ role: { name: \"Content Manager\", permissions: [\"read_articles\"] } }"}, {"name": "api_v1_admin_client_application_role", "verb": "PUT", "path": "/api/v1/admin/client_applications/:client_application_id/roles/:id(.:format)", "ca": "api/v1/admin/roles#update", "params": "{ role: { name: \"Content Manager\", permissions: [\"read_articles\"] } }"}, {"name": "api_v1_admin_client_application_permissions", "verb": "GET", "path": "/api/v1/admin/client_applications/:client_application_id/permissions(.:format)", "ca": "api/v1/admin/permissions#index"}, {"name": "api_v1_admin_client_applications", "verb": "GET", "path": "/api/v1/admin/client_applications(.:format)", "ca": "api/v1/admin/client_applications#index"}, {"name": "api_v1_admin_client_applications", "verb": "POST", "path": "/api/v1/admin/client_applications(.:format)", "ca": "api/v1/admin/client_applications#create", "params": "{ client_application: { name: \"HR Portal\", allowed_hosts: [\"hr.example.com\"] } }", "expect": "created"}, {"name": "api_v1_admin_client_application", "verb": "GET", "path": "/api/v1/admin/client_applications/:id(.:format)", "ca": "api/v1/admin/client_applications#show"}, {"name": "api_v1_admin_client_application", "verb": "PATCH", "path": "/api/v1/admin/client_applications/:id(.:format)", "ca": "api/v1/admin/client_applications#update", "params": "{ client_application: { webhook_url: \"https://hr.example.com/hooks\" } }"}, {"name": "api_v1_admin_client_application", "verb": "PUT", "path": "/api/v1/admin/client_applications/:id(.:format)", "ca": "api/v1/admin/client_applications#update", "params": "{ client_application: { webhook_url: \"https://hr.example.com/hooks\" } }"}, {"name": "api_v1_client_auth_login", "verb": "POST", "path": "/api/v1/client/auth/login(.:format)", "ca": "api/v1/client/auth#login", "params": "{ username: \"alice\", password: \"secret\", otp: \"123456\" }"}, {"name": "api_v1_client_auth_verify", "verb": "GET", "path": "/api/v1/client/auth/verify(.:format)", "ca": "api/v1/client/auth#verify"}, {"name": "api_v1_client_roles", "verb": "GET", "path": "/api/v1/client/roles(.:format)", "ca": "api/v1/client/roles#index"}, {"name": "api_v1_client_permissions", "verb": "GET", "path": "/api/v1/client/permissions(.:format)", "ca": "api/v1/client/permissions#index"}, {"name": "api_v1_public_two_factors_enroll", "verb": "POST", "path": "/api/v1/public/two_factors/enroll(.:format)", "ca": "api/v1/public/two_factors#enroll"}, {"name": "api_v1_public_two_factors_confirm", "verb": "POST", "path": "/api/v1/public/two_factors/confirm(.:format)", "ca": "api/v1/public/two_factors#confirm"}, {"name": "api_v1_public_two_factors_disable", "verb": "POST", "path": "/api/v1/public/two_factors/disable(.:format)", "ca": "api/v1/public/two_factors#disable"}], "l_click": "click a route row above", "helper": "named helpers", "test": "in an integration test"}</script></div></div></div><ul><li><b>Rename-safe</b>: change a path in <code>routes.rb</code> and every test follows. Remove a route and tests fail loudly with <code>NoMethodError</code> instead of quietly hitting 404.</li><li><b>Self-documenting</b>: required segments are keyword arguments, so <code>client_application_id:</code> in the call shows the nesting.</li><li><b>Use <code>_url</code></b> in tests (our convention); <code>_path</code> works too. Query params go in the helper (<code>api_v1_admin_users_url(page: 2)</code>) or in <code>params:</code> for GET.</li></ul><h2>Our test helpers</h2><h3>AdminIntegrationTest</h3><div class="code" data-label="ruby · test/support/admin_integration_test.rb"><pre>class AdminIntegrationTest &lt; ActionDispatch::IntegrationTest
+  DEFAULT_CUSTOM_HEADER = "XMLHttpRequest"
+
+  <span class="c"># every write request gets X-Requested-With automatically...</span>
+  [:post, :put, :patch, :delete].each do |method_name|
+    define_method(method_name) do |url, **args|
+      args[:headers] ||= {}
+      unless args.delete(:skip_custom_header)          <span class="c"># ...unless a test opts out</span>
+        args[:headers]["X-Requested-With"] ||= DEFAULT_CUSTOM_HEADER
+      end
+      super(url, **args)
+    end
+  end
+end
+
+<span class="c"># negative test:</span>
+post api_v1_admin_client_applications_url, params: {...}, skip_custom_header: true
+assert_response :forbidden</pre></div><h3>Signing in without the real login backend</h3><div class="code" data-label="ruby"><pre>def sign_in_as_admin(user)
+  Api::AppController.define_method(:fetch_cookies) { |_type| "mock_jwt_token" }   # any cookie
+  User.stub :find_by_jwt, user do                                                 <span class="c"># resolves to this user</span>
+    user.stub :is_admin?, true do
+      user.stub :jwt, "refreshed_mock_jwt_token" do
+        yield
+      end
+    end
+  end
+ensure
+  Api::AppController.remove_method(:fetch_cookies) if Api::AppController.instance_methods(false).include?(:fetch_cookies)
+end</pre></div><p>Minitest’s <code>stub</code> replaces a method only inside the block. The real <code>set_current_user</code> and <code>check_permissions</code> still run, so permission logic is tested for real.</p><h3>Client API tests</h3><div class="code" data-label="ruby · test/controllers/api/v1/client/roles_controller_test.rb"><pre>setup do
+  @client_application = client_applications(:one)
+  @headers = {
+    "X-App-Key" =&gt; @client_application.app_key,
+    "X-App-Secret" =&gt; JWT.encode({ sub: @client_application.app_key }, @client_application.api_secret, "HS256"),
+  }
+end
+
+test "GET #index returns unauthorized when authentication headers are missing" do
+  get api_v1_client_roles_url
+  assert_response :unauthorized
+end</pre></div><h2>Running tests</h2><div class="term" data-title="zsh — ~/myapp"><script type="application/json">[{"c": "bin/rails test test/controllers/api/v1/admin/roles_controller_test.rb", "o": "Running 12 tests in a single process (parallelization threshold is 50)\nRun options: --seed 52011\n\n# Running:\n\n............\n\nFinished in 0.912s, 13.16 runs/s, 57.02 assertions/s.\n12 runs, 52 assertions, 0 failures, 0 errors, 0 skips"}, {"c": "bin/rails test test/controllers/api/v1/admin/roles_controller_test.rb -n \"/404/\"", "o": "Run options: -n /404/ --seed 1209\n\n# Running:\n\n...\n\n3 runs, 11 assertions, 0 failures, 0 errors, 0 skips", "n": "<code>-n<\/code> filters by test name. Our names say verb, action and outcome, which makes this useful."}, {"c": "bin/rails test test/models/role_test.rb:24", "o": "# Running:\n\nF\n\nFailure:\nRoleTest#test_is_invalid_when_permissions_contain_strings_not_in_client_application.permissions [test/models/role_test.rb:29]:\nExpected [\"contains invalid permissions: admin:destroy, users:delete\"] to include \"contains invalid permissions: admin:destroy\".\n\nbin/rails test test/models/role_test.rb:24\n\n1 runs, 2 assertions, 1 failures, 0 errors, 0 skips", "n": "A failure prints the file:line and the exact command to re-run just that test."}]</script></div><h2>What to test for every endpoint</h2><ul><li>happy path: status, JSON equals <code>as_*_json</code>, database changed</li><li>validation failure → 400 with <code>details</code>, <code>assert_no_difference</code></li><li>missing wrapper key → 400 <code>ParameterMissing</code></li><li>unknown id → 404; <b>id from another parent → 404</b> (IDOR)</li><li>not signed in → 401; signed in without the permission → 403</li><li>invalid state transition → 400 <code>AASM::InvalidTransition</code></li></ul><div class="quiz" data-a="1"><p>Why do our controller tests call <code>api_v1_admin_client_application_roles_url(client_application_id: id)</code> rather than <code>"/api/v1/admin/client_applications/#{id}/roles"</code>?</p><div class="opts"><button type="button">Strings don't work in integration tests</button><button type="button">Helpers fail loudly if the route changes or a segment is missing</button><button type="button">Helpers are faster</button><button type="button">Strings skip the router</button></div><p class="explain">A typo in a string is a silent 404; a helper raises <code>NoMethodError</code> or <code>UrlGenerationError</code>.</p></div><div class="quiz" data-a="1"><p>How do you test that a POST without <code>X-Requested-With</code> is rejected, using <code>AdminIntegrationTest</code>?</p><div class="opts"><button type="button">Pass <code>headers: {}</code></button><button type="button">Pass <code>skip_custom_header: true</code></button><button type="button">Use <code>get</code> instead</button><button type="button">It can't be tested</button></div><p class="explain">The overridden <code>post</code> adds the header unless you opt out with <code>skip_custom_header: true</code>.</p></div></div>
+
+<div class="col"><label class="readmark"><input type="checkbox" id="read-r10-testing"> Mark lesson r10 as read</label><div class="pager"><a href="r09-rest-routes.html">◀ r09 RESTful and Resourceful Routes</a><a href="index.html#rails">~/ ▶</a></div></div>
+  </main>
+  <footer class="site">Based on the <a href="https://guides.rubyonrails.org/">Ruby on Rails Guides</a> (CC BY-SA 4.0), API-only parts, and the conventions in our own codebase. Code samples are adapted from our real code for teaching.</footer>
+</div>
+<script src="assets/site.js?v=92ac7aa3f8"></script>
+<script>
+
+
+</script>
+<script src="assets/widgets.js?v=b9f4e038ea"></script>
+</body>
+</html>

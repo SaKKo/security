@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en" data-lang="rails">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Controllers, Models or Services? · Rails Guide</title>
+
+<link rel="icon" href="favicon.ico" sizes="32x32">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="site.webmanifest">
+<meta name="theme-color" content="#000000">
+<link rel="stylesheet" href="assets/site.css?v=8f1e007517">
+<script src="assets/consent.js?v=9320b4a322"></script>
+</head>
+<body data-slug="r08-where-code-goes">
+<div class="win">
+  <div class="titlebar"><span class="dots"><i></i><i></i><i></i></span><span class="t">guest@websec: ~/websec/r08-where-code-goes — zsh — 100×40</span>
+    <a class="by" href="about.html" title="About the author"><span class="w0">by </span>SaKKo</a>
+    <span class="lsw" role="group" aria-label="Language"><a href="r08-where-code-goes.html" aria-current="true" data-setlang="en">EN</a><a href="th/r08-where-code-goes.html" data-setlang="th">TH</a></span></div>
+  <nav class="top" aria-label="Lessons"><a href="index.html#rails" title="Home">~/</a>
+<a class="trk" href="index.html#security">#1 security</a>
+<a class="trk on" href="r01-rails-api-app.html">#2 rails</a>
+<span class="grp">| basics:</span>
+<a href="r01-rails-api-app.html" title="A Rails API App">r01·api-app</a>
+<a href="r02-rails-commands.html" title="Rails Commands">r02·commands</a>
+<a href="r03-migrations.html" title="Migrations">r03·migrations</a>
+<span class="grp">| models:</span>
+<a href="r04-models.html" title="Models and ApplicationRecord">r04·models</a>
+<a href="r05-model-callbacks.html" title="Model Callbacks">r05·model-hooks</a>
+<span class="grp">| controllers:</span>
+<a href="r06-controllers.html" title="Controllers and the API Hierarchy">r06·controllers</a>
+<a href="r07-controller-callbacks.html" title="Controller Callbacks">r07·controller-hooks</a>
+<a href="r08-where-code-goes.html" aria-current="page" title="Controllers, Models or Services?">r08·services</a>
+<span class="grp">| api:</span>
+<a href="r09-rest-routes.html" title="RESTful and Resourceful Routes">r09·rest-routes</a>
+<a href="r10-testing.html" title="Testing the API">r10·testing</a></nav>
+  <main>
+<div class="col">
+<p class="prompt">guest@websec ~ % <b>man r08-where-code-goes</b></p>
+<h1>Controllers, Models or Services?</h1>
+<p class="lede">Most code-review comments in a Rails app are about <i>where</i> code lives, not whether it works. Here is how we decide.</p>
+<div class="tablewrap"><table><thead><tr><th>layer</th><th>owns</th><th>must not</th></tr></thead><tbody><tr><td><b>controller</b></td><td>HTTP: params, who is calling, which records they may touch, status code, which JSON shape</td><td>business rules, SQL beyond simple finds, calling external systems</td></tr><tr><td><b>model</b></td><td>data rules: validations, associations, state, derived values, JSON shapes, record-level behaviour</td><td>read <code>params</code>, cookies or the request; call external services directly</td></tr><tr><td><b>service</b></td><td>the outside world (company directory, JWT, payment, S3) or a stateless algorithm, behind a small API</td><td>own a table; know about HTTP requests</td></tr><tr><td><b>job</b></td><td>slow or retryable side effects: webhooks, emails, syncs</td><td>be required for the response to be correct</td></tr><tr><td><b>concern</b></td><td>behaviour shared by several models or controllers (<code>SoftDeletable</code>)</td><td>be a dumping ground for one model's code</td></tr></tbody></table></div><h2>One feature, three layers</h2><p>Admin login checks the password against the company directory, syncs the user, verifies 2FA and sets a cookie. Here is the same feature written badly, then the way it actually is:</p><div class="tabs"><div role="tablist"><button role="tab">✗ all in the controller</button><button role="tab">✓ split by layer</button></div><div role="tabpanel"><div class="code" data-label="ruby · ✗ untestable, unsafe, duplicated"><pre>def create
+  client = SomeDirectoryGem::Client.new(host: ENV["DIRECTORY_HOST"], password: ENV["DIRECTORY_PASSWORD"])
+  entry = client.login(params[:username], params[:password])      <span class="c"># raw client, raw errors, no timeout</span>
+  return render json: { error: "bad login" }, status: 401 unless entry
+  user = User.find_or_initialize_by(username: entry["name"].downcase)
+  user.email = entry["mail"]
+  user.save                                                        <span class="c"># failure silently ignored</span>
+  if !user.is_admin then return render json: { error: "no" }, status: 401 end
+  totp = ROTP::TOTP.new(user.otp_secret)
+  return render json: { error: "bad otp" }, status: 401 unless totp.verify(params[:otp])
+  cookies.encrypted[:bearer] = JWT.encode({ ... }, Rails.application.credentials.user_jwt_secret)
+  render json: { success: true }
+end</pre></div></div><div role="tabpanel"><div class="code" data-label="ruby · ✓ each piece testable alone"><pre><span class="c"># controller: HTTP only</span>
+def create
+  user = User.authenticate_and_sync!(username, password)        <span class="c"># model</span>
+  raise AppAuthenticationError.new("user not admin") unless user.is_admin?
+  raise AppAuthenticationError.new("401: Invalid 2FA code") unless user.verify_otp(otp)
+  user.reset_authentication_token
+  update_cookies(:bearer, user.jwt("bearer"))                    # inherited helper
+  render json: { success: true }, status: :created
+end
+
+<span class="c"># model: what a User is and does</span>
+def self.authenticate_and_sync!(username, password)
+  entry = DirectoryService.authenticate!(username, password)    <span class="c"># service</span>
+  sync_from_directory!(entry)
+end
+
+def verify_otp(code) = !totp.verify(code.to_s.strip, drift_behind: 1).nil?
+
+<span class="c"># service: the only code that talks to the directory</span>
+class DirectoryService
+  def self.authenticate!(username, password)
+    entry = client.login(username, password)                     <span class="c"># host, timeouts, secrets: in here only</span>
+    raise AppError.new("401: Invalid credentials") unless entry
+    { username: entry["name"], email: entry["mail"], display_name: entry["display"] }   # plain hash out
+  rescue SomeDirectoryGem::Error =&gt; e
+    raise AppError.new("Directory unavailable")                 # our error, no internals leaked
+  end
+end</pre></div></div></div><h2>Why services?</h2><ul><li><b>One door to the outside world.</b> Connection settings, timeouts, credentials and error translation for the directory live in <code>DirectoryService</code> only. When the directory changes, one file changes.</li><li><b>Errors in our language.</b> Network errors from a client gem or <code>JWT::DecodeError</code> become <code>AppError</code>, which the API already knows how to render.</li><li><b>Easy to fake in tests.</b> <code>DirectoryService.stub :authenticate!, entry do … end</code>: model and controller tests run without the real directory.</li><li><b>Reusable.</b> The same service method runs from a controller, a job, <code>bin/rails runner</code> or the console.</li><li><b>Models stay about data.</b> Loading a model never opens a socket.</li></ul><h3>Our service style</h3><div class="code" data-label="ruby · app/services/token_service.rb"><pre>class TokenService
+  HMAC_SECRET = Rails.application.credentials.dig(:token_service_jwt_secret)   <span class="c"># config read once</span>
+
+  def self.encode(hmac_secret, payload, exp = 8.hours.from_now)                <span class="c"># class methods,</span>
+    raise AppError.new("HMAC secret is missing") if hmac_secret.blank?         # no instance state
+    data = payload.deep_dup
+    data[:exp] = exp.to_i
+    data[:iat] = Time.current.to_i
+    JWT.encode(data, hmac_secret, "HS256")
+  end
+
+  def self.decode(hmac_secret, token)
+    raise AppError.new("HMAC secret is missing") if hmac_secret.blank?
+    JWT.decode(token, hmac_secret, true, { algorithm: "HS256" }).first.with_indifferent_access   # pin the algorithm
+  rescue JWT::DecodeError =&gt; e
+    raise AppError.new("Invalid token: #{e.message}")                          # translate errors
+  end
+end
+
+<span class="c"># the model offers a friendly method that uses its own secret</span>
+class ClientApplication &lt; ApplicationRecord
+  def encode_payload(payload) = TokenService.encode(api_secret, payload)
+  def decode_payload(token)   = TokenService.decode(api_secret, token)
+end</pre></div><div class="rs">Services are classes with <code>self.</code> methods and a <code>…Service</code> name, one per external system or algorithm. No <code>UserService</code> grab-bags: logic about a user's own data is a <code>User</code> method.</div><h3>Jobs for side effects</h3><div class="code" data-label="ruby · app/jobs/client_application_webhook_job.rb"><pre>class ClientApplicationWebhookJob &lt; ApplicationJob
+  queue_as :webhooks
+  retry_on StandardError, wait: :polynomially_longer, attempts: 5   <span class="c"># network fails; try again</span>
+
+  def perform(client_application_id, event_name, payload)           <span class="c"># pass ids, not objects</span>
+    client_app = ClientApplication.find_by(id: client_application_id)
+    return if client_app.nil? || client_app.webhook_url.blank?
+    token = JWT.encode({ iss: client_app.app_key, aud: client_app.webhook_url, exp: 10.minutes.from_now.to_i, event: event_name, data: payload },
+                       client_app.api_secret, "HS256")
+    Faraday.post(client_app.webhook_url) { |req| req.headers["Authorization"] = "Bearer #{token}"; req.body = { token:, event: event_name }.to_json }
+  end
+end</pre></div><p>The model’s <code>after_commit</code> only calls <code>notify_webhook</code>, which calls <code>perform_later</code>. The API responds immediately; slow or failing receivers never slow down or break our endpoint.</p><h2>Practice: where does it go?</h2><div class="demo"><header><b>sort the code</b><span>pick a layer for each</span></header><div class="body"><div class="sorter"><script type="application/json">{"buckets": [{"id": "controller", "label": "controller"}, {"id": "model", "label": "model"}, {"id": "service", "label": "service"}, {"id": "job", "label": "job"}], "items": [{"t": "Read <code>X-App-Key<\/code> from headers and set <code>current_client_application<\/code>", "a": "controller", "why": "It reads the request: controller (a <code>before_action<\/code> in <code>Client::AppController<\/code>)."}, {"t": "Check that a role's permissions all exist on its client application", "a": "model", "why": "A rule about the data: a model validation (<code>validate_permissions_inclusion<\/code>)."}, {"t": "Check a username and password against the company directory", "a": "service", "why": "External system: <code>DirectoryService<\/code>."}, {"t": "POST a signed event to a client's webhook URL, retrying on failure", "a": "job", "why": "Slow, can fail, must retry: a job."}, {"t": "Decide which fields an admin sees for a client application", "a": "model", "why": "JSON shape belongs to the model: <code>as_admin_json<\/code>."}, {"t": "Whitelist <code>name<\/code>, <code>webhook_url<\/code> and <code>allowed_hosts<\/code> from the request body", "a": "controller", "why": "Strong params are an HTTP concern: <code>client_application_params<\/code>."}, {"t": "Sign and verify HS256 JWTs", "a": "service", "why": "Stateless algorithm used from several places: <code>TokenService<\/code>."}, {"t": "Generate <code>app_key<\/code> and <code>api_secret<\/code> when a client application is created", "a": "model", "why": "A default for this record: <code>before_validation<\/code> callback in the model."}, {"t": "Check whether a <code>return_to<\/code> URL's host is in the app's <code>allowed_hosts<\/code>", "a": "model", "why": "It's a question about this app's own data: <code>ClientApplication#safe_return_url<\/code>. The controller just calls it."}, {"t": "Sync every department name from the directory into the <code>departments<\/code> table, nightly", "a": "job", "why": "Scheduled background work: a job that calls the directory service."}]}</script></div></div></div></div>
+
+<div class="col"><label class="readmark"><input type="checkbox" id="read-r08-where-code-goes"> Mark lesson r08 as read</label><div class="pager"><a href="r07-controller-callbacks.html">◀ r07 Controller Callbacks</a><a href="r09-rest-routes.html">r09 RESTful and Resourceful Routes ▶</a></div></div>
+  </main>
+  <footer class="site">Based on the <a href="https://guides.rubyonrails.org/">Ruby on Rails Guides</a> (CC BY-SA 4.0), API-only parts, and the conventions in our own codebase. Code samples are adapted from our real code for teaching.</footer>
+</div>
+<script src="assets/site.js?v=92ac7aa3f8"></script>
+<script>
+
+
+</script>
+<script src="assets/widgets.js?v=b9f4e038ea"></script>
+</body>
+</html>

@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en" data-lang="rails">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>01 Introduction · Web Security</title>
+
+<link rel="icon" href="favicon.ico" sizes="32x32">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="site.webmanifest">
+<meta name="theme-color" content="#000000">
+<link rel="stylesheet" href="assets/site.css?v=8f1e007517">
+<script src="assets/consent.js?v=9320b4a322"></script>
+</head>
+<body data-slug="01-introduction">
+<div class="win">
+  <div class="titlebar"><span class="dots"><i></i><i></i><i></i></span><span class="t">guest@websec: ~/websec/01-introduction — zsh — 100×40</span>
+    <a class="by" href="about.html" title="About the author"><span class="w0">by </span>SaKKo</a>
+    <span class="lsw" role="group" aria-label="Language"><a href="01-introduction.html" aria-current="true" data-setlang="en">EN</a><a href="th/01-introduction.html" data-setlang="th">TH</a></span>
+    <span class="langsw" role="group" aria-label="Code examples language"><span class="d">code:</span><button type="button" data-l="rails">rails</button><button type="button" data-l="node">node</button></span></div>
+  <nav class="top" aria-label="Sections"><a href="index.html" title="Web Security Field Guide">~/</a>
+<a class="trk on" href="index.html#security">#1 security</a>
+<a class="trk" href="r01-rails-api-app.html">#2 rails</a>
+<span class="grp">|</span>
+<a href="01-introduction.html" aria-current="page" title="Introduction">01·introduction</a>
+<a href="02-sql-injection.html" title="SQL Injection">02·sql-injection</a>
+<a href="03-unsafe-query-generation.html" title="Unsafe Query Generation">03·query-shape</a>
+<a href="04-xss-and-other-injection.html" title="XSS and Other Injection">04·xss</a>
+<span class="grp">| accounts:</span>
+<a href="05-authentication.html" title="Authentication">05·auth</a>
+<a href="05b-mfa.html" title="Multi-Factor Authentication">05b·mfa</a>
+<a href="06-sessions.html" title="Sessions">06·sessions</a>
+<a href="07-csrf.html" title="Cross-Site Request Forgery">07·csrf</a>
+<a href="08-user-management.html" title="User Management">08·accounts</a>
+<a href="09-mass-assignment-and-authorization.html" title="Mass Assignment and Authorization">09·authz</a>
+<span class="grp">| browser:</span>
+<a href="10-redirection-and-files.html" title="Redirection and Files">10·files</a>
+<a href="11-http-security-headers.html" title="HTTP Security Headers">11·headers</a>
+<a href="12-transport-cookies-third-party.html" title="Transport, Cookies and Third-Party Scripts">12·cookies-tls</a>
+<span class="grp">| server:</span>
+<a href="13-ssrf.html" title="Server-Side Request Forgery">13·ssrf</a>
+<a href="14-deserialization-and-xxe.html" title="Deserialization and XXE">14·deserialize</a>
+<a href="15-environmental-security.html" title="Environmental Security">15·secrets</a>
+<a href="16-cryptography.html" title="Cryptography and Data Protection">16·crypto</a>
+<a href="17-dependencies-and-cves.html" title="Dependencies and CVEs">17·dependencies</a>
+<span class="grp">| ops:</span>
+<a href="18-intranet-and-admin.html" title="Intranet and Admin Security">18·admin</a>
+<a href="19-misconfiguration-and-errors.html" title="Misconfiguration and Error Handling">19·misconfig</a>
+<a href="20-insecure-design.html" title="Insecure Design and Business Logic">20·design</a>
+<a href="21-logging-and-incident-response.html" title="Logging, Alerting and Incident Response">21·logging</a>
+<a href="22-additional-resources.html" title="Additional Resources">22·resources</a>
+<span class="grp">| questionnaires:</span>
+<a href="q1-developer-survey.html" title="Developer Security Survey">Q1·developer</a>
+<a href="q2-awareness-survey.html" title="Cyber Threat Awareness Survey">Q2·cyber</a></nav>
+  <main>
+<div class="col">
+<p class="prompt">guest@websec ~ % <b>man 01-introduction</b></p>
+<h1>01 · Introduction</h1>
+<p class="lede">Rails gives us safe defaults. But no framework can make an app secure on its own.</p>
+<div class="tldr">The framework catches the mistakes it can predict. Everything else is on us, for as long as the app is live.</div>
+<h2>Why "secure framework" isn't enough</h2>
+<p>Modern frameworks escape HTML, add CSRF tokens and parameterize queries for you. That kills whole classes of bugs. It still isn't enough, for three reasons:</p>
+<ol>
+<li><b>People.</b> One raw SQL string or one admin route without a check undoes everything. Rails can't guess which pages should be private.</li>
+<li><b>The whole stack.</b> Server, database, proxy, CI, cloud account. If someone can read your <code>.env</code>, nice templates won't save you.</li>
+<li><b>Time.</b> New attacks and new CVEs show up every month. Security is maintenance, not a one-off.</li>
+</ol>
+<div class="rp tool">Rails starts us off well: escaped views, CSRF tokens, safe queries, encrypted cookies, strong params, security headers. New apps also get <b>Brakeman</b> in CI. Add <code>bundler-audit</code> for gem CVEs.</div><div class="legend" style="margin:-6px 0 16px"><span class="ly">protected by default</span><span class="lp">partial: Rails helps, you must configure or finish it</span><span class="ln">your job: Rails does nothing here</span></div>
+<h2>Where attacks actually land</h2>
+<p>Most real breaches don't crack encryption. They walk through ordinary bugs: a missing permission check, an unvalidated field, a cookie sent over HTTP.</p>
+<div class="demo"><header><b>sim: the weakest link</b><span>drag the sliders</span></header><div class="body">
+<p class="hint">Attackers take the easiest way in. You're only as strong as your weakest layer.</p>
+<div id="chain" style="display:grid;gap:8px"></div>
+<hr/>
+<div class="row"><span>average strength:</span><b id="avg"></b><span class="d">|</span><span>what the attacker sees (minimum):</span><b id="min"></b></div>
+<div class="meter" style="margin-top:8px"><span id="minbar"></span></div>
+<div class="out" id="chain-msg" style="margin-top:10px"></div>
+</div></div>
+<div class="anim" data-actors="Attacker|Our Rails app|Database" data-title="Defaults held, our code didn't"><script type="application/json">[{"f": 0, "t": 1, "l": "comment: <script>steal()<\/script>", "k": "b", "c": "ERB escapes the comment on output, so the script never runs. <b>Rails default.<\/b>"}, {"f": 0, "t": 1, "l": "forged POST /transfers", "k": "b", "c": "No valid authenticity token: <code>protect_from_forgery<\/code> rejects it. <b>Rails default.<\/b>"}, {"f": 0, "t": 1, "l": "GET /invoices/1043", "k": "a", "c": "We wrote <code>Invoice.find(params[:id])<\/code> with no owner check. Rails has no idea 1043 isn't theirs."}, {"f": 1, "t": 2, "l": "SELECT … WHERE id = 1043", "c": "A perfectly parameterized query. Not injection, just a missing authorization rule."}, {"f": 2, "t": 1, "l": "another customer's invoice", "c": "The database returns what we asked for."}, {"f": 1, "t": 0, "l": "200 OK (data leak)", "k": "a", "c": "The framework's defaults held. <b>Our own code<\/b> was the weak link, which is what most of this guide is about."}]</script></div>
+<h2>What the rest of this guide covers</h2>
+<p>The lessons come in five parts, ordered for a team that's new to security: injection first (02–04, starting with SQL injection, which has hit us before), then accounts and access control (05–09), the browser side (10–12), the server and its secrets (13–17), and operations (18–22). The quizzes are at the end. Go through them in order: later lessons build on earlier ones.</p>
+</div>
+
+<div class="col"><label class="readmark"><input type="checkbox" id="read-01-introduction"> mark section 01 as read</label><div class="pager"><a href="index.html">◀ Web Security Field Guide</a><a href="02-sql-injection.html">02 SQL Injection ▶</a></div></div>
+  </main>
+  <footer class="site">Based on the <a href="https://guides.rubyonrails.org/security.html">Ruby on Rails Security Guide</a> (CC BY-SA 4.0), the <a href="https://cheatsheetseries.owasp.org/">OWASP Cheat Sheet Series</a>, the <a href="https://owasp.org/Top10/2025/">OWASP Top 10:2025</a> and <a href="https://infosec.mozilla.org/guidelines/web_security.html">Mozilla's Web Security Guidelines</a>. Written for our dev team; code samples are illustrative.</footer>
+</div>
+<script src="assets/site.js?v=92ac7aa3f8"></script>
+<script>
+
+const CH = [["Framework defaults", 90], ["Your application code", 55], ["Web server & TLS", 80], ["Database config", 75], ["Dependencies", 40], ["Team habits (secrets, reviews)", 60]];
+$("#chain").innerHTML = CH.map((l, i) => `<div class="row" style="flex-wrap:nowrap"><label for="s${i}" style="flex:0 0 230px">${l[0]}</label><input type="range" id="s${i}" min="0" max="100" value="${l[1]}" style="flex:1;accent-color:var(--fg)"><span id="v${i}" style="width:3ch;text-align:right"></span></div>`).join("");
+function upd() {
+  const v = CH.map((_, i) => +$("#s" + i).value);
+  v.forEach((x, i) => $("#v" + i).textContent = x);
+  const avg = Math.round(v.reduce((a, b) => a + b) / v.length), mn = Math.min(...v), wi = v.indexOf(mn);
+  $("#avg").textContent = avg + "/100"; $("#min").textContent = mn + "/100";
+  $("#minbar").style.width = mn + "%";
+  $("#minbar").style.background = mn < 40 ? "var(--red)" : mn < 70 ? "var(--yellow)" : "var(--fg)";
+  $("#chain-msg").innerHTML = `Attacker targets: <span class="r">${CH[wi][0]}</span>. ` + (mn < 40 ? "Raising the other layers barely matters until this one is fixed." : mn < 70 ? "Decent, but this layer is still the obvious entry point." : "No obvious weak spot. Keep it that way by patching and reviewing.");
+}
+$$("#chain input").forEach(i => i.addEventListener("input", upd)); upd();
+
+</script>
+</body>
+</html>
