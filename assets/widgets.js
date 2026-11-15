@@ -37,6 +37,8 @@ $$(".term").forEach(box => {
     if (reduceMotion) cm.textContent = s.c;
     else for (const ch of s.c) { if (g !== gen) return cancel(); cm.textContent += ch; await wait(16); }
     $(".cursor", ln).remove();
+    // console prompts ("myapp(dev)>") take Ruby, shell prompts ("~/myapp %") take bash
+    if (s.c) cm.innerHTML = HL.tok(s.c, /[>]\s*$/.test(s.p || "") ? "ruby" : "bash");
     await wait(220);
     if (s.o !== undefined) for (const line of s.o.split("\n")) {
       if (g !== gen) return cancel();

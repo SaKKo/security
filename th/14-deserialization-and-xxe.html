@@ -10,12 +10,12 @@
 <link rel="apple-touch-icon" href="../apple-touch-icon.png">
 <link rel="manifest" href="../site.webmanifest">
 <meta name="theme-color" content="#000000">
-<link rel="stylesheet" href="../assets/site.css?v=8f1e007517">
+<link rel="stylesheet" href="../assets/site.css?v=9ae1fedbc4">
 <script src="../assets/consent.js?v=9320b4a322"></script>
 </head>
 <body data-slug="14-deserialization-and-xxe">
 <div class="win">
-  <div class="titlebar"><span class="dots"><i></i><i></i><i></i></span><span class="t">guest@websec: ~/websec/14-deserialization-and-xxe/th — zsh — 100×40</span>
+  <header class="hdr"><div class="titlebar"><span class="dots"><i></i><i></i><i></i></span><span class="t">guest@websec: ~/websec/14-deserialization-and-xxe/th — zsh — 100×40</span>
     <a class="by" href="about.html" title="เกี่ยวกับผู้เขียน"><span class="w0">เขียนโดย </span>SaKKo</a>
     <span class="lsw" role="group" aria-label="ภาษา"><a href="../14-deserialization-and-xxe.html" data-setlang="en">EN</a><a href="14-deserialization-and-xxe.html" aria-current="true" data-setlang="th">TH</a></span>
     <span class="langsw" role="group" aria-label="Code examples language"><span class="d">โค้ด:</span><button type="button" data-l="rails">rails</button><button type="button" data-l="node">node</button></span></div>
@@ -52,7 +52,7 @@
 <a href="22-additional-resources.html" title="แหล่งข้อมูลเพิ่มเติม">22·แหล่งข้อมูล</a>
 <span class="grp">| แบบสอบถาม:</span>
 <a href="q1-developer-survey.html" title="แบบสำรวจความปลอดภัยสำหรับนักพัฒนา">Q1·dev</a>
-<a href="q2-awareness-survey.html" title="แบบสำรวจความตระหนักรู้ภัยไซเบอร์">Q2·ทุกคน</a></nav>
+<a href="q2-awareness-survey.html" title="แบบสำรวจความตระหนักรู้ภัยไซเบอร์">Q2·ทุกคน</a></nav></header>
   <main>
 <div class="col">
 <p class="prompt">guest@websec ~ % <b>man 14-deserialization-and-xxe</b></p>
@@ -113,7 +113,7 @@ JSON.parse(body);                                   <span class="ok">// plain da
 <p>XML ซ่อนอยู่ใน SAML, RSS, SVG และไฟล์ Office</p>
 <div class="anim" data-actors="Attacker|Rails app (XML import)|Server filesystem" data-title="XXE อ่านไฟล์บนเซิร์ฟเวอร์"><script type="application/json">[{"f": 0, "t": 1, "l": "upload: <!ENTITY x SYSTEM \"file:///etc/passwd\"> … <name>&x;<\/name>", "k": "a", "c": "ไฟล์ XML ที่อัปโหลดประกาศ external entity และใช้มันในฟิลด์หนึ่ง"}, {"n": 1, "l": "parser with NOENT / DTDLOAD enabled", "k": "a", "c": "ตัวเลือกบางอย่างของ parser สั่งให้แทนค่า external entity"}, {"f": 1, "t": 2, "l": "read /etc/passwd", "k": "a", "c": "parser อ่านไฟล์บนเซิร์ฟเวอร์"}, {"f": 1, "t": 0, "l": "\"Imported contact: root:x:0:0:…\"", "k": "a", "c": "เนื้อหาของไฟล์กลับมาอยู่ในข้อมูลที่นำเข้า"}, {"n": 1, "l": "Nokogiri defaults: no entity substitution, no network", "k": "k", "c": "ด้วยตัวเลือกเริ่มต้นของ Nokogiri entity ยังคงเป็นการอ้างอิงที่ไม่ถูกแทนค่า"}]</script></div>
 <div class="demo"><header><b>sim: billion laughs</b><span>entity ซ้อนกันระเบิดออกได้อย่างไร</span></header><div class="body">
-<div class="row"><label for="bl-lv">จำนวนชั้นที่ซ้อน</label><input id="bl-lv" max="10" min="1" style="flex:1;accent-color:var(--fg)" type="range" value="9"/><span id="bl-lvv"></span></div>
+<div class="row"><label for="bl-lv">จำนวนชั้นที่ซ้อน</label><input id="bl-lv" max="10" min="1" style="flex:1;min-width:60px;accent-color:var(--fg)" type="range" value="9"/><span id="bl-lvv"></span></div>
 <pre class="plain" id="bl-doc" style="margin-top:8px;font-size:12px"></pre>
 <div class="out" id="bl-out" style="margin-top:8px"></div>
 </div></div>
@@ -130,7 +130,7 @@ doc = Nokogiri::XML(upload.read) { |c| c.strict.nonet }
   </main>
   <footer class="site">อ้างอิงจาก <a href="https://guides.rubyonrails.org/security.html">Ruby on Rails Security Guide</a> (CC BY-SA 4.0), <a href="https://cheatsheetseries.owasp.org/">OWASP Cheat Sheet Series</a>, <a href="https://owasp.org/Top10/2025/">OWASP Top 10:2025</a> และ <a href="https://infosec.mozilla.org/guidelines/web_security.html">Mozilla Web Security Guidelines</a> เขียนสำหรับทีมพัฒนาของเรา ตัวอย่างโค้ดเพื่อการอธิบาย ข้อความในผลการจำลองบางส่วนยังเป็นภาษาอังกฤษ</footer>
 </div>
-<script src="../assets/site.js?v=92ac7aa3f8"></script>
+<script src="../assets/site.js?v=3825cbbd72"></script>
 <script>
 
 function ym() {

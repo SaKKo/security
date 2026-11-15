@@ -422,3 +422,64 @@ html[lang="th"] .rs::before{content:"สไตล์ของเรา"}
 .cc .row{justify-content:flex-end;gap:8px}
 .cc .btn[hidden]{display:none}
 @media (max-width:600px){.cc{left:8px;right:8px;bottom:8px;padding:10px}.cc .row .btn{flex:1 1 auto}}
+/* ---------- sticky header ---------- */
+.hdr{position:sticky;top:0;z-index:50;background:var(--bg);border-bottom:1px solid var(--faint)}
+.hdr nav.top{border-bottom:0}
+html{scroll-padding-top:calc(var(--hdr-h,0px) + 10px)}
+
+/* ---------- syntax highlighting (site.js HL) ---------- */
+.hk{color:var(--cyan)}
+.hs{color:#D7D75F}
+.hn{color:#E58AE5}
+.ht{color:#87AFFF}
+.hv{color:var(--white)}
+.hf{color:#EAFFE6}
+.ho{color:#9FC9C9}
+.term .screen .cm .hf{color:var(--bright)}
+
+/* ---------- small screens ---------- */
+code{overflow-wrap:anywhere}
+pre code{overflow-wrap:normal}
+select{max-width:100%}
+.row>*{min-width:0}
+.cbl li>*,.chl li>*{min-width:0;overflow-wrap:anywhere}
+.qcard label.opt>span{min-width:0}
+.tablewrap{-webkit-overflow-scrolling:touch;
+  /* edge shadows appear only when there is more table to scroll to */
+  background:linear-gradient(to right,var(--bg) 40%,transparent) left/28px 100% no-repeat local,
+    linear-gradient(to left,var(--bg) 40%,transparent) right/28px 100% no-repeat local,
+    radial-gradient(farthest-side at 0 50%,rgba(40,254,20,.45),transparent) left/12px 100% no-repeat scroll,
+    radial-gradient(farthest-side at 100% 50%,rgba(40,254,20,.45),transparent) right/12px 100% no-repeat scroll}
+@media (max-width:720px){
+  .tablewrap table{font-size:13px;width:auto;min-width:100%}
+  .tablewrap th,.tablewrap td{min-width:16ch;padding:5px 7px}
+  .tablewrap :is(th,td):first-child{min-width:12ch}
+  .tablewrap :is(th,td):only-child,.tablewrap td:empty,.tablewrap th:empty{min-width:0}
+  .rtable td,.rtable th{min-width:0}
+}
+@media (max-width:600px){
+  body{font-size:14.5px}
+  .win{margin:0;border-width:0}
+  .titlebar{gap:8px;padding:5px 10px;font-size:12px}
+  .titlebar .dots,.titlebar .t,.langsw .d{display:none}
+  .titlebar .by{margin-right:auto}
+  .langsw button{font-size:12px;padding:1px 8px}
+  .lsw a{padding:1px 7px}
+  /* one swipeable row of links instead of ten wrapped lines */
+  nav.top{flex-wrap:nowrap;overflow-x:auto;gap:10px;padding:6px 10px;white-space:nowrap;scrollbar-width:none;
+    -webkit-mask-image:linear-gradient(to right,#000 calc(100% - 24px),transparent);mask-image:linear-gradient(to right,#000 calc(100% - 24px),transparent)}
+  nav.top::-webkit-scrollbar{display:none}
+  nav.top>*{flex:none}
+  main{padding:16px 12px 32px}
+  h1{font-size:22px}
+  h2{font-size:17px;margin-top:34px}
+  .code pre,pre.plain{font-size:12.5px;padding:10px}
+  /* keep the corner label and copy button off the first and last lines */
+  .code pre{padding-top:22px;padding-bottom:30px}
+  .demo .body{padding:10px}
+  .tldr,.toc,.note,.warn,.rails,.rp,.rs{padding-left:10px;padding-right:10px}
+  footer.site{padding:10px 12px}
+}
+.grid2>*,.grid3>*{min-width:0}
+.row label{max-width:100%}
+.row label>select{min-width:0;flex:0 1 auto}

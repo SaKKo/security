@@ -10,12 +10,12 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="site.webmanifest">
 <meta name="theme-color" content="#000000">
-<link rel="stylesheet" href="assets/site.css?v=8f1e007517">
+<link rel="stylesheet" href="assets/site.css?v=9ae1fedbc4">
 <script src="assets/consent.js?v=9320b4a322"></script>
 </head>
 <body data-slug="index">
 <div class="win">
-  <div class="titlebar"><span class="dots"><i></i><i></i><i></i></span><span class="t">guest@websec: ~/websec — zsh — 100×40</span>
+  <header class="hdr"><div class="titlebar"><span class="dots"><i></i><i></i><i></i></span><span class="t">guest@websec: ~/websec — zsh — 100×40</span>
     <a class="by" href="about.html" title="About the author"><span class="w0">by </span>SaKKo</a>
     <span class="lsw" role="group" aria-label="Language"><a href="index.html" aria-current="true" data-setlang="en">EN</a><a href="th/index.html" data-setlang="th">TH</a></span>
     <span class="langsw" role="group" aria-label="Code examples language"><span class="d">code:</span><button type="button" data-l="rails">rails</button><button type="button" data-l="node">node</button></span></div>
@@ -52,7 +52,7 @@
 <a href="22-additional-resources.html" title="Additional Resources">22·resources</a>
 <span class="grp">| questionnaires:</span>
 <a href="q1-developer-survey.html" title="Developer Security Survey">Q1·developer</a>
-<a href="q2-awareness-survey.html" title="Cyber Threat Awareness Survey">Q2·cyber</a></nav>
+<a href="q2-awareness-survey.html" title="Cyber Threat Awareness Survey">Q2·cyber</a></nav></header>
   <main>
 <div class="col">
 <p class="prompt">guest@websec ~ % <b>cat README</b></p>
@@ -122,7 +122,7 @@
   </main>
   <footer class="site">Based on the <a href="https://guides.rubyonrails.org/security.html">Ruby on Rails Security Guide</a> (CC BY-SA 4.0), the <a href="https://cheatsheetseries.owasp.org/">OWASP Cheat Sheet Series</a>, the <a href="https://owasp.org/Top10/2025/">OWASP Top 10:2025</a> and <a href="https://infosec.mozilla.org/guidelines/web_security.html">Mozilla's Web Security Guidelines</a>. Written for our dev team; code samples are illustrative.</footer>
 </div>
-<script src="assets/site.js?v=92ac7aa3f8"></script>
+<script src="assets/site.js?v=3825cbbd72"></script>
 <script>
 
 const CARDS = [{"slug": "01-introduction", "num": "01", "title": "Introduction", "blurb": "Why security is your job, not your framework's", "grp": "start"}, {"slug": "02-sql-injection", "num": "02", "title": "SQL Injection", "blurb": "Start here: how it works, how to find it, how to fix it", "grp": "start"}, {"slug": "03-unsafe-query-generation", "num": "03", "title": "Unsafe Query Generation", "blurb": "When request parsing changes your query's shape", "grp": "start"}, {"slug": "04-xss-and-other-injection", "num": "04", "title": "XSS and Other Injection", "blurb": "XSS, CSS, Markdown, shell and header injection", "grp": "start"}, {"slug": "05-authentication", "num": "05", "title": "Authentication", "blurb": "Storing passwords, logging in, MFA, resets", "grp": "access"}, {"slug": "05b-mfa", "num": "05b", "title": "Multi-Factor Authentication", "blurb": "How TOTP works, and why a home-made random code isn't MFA", "grp": "access"}, {"slug": "06-sessions", "num": "06", "title": "Sessions", "blurb": "Hijacking, fixation, replay and expiry", "grp": "access"}, {"slug": "07-csrf", "num": "07", "title": "Cross-Site Request Forgery", "blurb": "When another site clicks buttons on yours", "grp": "access"}, {"slug": "08-user-management", "num": "08", "title": "User Management", "blurb": "Brute force, takeover, CAPTCHAs, logs, regex, IDOR", "grp": "access"}, {"slug": "09-mass-assignment-and-authorization", "num": "09", "title": "Mass Assignment and Authorization", "blurb": "Who may set which field, and who may do what", "grp": "access"}, {"slug": "10-redirection-and-files", "num": "10", "title": "Redirection and Files", "blurb": "Open redirects, uploads, path traversal", "grp": "browser"}, {"slug": "11-http-security-headers", "num": "11", "title": "HTTP Security Headers", "blurb": "CSP, HSTS, framing, CORS and friends", "grp": "browser"}, {"slug": "12-transport-cookies-third-party", "num": "12", "title": "Transport, Cookies and Third-Party Scripts", "blurb": "TLS, cookie prefixes, mixed content, SRI", "grp": "browser"}, {"slug": "13-ssrf", "num": "13", "title": "Server-Side Request Forgery", "blurb": "When your server fetches a URL for the attacker", "grp": "server"}, {"slug": "14-deserialization-and-xxe", "num": "14", "title": "Deserialization and XXE", "blurb": "Data formats that can run code or read files", "grp": "server"}, {"slug": "15-environmental-security", "num": "15", "title": "Environmental Security", "blurb": "Secrets, keys and config files", "grp": "server"}, {"slug": "16-cryptography", "num": "16", "title": "Cryptography and Data Protection", "blurb": "Hashing vs encryption, keys, randomness, timing", "grp": "server"}, {"slug": "17-dependencies-and-cves", "num": "17", "title": "Dependencies and CVEs", "blurb": "Keeping third-party code patched", "grp": "server"}, {"slug": "18-intranet-and-admin", "num": "18", "title": "Intranet and Admin Security", "blurb": "Protecting the keys to the kingdom", "grp": "ops"}, {"slug": "19-misconfiguration-and-errors", "num": "19", "title": "Misconfiguration and Error Handling", "blurb": "Debug modes, defaults, failing open", "grp": "ops"}, {"slug": "20-insecure-design", "num": "20", "title": "Insecure Design and Business Logic", "blurb": "Race conditions, abuse cases, threat modeling", "grp": "ops"}, {"slug": "21-logging-and-incident-response", "num": "21", "title": "Logging, Alerting and Incident Response", "blurb": "Noticing attacks and responding well", "grp": "ops"}, {"slug": "22-additional-resources", "num": "22", "title": "Additional Resources", "blurb": "Where to keep learning", "grp": "ops"}, {"slug": "q1-developer-survey", "num": "Q1", "title": "Developer Security Survey", "blurb": "Individual knowledge check for the dev team", "grp": "survey"}, {"slug": "q2-awareness-survey", "num": "Q2", "title": "Cyber Threat Awareness Survey", "blurb": "For everyone, including non-technical staff", "grp": "survey"}];

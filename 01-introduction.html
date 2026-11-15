@@ -10,12 +10,12 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="site.webmanifest">
 <meta name="theme-color" content="#000000">
-<link rel="stylesheet" href="assets/site.css?v=8f1e007517">
+<link rel="stylesheet" href="assets/site.css?v=9ae1fedbc4">
 <script src="assets/consent.js?v=9320b4a322"></script>
 </head>
 <body data-slug="01-introduction">
 <div class="win">
-  <div class="titlebar"><span class="dots"><i></i><i></i><i></i></span><span class="t">guest@websec: ~/websec/01-introduction — zsh — 100×40</span>
+  <header class="hdr"><div class="titlebar"><span class="dots"><i></i><i></i><i></i></span><span class="t">guest@websec: ~/websec/01-introduction — zsh — 100×40</span>
     <a class="by" href="about.html" title="About the author"><span class="w0">by </span>SaKKo</a>
     <span class="lsw" role="group" aria-label="Language"><a href="01-introduction.html" aria-current="true" data-setlang="en">EN</a><a href="th/01-introduction.html" data-setlang="th">TH</a></span>
     <span class="langsw" role="group" aria-label="Code examples language"><span class="d">code:</span><button type="button" data-l="rails">rails</button><button type="button" data-l="node">node</button></span></div>
@@ -52,7 +52,7 @@
 <a href="22-additional-resources.html" title="Additional Resources">22·resources</a>
 <span class="grp">| questionnaires:</span>
 <a href="q1-developer-survey.html" title="Developer Security Survey">Q1·developer</a>
-<a href="q2-awareness-survey.html" title="Cyber Threat Awareness Survey">Q2·cyber</a></nav>
+<a href="q2-awareness-survey.html" title="Cyber Threat Awareness Survey">Q2·cyber</a></nav></header>
   <main>
 <div class="col">
 <p class="prompt">guest@websec ~ % <b>man 01-introduction</b></p>
@@ -86,11 +86,11 @@
   </main>
   <footer class="site">Based on the <a href="https://guides.rubyonrails.org/security.html">Ruby on Rails Security Guide</a> (CC BY-SA 4.0), the <a href="https://cheatsheetseries.owasp.org/">OWASP Cheat Sheet Series</a>, the <a href="https://owasp.org/Top10/2025/">OWASP Top 10:2025</a> and <a href="https://infosec.mozilla.org/guidelines/web_security.html">Mozilla's Web Security Guidelines</a>. Written for our dev team; code samples are illustrative.</footer>
 </div>
-<script src="assets/site.js?v=92ac7aa3f8"></script>
+<script src="assets/site.js?v=3825cbbd72"></script>
 <script>
 
 const CH = [["Framework defaults", 90], ["Your application code", 55], ["Web server & TLS", 80], ["Database config", 75], ["Dependencies", 40], ["Team habits (secrets, reviews)", 60]];
-$("#chain").innerHTML = CH.map((l, i) => `<div class="row" style="flex-wrap:nowrap"><label for="s${i}" style="flex:0 0 230px">${l[0]}</label><input type="range" id="s${i}" min="0" max="100" value="${l[1]}" style="flex:1;accent-color:var(--fg)"><span id="v${i}" style="width:3ch;text-align:right"></span></div>`).join("");
+$("#chain").innerHTML = CH.map((l, i) => `<div class="row" style="flex-wrap:nowrap"><label for="s${i}" style="flex:0 1 230px;min-width:0">${l[0]}</label><input type="range" id="s${i}" min="0" max="100" value="${l[1]}" style="flex:1;min-width:60px;accent-color:var(--fg)"><span id="v${i}" style="width:3ch;text-align:right"></span></div>`).join("");
 function upd() {
   const v = CH.map((_, i) => +$("#s" + i).value);
   v.forEach((x, i) => $("#v" + i).textContent = x);

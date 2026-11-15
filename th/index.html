@@ -10,12 +10,12 @@
 <link rel="apple-touch-icon" href="../apple-touch-icon.png">
 <link rel="manifest" href="../site.webmanifest">
 <meta name="theme-color" content="#000000">
-<link rel="stylesheet" href="../assets/site.css?v=8f1e007517">
+<link rel="stylesheet" href="../assets/site.css?v=9ae1fedbc4">
 <script src="../assets/consent.js?v=9320b4a322"></script>
 </head>
 <body data-slug="index">
 <div class="win">
-  <div class="titlebar"><span class="dots"><i></i><i></i><i></i></span><span class="t">guest@websec: ~/websec/th — zsh — 100×40</span>
+  <header class="hdr"><div class="titlebar"><span class="dots"><i></i><i></i><i></i></span><span class="t">guest@websec: ~/websec/th — zsh — 100×40</span>
     <a class="by" href="about.html" title="เกี่ยวกับผู้เขียน"><span class="w0">เขียนโดย </span>SaKKo</a>
     <span class="lsw" role="group" aria-label="ภาษา"><a href="../index.html" data-setlang="en">EN</a><a href="index.html" aria-current="true" data-setlang="th">TH</a></span>
     <span class="langsw" role="group" aria-label="Code examples language"><span class="d">โค้ด:</span><button type="button" data-l="rails">rails</button><button type="button" data-l="node">node</button></span></div>
@@ -52,7 +52,7 @@
 <a href="22-additional-resources.html" title="แหล่งข้อมูลเพิ่มเติม">22·แหล่งข้อมูล</a>
 <span class="grp">| แบบสอบถาม:</span>
 <a href="q1-developer-survey.html" title="แบบสำรวจความปลอดภัยสำหรับนักพัฒนา">Q1·dev</a>
-<a href="q2-awareness-survey.html" title="แบบสำรวจความตระหนักรู้ภัยไซเบอร์">Q2·ทุกคน</a></nav>
+<a href="q2-awareness-survey.html" title="แบบสำรวจความตระหนักรู้ภัยไซเบอร์">Q2·ทุกคน</a></nav></header>
   <main>
 <div class="col">
 <p class="prompt">guest@websec ~ % <b>cat README</b></p>
@@ -122,7 +122,7 @@
   </main>
   <footer class="site">อ้างอิงจาก <a href="https://guides.rubyonrails.org/security.html">Ruby on Rails Security Guide</a> (CC BY-SA 4.0), <a href="https://cheatsheetseries.owasp.org/">OWASP Cheat Sheet Series</a>, <a href="https://owasp.org/Top10/2025/">OWASP Top 10:2025</a> และ <a href="https://infosec.mozilla.org/guidelines/web_security.html">Mozilla Web Security Guidelines</a> เขียนสำหรับทีมพัฒนาของเรา ตัวอย่างโค้ดเพื่อการอธิบาย ข้อความในผลการจำลองบางส่วนยังเป็นภาษาอังกฤษ</footer>
 </div>
-<script src="../assets/site.js?v=92ac7aa3f8"></script>
+<script src="../assets/site.js?v=3825cbbd72"></script>
 <script>
 
 const CARDS = [{"slug": "01-introduction", "num": "01", "title": "บทนำ", "blurb": "ทำไมความปลอดภัยเป็นหน้าที่ของคุณ ไม่ใช่ของเฟรมเวิร์ก", "grp": "start"}, {"slug": "02-sql-injection", "num": "02", "title": "SQL Injection", "blurb": "เริ่มที่นี่: ทำงานอย่างไร หาเจอได้อย่างไร แก้อย่างไร", "grp": "start"}, {"slug": "03-unsafe-query-generation", "num": "03", "title": "การสร้าง query ที่ไม่ปลอดภัย", "blurb": "เมื่อการ parse request เปลี่ยนรูปร่างของ query", "grp": "start"}, {"slug": "04-xss-and-other-injection", "num": "04", "title": "XSS และ injection แบบอื่น", "blurb": "XSS, CSS, Markdown, shell และ header injection", "grp": "start"}, {"slug": "05-authentication", "num": "05", "title": "การยืนยันตัวตน", "blurb": "เก็บรหัสผ่าน ล็อกอิน MFA และรีเซ็ตรหัสผ่าน", "grp": "access"}, {"slug": "05b-mfa", "num": "05b", "title": "การยืนยันตัวตนหลายปัจจัย", "blurb": "TOTP ทำงานอย่างไร และทำไมรหัสสุ่มแบบทำเองถึงไม่ใช่ MFA", "grp": "access"}, {"slug": "06-sessions", "num": "06", "title": "Session", "blurb": "การขโมย, fixation, replay และการหมดอายุ", "grp": "access"}, {"slug": "07-csrf", "num": "07", "title": "Cross-Site Request Forgery", "blurb": "เมื่อเว็บอื่นกดปุ่มบนเว็บของคุณ", "grp": "access"}, {"slug": "08-user-management", "num": "08", "title": "การจัดการผู้ใช้", "blurb": "Brute force, ยึดบัญชี, CAPTCHA, log, regex, IDOR", "grp": "access"}, {"slug": "09-mass-assignment-and-authorization", "num": "09", "title": "Mass Assignment และ Authorization", "blurb": "ใครตั้งค่าฟิลด์ไหนได้ และใครทำอะไรได้", "grp": "access"}, {"slug": "10-redirection-and-files", "num": "10", "title": "Redirect และไฟล์", "blurb": "Open redirect, การอัปโหลด, path traversal", "grp": "browser"}, {"slug": "11-http-security-headers", "num": "11", "title": "HTTP Security Header", "blurb": "CSP, HSTS, framing, CORS และอื่นๆ", "grp": "browser"}, {"slug": "12-transport-cookies-third-party", "num": "12", "title": "การรับส่งข้อมูล คุกกี้ และสคริปต์บุคคลที่สาม", "blurb": "TLS, prefix ของคุกกี้, mixed content, SRI", "grp": "browser"}, {"slug": "13-ssrf", "num": "13", "title": "Server-Side Request Forgery", "blurb": "เมื่อเซิร์ฟเวอร์ไปดึง URL ให้ผู้โจมตี", "grp": "server"}, {"slug": "14-deserialization-and-xxe", "num": "14", "title": "Deserialization และ XXE", "blurb": "รูปแบบข้อมูลที่รันโค้ดหรืออ่านไฟล์ได้", "grp": "server"}, {"slug": "15-environmental-security", "num": "15", "title": "ความปลอดภัยของสภาพแวดล้อม", "blurb": "Secret, คีย์ และไฟล์ config", "grp": "server"}, {"slug": "16-cryptography", "num": "16", "title": "การเข้ารหัสและการปกป้องข้อมูล", "blurb": "Hash กับการเข้ารหัส คีย์ ความสุ่ม และเวลา", "grp": "server"}, {"slug": "17-dependencies-and-cves", "num": "17", "title": "Dependency และ CVE", "blurb": "อัปเดตแพตช์โค้ดของบุคคลที่สาม", "grp": "server"}, {"slug": "18-intranet-and-admin", "num": "18", "title": "ความปลอดภัยของ intranet และ admin", "blurb": "ปกป้องกุญแจของทั้งอาณาจักร", "grp": "ops"}, {"slug": "19-misconfiguration-and-errors", "num": "19", "title": "การตั้งค่าผิดพลาดและการจัดการ error", "blurb": "โหมด debug ค่าเริ่มต้น และ fail open", "grp": "ops"}, {"slug": "20-insecure-design", "num": "20", "title": "การออกแบบที่ไม่ปลอดภัยและ business logic", "blurb": "Race condition, abuse case, threat modeling", "grp": "ops"}, {"slug": "21-logging-and-incident-response", "num": "21", "title": "Logging การแจ้งเตือน และการรับมือเหตุการณ์", "blurb": "สังเกตการโจมตีและรับมืออย่างดี", "grp": "ops"}, {"slug": "22-additional-resources", "num": "22", "title": "แหล่งข้อมูลเพิ่มเติม", "blurb": "ที่ที่จะเรียนรู้ต่อ", "grp": "ops"}, {"slug": "q1-developer-survey", "num": "Q1", "title": "แบบสำรวจความปลอดภัยสำหรับนักพัฒนา", "blurb": "ทดสอบความรู้รายบุคคลสำหรับทีมพัฒนา", "grp": "survey"}, {"slug": "q2-awareness-survey", "num": "Q2", "title": "แบบสำรวจความตระหนักรู้ภัยไซเบอร์", "blurb": "สำหรับทุกคน รวมถึงพนักงานที่ไม่ใช่สายเทคนิค", "grp": "survey"}];

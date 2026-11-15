@@ -10,12 +10,12 @@
 <link rel="apple-touch-icon" href="../apple-touch-icon.png">
 <link rel="manifest" href="../site.webmanifest">
 <meta name="theme-color" content="#000000">
-<link rel="stylesheet" href="../assets/site.css?v=8f1e007517">
+<link rel="stylesheet" href="../assets/site.css?v=9ae1fedbc4">
 <script src="../assets/consent.js?v=9320b4a322"></script>
 </head>
 <body data-slug="21-logging-and-incident-response">
 <div class="win">
-  <div class="titlebar"><span class="dots"><i></i><i></i><i></i></span><span class="t">guest@websec: ~/websec/21-logging-and-incident-response/th — zsh — 100×40</span>
+  <header class="hdr"><div class="titlebar"><span class="dots"><i></i><i></i><i></i></span><span class="t">guest@websec: ~/websec/21-logging-and-incident-response/th — zsh — 100×40</span>
     <a class="by" href="about.html" title="เกี่ยวกับผู้เขียน"><span class="w0">เขียนโดย </span>SaKKo</a>
     <span class="lsw" role="group" aria-label="ภาษา"><a href="../21-logging-and-incident-response.html" data-setlang="en">EN</a><a href="21-logging-and-incident-response.html" aria-current="true" data-setlang="th">TH</a></span>
     <span class="langsw" role="group" aria-label="Code examples language"><span class="d">โค้ด:</span><button type="button" data-l="rails">rails</button><button type="button" data-l="node">node</button></span></div>
@@ -52,7 +52,7 @@
 <a href="22-additional-resources.html" title="แหล่งข้อมูลเพิ่มเติม">22·แหล่งข้อมูล</a>
 <span class="grp">| แบบสอบถาม:</span>
 <a href="q1-developer-survey.html" title="แบบสำรวจความปลอดภัยสำหรับนักพัฒนา">Q1·dev</a>
-<a href="q2-awareness-survey.html" title="แบบสำรวจความตระหนักรู้ภัยไซเบอร์">Q2·ทุกคน</a></nav>
+<a href="q2-awareness-survey.html" title="แบบสำรวจความตระหนักรู้ภัยไซเบอร์">Q2·ทุกคน</a></nav></header>
   <main>
 <div class="col">
 <p class="prompt">guest@websec ~ % <b>man 21-logging-and-incident-response</b></p>
@@ -89,7 +89,7 @@ SecurityLog.event("admin.role_changed", target_id: user.id, from: "member", to: 
 <h2>21.3 การแจ้งเตือน: log ที่ไม่มีใครอ่านไม่นับ</h2>
 <p>การเจาะระบบมักอยู่ใน log เป็นเดือนโดยไม่มีใครเห็น ให้เปลี่ยนสัญญาณสำคัญเป็นการแจ้งเตือนที่มีเจ้าของ: ล็อกอินล้มเหลวพุ่ง admin ใหม่ export ใหญ่ๆ ให้มีน้อยๆ ไม่อย่างนั้นคนจะเมิน</p>
 <div class="demo"><header><b>sim: ปรับการแจ้งเตือน</b><span>จำนวนล็อกอินล้มเหลวต่อนาที ชั่วโมงที่ผ่านมา</span></header><div class="body">
-<div class="row"><label for="al-th">แจ้งเตือนเมื่อล็อกอินล้มเหลว/นาที &gt;</label><input id="al-th" max="120" min="5" style="flex:1;accent-color:var(--fg)" type="range" value="40"/><b id="al-thv"></b></div>
+<div class="row"><label for="al-th">แจ้งเตือนเมื่อล็อกอินล้มเหลว/นาที &gt;</label><input id="al-th" max="120" min="5" style="flex:1;min-width:60px;accent-color:var(--fg)" type="range" value="40"/><b id="al-thv"></b></div>
 <canvas height="160" id="al-cv" style="width:100%;height:160px;border:1px solid var(--faint);margin-top:8px" width="900"></canvas>
 <div class="out" id="al-out" style="margin-top:8px"></div>
 </div></div>
@@ -109,7 +109,7 @@ SecurityLog.event("admin.role_changed", target_id: user.id, from: "member", to: 
   </main>
   <footer class="site">อ้างอิงจาก <a href="https://guides.rubyonrails.org/security.html">Ruby on Rails Security Guide</a> (CC BY-SA 4.0), <a href="https://cheatsheetseries.owasp.org/">OWASP Cheat Sheet Series</a>, <a href="https://owasp.org/Top10/2025/">OWASP Top 10:2025</a> และ <a href="https://infosec.mozilla.org/guidelines/web_security.html">Mozilla Web Security Guidelines</a> เขียนสำหรับทีมพัฒนาของเรา ตัวอย่างโค้ดเพื่อการอธิบาย ข้อความในผลการจำลองบางส่วนยังเป็นภาษาอังกฤษ</footer>
 </div>
-<script src="../assets/site.js?v=92ac7aa3f8"></script>
+<script src="../assets/site.js?v=3825cbbd72"></script>
 <script>
 
 function li() {

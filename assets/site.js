@@ -28,6 +28,124 @@ function setLang(l) {
   store.set("lang2", l);
 }
 
+/* ---------- syntax highlighting: ruby, javascript, bash ----------
+   Only bare text inside <pre> is tokenized. Hand-written spans (.c comment, .bad, .ok)
+   keep their colour, so the red "vulnerable" lines stay red. */
+const HL = (() => {
+  const words = s => new Set(s.split(" "));
+  const KW = {
+    ruby: words("alias and begin break case class def defined? do else elsif end ensure for if in module next not or redo rescue retry return super then undef unless until when while yield require require_relative include extend prepend private protected public attr_accessor attr_reader attr_writer raise loop lambda proc"),
+    js: words("as async await break case catch class const continue debugger default delete do else export extends finally for from function if import in instanceof let new of return static super switch throw try typeof var void while with yield require module exports"),
+    bash: words("if then else elif fi for while until do done case esac in function select time")
+  };
+  const LIT = { ruby: words("true false nil self __FILE__"), js: words("true false null undefined NaN Infinity this") };
+  const span = (cls, s) => cls ? `<span class="${cls}">${esc(s)}</span>` : esc(s);
+  // index just past the bracket that closes the one at src[i]
+  function closeOf(src, i, open, close) {
+    for (let d = 0; i < src.length; i++) { if (src[i] === "\\") { i++; continue; } if (src[i] === open) d++; else if (src[i] === close && --d === 0) return i + 1; }
+    return src.length;
+  }
+  // quoted string from src[i]; interpolation (#{…} or ${…}) is highlighted as code inside it
+  function str(src, i, q, interp, lang) {
+    let out = "", buf = q, j = i + 1;
+    for (; j < src.length; j++) {
+      const c = src[j];
+      if (c === "\\") { buf += src.slice(j, j + 2); j++; continue; }
+      if (c === "\n" && q !== "`") break;
+      if (interp && c === interp && src[j + 1] === "{") {
+        const end = closeOf(src, j + 1, "{", "}");
+        out += span("hs", buf) + span("hk", interp + "{") + tok(src.slice(j + 2, end - 1), lang) + span("hk", "}");
+        buf = ""; j = end - 1; continue;
+      }
+      buf += c;
+      if (c === q) { j++; break; }
+    }
+    return [out + span("hs", buf), j];
+  }
+  const PAIR = { "(": ")", "[": "]", "{": "}", "<": ">" };
+  function tok(src, lang, st = { cmd: true }) {
+    let out = "", i = 0, plain = "";
+    const flush = () => { out += esc(plain); plain = ""; };
+    const emit = (cls, s) => { flush(); out += span(cls, s); i += s.length; };
+    const at = re => { re.lastIndex = i; const m = re.exec(src); return m && m[0]; };
+    const before = () => src.slice(Math.max(0, i - 24), i);
+    // "/" starts a regex literal unless it follows a value (then it is division)
+    const regexOK = () => { const b = before().trimEnd(); return !/[\w)\]}"'`<]$/.test(b) || /\b(return|typeof|when|if|unless|and|or|not)$/.test(b); };
+    while (i < src.length) {
+      const c = src[i]; let m;
+      if (lang === "bash") {
+        if (c === "\n") { plain += c; i++; st.cmd = true; continue; }
+        if (c === " " || c === "\t") { plain += c; i++; continue; }
+        if (c === "#" && (i === 0 || /\s/.test(src[i - 1]))) { emit("c", at(/#.*/y)); continue; }
+        if (st.cmd && (m = at(/\$ (?=\S)/y)) && (i === 0 || src[i - 1] === "\n")) { emit("c", m); continue; }
+        if (c === "'") { emit("hs", at(/'[^']*'?/y)); st.cmd = false; continue; }
+        if (c === '"') { emit("hs", at(/"(?:\\.|[^"\\])*"?/y)); st.cmd = false; continue; }
+        if ((m = at(/\$\(/y))) { emit("hk", m); (st.sub = st.sub || []).push(st.cmd); st.cmd = true; continue; }
+        if (c === ")" && st.sub && st.sub.length) { emit("hk", c); st.cmd = st.sub.pop(); continue; }
+        if ((m = at(/\$(?:\{[^}]*\}|\w+|[?#@*!$])/y))) { emit("hv", m); st.cmd = false; continue; }
+        if ((m = at(/&&|\|\||[|;&]/y))) { emit("hk", m); st.cmd = true; continue; }
+        if ((m = at(/\d*>>?(?:&\d)?|</y))) { emit("hk", m); continue; }
+        if ((m = at(/\\(?=\n)/y))) { emit("hk", m); continue; }
+        if ((m = at(/[^\s|;&<>"'$()]+/y))) {
+          // FOO=bar before a command is an env assignment; the command comes after it
+          const env = st.cmd && at(/[A-Za-z_]\w*=(?:"[^"]*"|'[^']*'|[^\s|;&$()"']*)/y);
+          if (env) { emit("hv", env); continue; }
+          if (st.cmd) { emit(KW.bash.has(m) ? "hk" : "hf", m); st.cmd = KW.bash.has(m) || m === "sudo" || m === "env" || m === "time"; }
+          else if (m[0] === "-") emit("ho", m);
+          else { plain += m; i += m.length; }
+          continue;
+        }
+        plain += c; i++; continue;
+      }
+      // ruby / js
+      if (lang === "ruby") {
+        if ((m = at(/<%#[\s\S]*?%>/y))) { emit("c", m); continue; }
+        if ((m = at(/<%[=-]?|-?%>/y))) { emit("hk", m); continue; }
+        if (c === "#") { emit("c", at(/#.*/y)); continue; }
+        if (c === '"' || c === "`" || c === "'") { flush(); const [h, j] = str(src, i, c, c === "'" ? null : "#", lang); out += h; i = j; continue; }
+        if ((m = at(/%[wWiIqQr]?[[({<]/y))) { const o = m[m.length - 1], end = closeOf(src, i + m.length - 1, o, PAIR[o]); emit("hs", src.slice(i, end) + (at(/[imx]*/y) || "")); continue; }
+        if (c === ":" && src[i + 1] !== ":" && !/[\w:]/.test(src[i - 1] || "") && (m = at(/:(?:[A-Za-z_]\w*[?!=]?|"[^"]*")/y))) { emit("hn", m); continue; }
+        if ((m = at(/[A-Za-z_]\w*[?!]?:(?![:\w])/y)) && !/[\w@$]/.test(src[i - 1] || "")) { emit("hn", m); continue; }
+        if ((m = at(/@@?\w+|\$\w+/y))) { emit("hv", m); continue; }
+      } else {
+        if ((m = at(/\/\/.*|\/\*[\s\S]*?(?:\*\/|$)/y))) { emit("c", m); continue; }
+        if (c === "`" || c === '"' || c === "'") { flush(); const [h, j] = str(src, i, c, c === "`" ? "$" : null, lang); out += h; i = j; continue; }
+      }
+      if (c === "/" && regexOK() && (m = at(/\/(?![*\/\s])(?:\\.|\[(?:\\.|[^\]\\\n])*\]|[^\/\\\n])+\/[a-z]*/y))) { emit("hs", m); continue; }
+      if ((m = at(/\d[\d_]*(?:\.\d+)?(?:e[+-]?\d+)?/iy)) && !/\w/.test(src[i - 1] || "")) { emit("hn", m); continue; }
+      if ((m = at(/[A-Za-z_$][\w$]*[?!]?/y))) {
+        if (lang === "js" && /[?!]$/.test(m)) m = m.slice(0, -1);
+        if (!/[\w$]/.test(src[i - 1] || "")) {
+          if (src[i - 1] !== "." && KW[lang].has(m)) { emit("hk", m); continue; }
+          if (LIT[lang].has(m)) { emit("hn", m); continue; }
+          if (/^[A-Z]/.test(m)) { emit("ht", m); continue; }
+          if (/\b(def|function)\s+(self\.)?$/.test(before()) || src[i + m.length] === "(") { emit("hf", m); continue; }
+        }
+        plain += m; i += m.length; continue;
+      }
+      plain += c; i++;
+    }
+    flush();
+    return out;
+  }
+  function langOf(pre) {
+    const box = pre.closest(".code"); if (!box) return null;
+    const l = pre.dataset.lang || (box.dataset.label || "").split(/\s/)[0];
+    return { rails: "ruby", ruby: "ruby", node: "js", js: "js", javascript: "js", shell: "bash", bash: "bash", sh: "bash" }[l] || null;
+  }
+  function pre(el) {
+    const lang = langOf(el); if (!lang) return;
+    const st = { cmd: true };
+    Array.from(el.childNodes).forEach(n => {
+      if (n.nodeType !== 3) { st.cmd = /\n$/.test(n.textContent); return; }
+      const t = document.createElement("template"); t.innerHTML = tok(n.textContent, lang, st);
+      n.replaceWith(t.content);
+    });
+  }
+  return { tok, pre };
+})();
+$$(".code pre").forEach(HL.pre);
+
 // code labels + copy buttons
 $$(".code").forEach(c => {
   const lbl = document.createElement("span"); lbl.className = "lbl";
@@ -161,3 +279,13 @@ $$(".anim").forEach(box => {
 $$(".card[data-slug]").forEach(c => {
   if (store.get("read:" + c.dataset.slug, false)) { c.classList.add("read"); const st = $(".st", c); if (st) st.textContent = L.read; }
 });
+
+// sticky header: expose its height for anchor offsets; on the one-row mobile nav, bring the current page into view
+(() => {
+  const hdr = $(".hdr"); if (!hdr) return;
+  const setH = () => document.documentElement.style.setProperty("--hdr-h", hdr.offsetHeight + "px");
+  setH();
+  if ("ResizeObserver" in window) new ResizeObserver(setH).observe(hdr); else addEventListener("resize", setH);
+  const nav = $("nav.top", hdr), cur = nav && $("[aria-current=page]", nav);
+  if (cur && nav.scrollWidth > nav.clientWidth) nav.scrollLeft = cur.offsetLeft - nav.offsetLeft - (nav.clientWidth - cur.offsetWidth) / 2;
+})();

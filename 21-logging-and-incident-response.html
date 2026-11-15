@@ -10,12 +10,12 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="site.webmanifest">
 <meta name="theme-color" content="#000000">
-<link rel="stylesheet" href="assets/site.css?v=8f1e007517">
+<link rel="stylesheet" href="assets/site.css?v=9ae1fedbc4">
 <script src="assets/consent.js?v=9320b4a322"></script>
 </head>
 <body data-slug="21-logging-and-incident-response">
 <div class="win">
-  <div class="titlebar"><span class="dots"><i></i><i></i><i></i></span><span class="t">guest@websec: ~/websec/21-logging-and-incident-response — zsh — 100×40</span>
+  <header class="hdr"><div class="titlebar"><span class="dots"><i></i><i></i><i></i></span><span class="t">guest@websec: ~/websec/21-logging-and-incident-response — zsh — 100×40</span>
     <a class="by" href="about.html" title="About the author"><span class="w0">by </span>SaKKo</a>
     <span class="lsw" role="group" aria-label="Language"><a href="21-logging-and-incident-response.html" aria-current="true" data-setlang="en">EN</a><a href="th/21-logging-and-incident-response.html" data-setlang="th">TH</a></span>
     <span class="langsw" role="group" aria-label="Code examples language"><span class="d">code:</span><button type="button" data-l="rails">rails</button><button type="button" data-l="node">node</button></span></div>
@@ -52,7 +52,7 @@
 <a href="22-additional-resources.html" title="Additional Resources">22·resources</a>
 <span class="grp">| questionnaires:</span>
 <a href="q1-developer-survey.html" title="Developer Security Survey">Q1·developer</a>
-<a href="q2-awareness-survey.html" title="Cyber Threat Awareness Survey">Q2·cyber</a></nav>
+<a href="q2-awareness-survey.html" title="Cyber Threat Awareness Survey">Q2·cyber</a></nav></header>
   <main>
 <div class="col">
 <p class="prompt">guest@websec ~ % <b>man 21-logging-and-incident-response</b></p>
@@ -89,7 +89,7 @@ SecurityLog.event("admin.role_changed", target_id: user.id, from: "member", to: 
 <h2>21.3 Alerting: logs nobody reads don't count</h2>
 <p>Breaches often sit in the logs for months, unseen. Turn the key signals into alerts someone owns: failed-login spikes, new admins, big exports. Keep them few or people tune them out.</p>
 <div class="demo"><header><b>sim: tune an alert</b><span>failed logins per minute, last hour</span></header><div class="body">
-<div class="row"><label for="al-th">alert when failed logins/min &gt;</label><input id="al-th" max="120" min="5" style="flex:1;accent-color:var(--fg)" type="range" value="40"/><b id="al-thv"></b></div>
+<div class="row"><label for="al-th">alert when failed logins/min &gt;</label><input id="al-th" max="120" min="5" style="flex:1;min-width:60px;accent-color:var(--fg)" type="range" value="40"/><b id="al-thv"></b></div>
 <canvas height="160" id="al-cv" style="width:100%;height:160px;border:1px solid var(--faint);margin-top:8px" width="900"></canvas>
 <div class="out" id="al-out" style="margin-top:8px"></div>
 </div></div>
@@ -109,7 +109,7 @@ SecurityLog.event("admin.role_changed", target_id: user.id, from: "member", to: 
   </main>
   <footer class="site">Based on the <a href="https://guides.rubyonrails.org/security.html">Ruby on Rails Security Guide</a> (CC BY-SA 4.0), the <a href="https://cheatsheetseries.owasp.org/">OWASP Cheat Sheet Series</a>, the <a href="https://owasp.org/Top10/2025/">OWASP Top 10:2025</a> and <a href="https://infosec.mozilla.org/guidelines/web_security.html">Mozilla's Web Security Guidelines</a>. Written for our dev team; code samples are illustrative.</footer>
 </div>
-<script src="assets/site.js?v=92ac7aa3f8"></script>
+<script src="assets/site.js?v=3825cbbd72"></script>
 <script>
 
 function li() {

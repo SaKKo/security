@@ -10,12 +10,12 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="site.webmanifest">
 <meta name="theme-color" content="#000000">
-<link rel="stylesheet" href="assets/site.css?v=8f1e007517">
+<link rel="stylesheet" href="assets/site.css?v=9ae1fedbc4">
 <script src="assets/consent.js?v=9320b4a322"></script>
 </head>
 <body data-slug="11-http-security-headers">
 <div class="win">
-  <div class="titlebar"><span class="dots"><i></i><i></i><i></i></span><span class="t">guest@websec: ~/websec/11-http-security-headers — zsh — 100×40</span>
+  <header class="hdr"><div class="titlebar"><span class="dots"><i></i><i></i><i></i></span><span class="t">guest@websec: ~/websec/11-http-security-headers — zsh — 100×40</span>
     <a class="by" href="about.html" title="About the author"><span class="w0">by </span>SaKKo</a>
     <span class="lsw" role="group" aria-label="Language"><a href="11-http-security-headers.html" aria-current="true" data-setlang="en">EN</a><a href="th/11-http-security-headers.html" data-setlang="th">TH</a></span>
     <span class="langsw" role="group" aria-label="Code examples language"><span class="d">code:</span><button type="button" data-l="rails">rails</button><button type="button" data-l="node">node</button></span></div>
@@ -52,7 +52,7 @@
 <a href="22-additional-resources.html" title="Additional Resources">22·resources</a>
 <span class="grp">| questionnaires:</span>
 <a href="q1-developer-survey.html" title="Developer Security Survey">Q1·developer</a>
-<a href="q2-awareness-survey.html" title="Cyber Threat Awareness Survey">Q2·cyber</a></nav>
+<a href="q2-awareness-survey.html" title="Cyber Threat Awareness Survey">Q2·cyber</a></nav></header>
   <main>
 <div class="col">
 <p class="prompt">guest@websec ~ % <b>curl -I https://app.example.com</b></p>
@@ -73,7 +73,7 @@
 <h3>X-Frame-Options</h3>
 <p>Stops other sites putting our page in an invisible iframe and tricking users into clicking our buttons (<b>clickjacking</b>). Rails' default <code>SAMEORIGIN</code> is fine.</p>
 <div class="demo"><header><b>sim: clickjacking</b><span>reveal the hidden frame</span></header><div class="body">
-<div class="row"><label for="cj-op">hidden iframe opacity</label><input id="cj-op" max="100" min="0" style="flex:1;accent-color:var(--fg)" type="range" value="0"/><span id="cj-opv">0%</span><label><input id="cj-xfo" type="checkbox"/> bank sends X-Frame-Options: DENY</label></div>
+<div class="row"><label for="cj-op">hidden iframe opacity</label><input id="cj-op" max="100" min="0" style="flex:1;min-width:60px;accent-color:var(--fg)" type="range" value="0"/><span id="cj-opv">0%</span><label><input id="cj-xfo" type="checkbox"/> bank sends X-Frame-Options: DENY</label></div>
 <div style="position:relative;height:190px;border:1px solid var(--faint);margin-top:10px;overflow:hidden">
 <div style="position:absolute;inset:0;padding:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px">
 <div class="y">FREE-PRIZE.TEST · You won a new phone!</div>
@@ -234,7 +234,7 @@ app.use((req, res, next) =&gt; {
   </main>
   <footer class="site">Based on the <a href="https://guides.rubyonrails.org/security.html">Ruby on Rails Security Guide</a> (CC BY-SA 4.0), the <a href="https://cheatsheetseries.owasp.org/">OWASP Cheat Sheet Series</a>, the <a href="https://owasp.org/Top10/2025/">OWASP Top 10:2025</a> and <a href="https://infosec.mozilla.org/guidelines/web_security.html">Mozilla's Web Security Guidelines</a>. Written for our dev team; code samples are illustrative.</footer>
 </div>
-<script src="assets/site.js?v=92ac7aa3f8"></script>
+<script src="assets/site.js?v=3825cbbd72"></script>
 <script>
 
 // 9.1 header inspector

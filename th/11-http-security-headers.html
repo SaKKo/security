@@ -10,12 +10,12 @@
 <link rel="apple-touch-icon" href="../apple-touch-icon.png">
 <link rel="manifest" href="../site.webmanifest">
 <meta name="theme-color" content="#000000">
-<link rel="stylesheet" href="../assets/site.css?v=8f1e007517">
+<link rel="stylesheet" href="../assets/site.css?v=9ae1fedbc4">
 <script src="../assets/consent.js?v=9320b4a322"></script>
 </head>
 <body data-slug="11-http-security-headers">
 <div class="win">
-  <div class="titlebar"><span class="dots"><i></i><i></i><i></i></span><span class="t">guest@websec: ~/websec/11-http-security-headers/th — zsh — 100×40</span>
+  <header class="hdr"><div class="titlebar"><span class="dots"><i></i><i></i><i></i></span><span class="t">guest@websec: ~/websec/11-http-security-headers/th — zsh — 100×40</span>
     <a class="by" href="about.html" title="เกี่ยวกับผู้เขียน"><span class="w0">เขียนโดย </span>SaKKo</a>
     <span class="lsw" role="group" aria-label="ภาษา"><a href="../11-http-security-headers.html" data-setlang="en">EN</a><a href="11-http-security-headers.html" aria-current="true" data-setlang="th">TH</a></span>
     <span class="langsw" role="group" aria-label="Code examples language"><span class="d">โค้ด:</span><button type="button" data-l="rails">rails</button><button type="button" data-l="node">node</button></span></div>
@@ -52,7 +52,7 @@
 <a href="22-additional-resources.html" title="แหล่งข้อมูลเพิ่มเติม">22·แหล่งข้อมูล</a>
 <span class="grp">| แบบสอบถาม:</span>
 <a href="q1-developer-survey.html" title="แบบสำรวจความปลอดภัยสำหรับนักพัฒนา">Q1·dev</a>
-<a href="q2-awareness-survey.html" title="แบบสำรวจความตระหนักรู้ภัยไซเบอร์">Q2·ทุกคน</a></nav>
+<a href="q2-awareness-survey.html" title="แบบสำรวจความตระหนักรู้ภัยไซเบอร์">Q2·ทุกคน</a></nav></header>
   <main>
 <div class="col">
 <p class="prompt">guest@websec ~ % <b>curl -I https://app.example.com</b></p>
@@ -73,7 +73,7 @@
 <h3>X-Frame-Options</h3>
 <p>กันไม่ให้เว็บอื่นใส่หน้าเราใน iframe ที่มองไม่เห็น แล้วหลอกให้ผู้ใช้กดปุ่มของเรา (<b>clickjacking</b>) ค่าเริ่มต้น <code>SAMEORIGIN</code> ของ Rails ใช้ได้</p>
 <div class="demo"><header><b>sim: clickjacking</b><span>เผย frame ที่ซ่อนอยู่</span></header><div class="body">
-<div class="row"><label for="cj-op">ความทึบของ iframe ที่ซ่อน</label><input id="cj-op" max="100" min="0" style="flex:1;accent-color:var(--fg)" type="range" value="0"/><span id="cj-opv">0%</span><label><input id="cj-xfo" type="checkbox"/> ธนาคารส่ง X-Frame-Options: DENY</label></div>
+<div class="row"><label for="cj-op">ความทึบของ iframe ที่ซ่อน</label><input id="cj-op" max="100" min="0" style="flex:1;min-width:60px;accent-color:var(--fg)" type="range" value="0"/><span id="cj-opv">0%</span><label><input id="cj-xfo" type="checkbox"/> ธนาคารส่ง X-Frame-Options: DENY</label></div>
 <div style="position:relative;height:190px;border:1px solid var(--faint);margin-top:10px;overflow:hidden">
 <div style="position:absolute;inset:0;padding:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px">
 <div class="y">FREE-PRIZE.TEST · You won a new phone!</div>
@@ -234,7 +234,7 @@ app.use((req, res, next) =&gt; {
   </main>
   <footer class="site">อ้างอิงจาก <a href="https://guides.rubyonrails.org/security.html">Ruby on Rails Security Guide</a> (CC BY-SA 4.0), <a href="https://cheatsheetseries.owasp.org/">OWASP Cheat Sheet Series</a>, <a href="https://owasp.org/Top10/2025/">OWASP Top 10:2025</a> และ <a href="https://infosec.mozilla.org/guidelines/web_security.html">Mozilla Web Security Guidelines</a> เขียนสำหรับทีมพัฒนาของเรา ตัวอย่างโค้ดเพื่อการอธิบาย ข้อความในผลการจำลองบางส่วนยังเป็นภาษาอังกฤษ</footer>
 </div>
-<script src="../assets/site.js?v=92ac7aa3f8"></script>
+<script src="../assets/site.js?v=3825cbbd72"></script>
 <script>
 
 // 9.1 header inspector
