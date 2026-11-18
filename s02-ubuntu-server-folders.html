@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en" data-lang="rails">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ubuntu Server Folders · Server Guide</title>
+
+<link rel="icon" href="favicon.ico" sizes="32x32">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="site.webmanifest">
+<meta name="theme-color" content="#000000">
+<link rel="stylesheet" href="assets/site.css?v=9ae1fedbc4">
+<script src="assets/consent.js?v=9320b4a322"></script>
+<link rel="stylesheet" href="assets/server.css?v=1">
+<style>
+/* folder explorer: terminal on top of a clickable tree, both pinned on the left */
+.fx-tree{list-style:none;margin:8px 0 0;padding:6px 0;border:1px solid var(--faint);font-size:13px;overflow:auto;max-height:42vh}
+.fx-tree li{margin:0}
+.fx-tree button{font:inherit;display:flex;gap:10px;align-items:baseline;width:100%;background:none;border:0;border-left:2px solid transparent;color:var(--fg);padding:2px 10px;cursor:pointer;text-align:left}
+.fx-tree button:hover{background:#031103;color:var(--bright)}
+.fx-tree button[aria-current="true"]{background:var(--fg);color:var(--bg)}
+.fx-tree button[aria-current="true"] .tg{color:var(--bg)}
+.fx-tree .nm{white-space:nowrap}
+.fx-tree .nm .g{color:var(--faint)}
+.fx-tree button[aria-current="true"] .nm .g{color:var(--sel)}
+.fx-tree .sd{flex:1;min-width:0;color:var(--dim);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fx-tree button[aria-current="true"] .sd{color:var(--bg)}
+.tg{font-size:11px;white-space:nowrap}
+.tg.yours{color:var(--bright)}.tg.config{color:var(--cyan)}.tg.data{color:var(--white)}.tg.system{color:var(--dim)}.tg.virtual{color:var(--yellow)}.tg.temp{color:var(--red)}
+.fx-badge{display:inline-block;font-size:12px;border:1px solid currentColor;padding:0 6px;margin-left:8px;vertical-align:3px}
+.fx-legend{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-size:13px;margin:10px 0 0;color:var(--white)}
+.fx-legend dt{margin:0}.fx-legend dd{margin:0}
+@media (min-width:900px){
+  .fx .sv-left{position:sticky;top:calc(var(--hdr-h,0px) + 16px);height:calc(100vh - var(--hdr-h,0px) - 32px);display:flex;flex-direction:column;align-self:start}
+  .fx .sv-stage{position:static;height:auto;flex:1 1 52%;min-height:0}
+  .fx-tree{flex:1 1 48%;max-height:none;min-height:0}
+}
+</style>
+</head>
+<body data-slug="s02-ubuntu-server-folders">
+<div class="win">
+  <header class="hdr"><div class="titlebar"><span class="dots"><i></i><i></i><i></i></span><span class="t">guest@websec: ~/websec/s02-ubuntu-server-folders — zsh — 100×40</span>
+    <a class="by" href="about.html" title="About the author"><span class="w0">by </span>SaKKo</a>
+    <span class="lsw" role="group" aria-label="Language"><a href="s02-ubuntu-server-folders.html" aria-current="true" data-setlang="en">EN</a></span></div>
+  <nav class="top" aria-label="Lessons"><a href="index.html#server" title="Home">~/</a>
+<a class="trk" href="index.html#security">#1 security</a>
+<a class="trk" href="r01-rails-api-app.html">#2 rails</a>
+<a class="trk on" href="s01-ubuntu-server-setup.html">#3 server</a>
+<span class="grp">| setup:</span>
+<a href="s01-ubuntu-server-setup.html" title="Ubuntu Server Setup">s01·ubuntu-server</a>
+<a href="s02-ubuntu-server-folders.html" aria-current="page" title="Ubuntu Server Folders">s02·folders</a></nav></header>
+  <main class="sv-main">
+<div class="sv fx">
+  <div class="sv-left">
+    <div class="sv-stage">
+      <div class="sv-term">
+        <header><span class="dots"><i></i><i></i><i></i></span><b id="fx-title">ssh ubuntu@my-server</b><span class="where" id="fx-where">/</span></header>
+        <div class="sv-scr" id="fx-scr" aria-live="off"></div>
+      </div>
+      <div class="sv-ctl">
+        <button type="button" class="btn" id="fx-prev" title="Previous folder (←)">◀ prev</button>
+        <button type="button" class="btn" id="fx-next" title="Next folder (→)">next ▶</button>
+        <button type="button" class="btn" id="fx-again" title="Run the commands again">↺ replay</button>
+        <button type="button" class="btn" id="fx-skip" title="Show the output at once">⏭ skip animation</button>
+        <span class="pos" id="fx-pos"></span>
+      </div>
+    </div>
+    <ul class="fx-tree" id="fx-tree" aria-label="Folders"></ul>
+  </div>
+
+  <div class="sv-right">
+  <div class="sv-intro">
+  <p class="prompt">guest@websec ~ % <b>man hier</b></p>
+  <h1>Ubuntu Server Folders</h1>
+  <p class="lede">Every file on the server lives in one tree that starts at <code>/</code>. Click a folder on the left (or use ← →) to see what's inside on a real-looking server, what it's for, and whether you should touch it.</p>
+  <dl class="fx-legend">
+    <dt class="tg yours">yours</dt><dd>put your own files and apps here</dd>
+    <dt class="tg config">config</dt><dd>settings: edit with sudo, carefully, and keep a backup</dd>
+    <dt class="tg data">data</dt><dd>apps write here: read it and back it up, don't hand-edit</dd>
+    <dt class="tg system">system</dt><dd>owned by apt: never add, edit or delete files</dd>
+    <dt class="tg virtual">virtual</dt><dd>made up by the kernel on the fly, not on disk</dd>
+    <dt class="tg temp">temp</dt><dd>scratch space that gets wiped</dd>
+  </dl>
+  </div>
+
+  <div class="sv-panes">
+    <section class="sv-explain" id="fx-box" aria-live="polite">
+      <h2>This folder</h2>
+      <div id="fx-explain"></div>
+    </section>
+    <section>
+      <h2>Commands shown</h2>
+      <ul class="sv-hist" id="fx-cmds"></ul>
+    </section>
+
+<h2>Where does … live?</h2>
+<p>The question you'll actually ask. Paths from lesson s01 included.</p>
+<div class="tablewrap"><table><thead><tr><th>thing</th><th>path</th></tr></thead><tbody>
+<tr><td>SSH server settings</td><td><code>/etc/ssh/sshd_config.d/*.conf</code></td></tr>
+<tr><td>who may log in as ubuntu</td><td><code>/home/ubuntu/.ssh/authorized_keys</code></td></tr>
+<tr><td>sudo rules</td><td><code>/etc/sudoers.d/</code></td></tr>
+<tr><td>firewall rules</td><td><code>/etc/ufw/user.rules</code> (change them with <code>ufw</code>, not by hand)</td></tr>
+<tr><td>apt sources and keys</td><td><code>/etc/apt/sources.list.d/</code>, <code>/etc/apt/keyrings/</code></td></tr>
+<tr><td>your systemd services</td><td><code>/etc/systemd/system/myapp.service</code></td></tr>
+<tr><td>services installed by packages</td><td><code>/usr/lib/systemd/system/</code> (override with <code>systemctl edit</code>)</td></tr>
+<tr><td>logs</td><td><code>/var/log/</code> and <code>journalctl</code> (stored in <code>/var/log/journal/</code>)</td></tr>
+<tr><td>Docker images, containers, volumes</td><td><code>/var/lib/docker/</code></td></tr>
+<tr><td>a container's log file</td><td><code>/var/lib/docker/containers/&lt;id&gt;/&lt;id&gt;-json.log</code></td></tr>
+<tr><td>Docker daemon settings</td><td><code>/etc/docker/daemon.json</code></td></tr>
+<tr><td>Postgres data (apt install)</td><td><code>/var/lib/postgresql/16/main/</code>, config in <code>/etc/postgresql/16/main/</code></td></tr>
+<tr><td>nginx sites</td><td><code>/etc/nginx/sites-available/</code> + symlink in <code>sites-enabled/</code></td></tr>
+<tr><td>Let's Encrypt certificates</td><td><code>/etc/letsencrypt/live/&lt;domain&gt;/</code></td></tr>
+<tr><td>your crontab</td><td><code>crontab -e</code> (stored in <code>/var/spool/cron/crontabs/ubuntu</code>)</td></tr>
+<tr><td>Node versions (nvm)</td><td><code>~/.nvm/versions/node/</code></td></tr>
+<tr><td>Ruby versions (rvm)</td><td><code>~/.rvm/rubies/</code></td></tr>
+<tr><td>Python versions (pyenv)</td><td><code>~/.pyenv/versions/</code></td></tr>
+<tr><td>swap file</td><td><code>/swapfile</code></td></tr>
+<tr><td>your app's code</td><td><code>/srv/myapp</code> or <code>/home/ubuntu/apps/myapp</code>: pick one and stick to it</td></tr>
+<tr><td>a binary you downloaded</td><td><code>/usr/local/bin/</code></td></tr>
+</tbody></table></div>
+
+<h2>Disk full? Find what's big</h2>
+<div class="tablewrap"><table><thead><tr><th>command</th><th>what it tells you</th></tr></thead><tbody>
+<tr><td><code>df -h</code></td><td>free space per disk. Ignore the <code>/dev/loop*</code> lines (snaps).</td></tr>
+<tr><td><code>sudo du -xh --max-depth=1 / | sort -h</code></td><td>size of each top-level folder. <code>-x</code> stays on one disk, so it skips <code>/proc</code>.</td></tr>
+<tr><td><code>sudo du -sh /var/* | sort -h</code></td><td>usually the answer: logs, Docker or apt cache</td></tr>
+<tr><td><code>docker system df</code></td><td>space used by images, containers, volumes, build cache</td></tr>
+<tr><td><code>journalctl --disk-usage</code></td><td>size of the systemd journal. Shrink: <code>sudo journalctl --vacuum-size=200M</code></td></tr>
+<tr><td><code>sudo apt clean &amp;&amp; sudo apt autoremove</code></td><td>drop downloaded .deb files and old kernels</td></tr>
+<tr><td><code>sudo apt install ncdu &amp;&amp; sudo ncdu -x /</code></td><td>interactive browser of what uses the space</td></tr>
+</tbody></table></div>
+
+<h2>What to back up</h2>
+<ul>
+<li><code>/etc</code>: all your configuration. Small, and painful to rebuild by memory. <code>etckeeper</code> puts it in git automatically.</li>
+<li><code>/home</code> and <code>/srv</code> (or wherever your apps live): code, <code>.env</code> files, uploads.</li>
+<li>Databases: a <b>dump</b> (<code>pg_dump</code>, <code>mysqldump</code>), not a copy of <code>/var/lib/postgresql</code> while it's running.</li>
+<li>Docker volumes in <code>/var/lib/docker/volumes/</code>: stop the container or use the app's own dump tool first.</li>
+<li><code>/var/spool/cron/crontabs</code>: everyone's crontabs.</li>
+</ul>
+<p>Not worth backing up: <code>/usr</code>, <code>/boot</code>, <code>/var/cache</code>, <code>/tmp</code>, <code>/proc</code>, <code>/sys</code>, <code>/dev</code>, <code>/run</code>. A reinstall brings those back.</p>
+
+<label class="readmark"><input type="checkbox" id="read-s02-ubuntu-server-folders"> Mark lesson s02 as read</label><div class="pager"><a href="s01-ubuntu-server-setup.html">◀ s01 Ubuntu Server Setup</a><span></span></div>
+  </div>
+  </div>
+</div>
+  </main>
+  <footer class="site">Based on the <a href="https://refspecs.linuxfoundation.org/FHS_3.0/fhs/index.html">Filesystem Hierarchy Standard 3.0</a>, <code>man hier</code> and <code>man file-hierarchy</code> on Ubuntu 24.04. Terminal output is illustrative.</footer>
+</div>
+<script src="assets/site.js?v=3825cbbd72"></script>
+<script>
+(() => {
+// p = path (also the URL hash), n = label in the tree, k = tag, s = one-liner, x = explanation, L = commands run in the terminal
+const E = [
+{ p: "/", k: "system", s: "the root of everything",
+  x: `<p>Linux has <b>one tree</b>. There's no <code>C:</code> or <code>D:</code>: a second disk is attached ("mounted") onto a folder inside this tree, like <code>/mnt/data</code>.</p>
+<p>Don't confuse <code>/</code> (the root of the tree) with <code>/root</code> (the root <i>user's</i> home folder).</p>
+<p>The <code>*.usr-is-merged</code> folders are markers left by Ubuntu's switch to a merged <code>/usr</code> (see <code>/bin</code>). Ignore them. <code>swapfile</code> is the one from s01 step 14.</p>
+<div class="note">The full official description is on the server itself: <code>man hier</code> and <code>man file-hierarchy</code>.</div>`,
+  L: [{ c: "ls -l /", o: `total 2097228
+lrwxrwxrwx   1 root root          7 Apr 22  2024 bin -> usr/bin
+drwxr-xr-x   2 root root       4096 Feb 26  2024 bin.usr-is-merged
+drwxr-xr-x   4 root root       4096 Nov 18 09:30 boot
+drwxr-xr-x  19 root root       3960 Nov 18 09:31 dev
+drwxr-xr-x 112 root root       4096 Nov 18 10:02 etc
+drwxr-xr-x   3 root root       4096 Nov 18 09:20 home
+lrwxrwxrwx   1 root root          7 Apr 22  2024 lib -> usr/lib
+drwxr-xr-x   2 root root       4096 Feb 26  2024 lib.usr-is-merged
+lrwxrwxrwx   1 root root          9 Apr 22  2024 lib64 -> usr/lib64
+drwx------   2 root root      16384 Nov 18 09:12 lost+found
+drwxr-xr-x   2 root root       4096 Oct  9 14:30 media
+drwxr-xr-x   2 root root       4096 Oct  9 14:30 mnt
+drwxr-xr-x   3 root root       4096 Nov 18 09:58 opt
+dr-xr-xr-x 187 root root          0 Nov 18 09:31 proc
+drwx------   5 root root       4096 Nov 18 09:25 root
+drwxr-xr-x  31 root root        960 Nov 18 10:05 run
+lrwxrwxrwx   1 root root          8 Apr 22  2024 sbin -> usr/sbin
+drwxr-xr-x   2 root root       4096 Feb 26  2024 sbin.usr-is-merged
+drwxr-xr-x   6 root root       4096 Nov 18 09:14 snap
+drwxr-xr-x   2 root root       4096 Oct  9 14:30 srv
+-rw-------   1 root root 2147483648 Nov 18 10:20 swapfile
+dr-xr-xr-x  13 root root          0 Nov 18 09:31 sys
+drwxrwxrwt  12 root root       4096 Nov 18 10:21 tmp
+drwxr-xr-x  12 root root       4096 Oct  9 14:30 usr
+drwxr-xr-x  13 root root       4096 Oct  9 14:31 var`, n: "<code>l</code> at the start = symlink, <code>d</code> = folder, <code>-</code> = file. Sizes of 0 mean virtual folders." }] },
+{ p: "/bin", n: "/bin /sbin /lib", k: "system", s: "shortcuts into /usr",
+  x: `<p>Old Unix split programs between <code>/bin</code> (needed to boot) and <code>/usr/bin</code> (everything else). Modern Ubuntu merged them: <code>/bin</code>, <code>/sbin</code>, <code>/lib</code> and <code>/lib64</code> are now just <b>symlinks</b> into <code>/usr</code>.</p>
+<p>So <code>/bin/bash</code> and <code>/usr/bin/bash</code> are the same file, and old scripts starting with <code>#!/bin/bash</code> keep working.</p>`,
+  L: [{ c: "ls -l /bin /sbin /lib /lib64", o: "lrwxrwxrwx 1 root root 7 Apr 22  2024 /bin -> usr/bin\nlrwxrwxrwx 1 root root 7 Apr 22  2024 /lib -> usr/lib\nlrwxrwxrwx 1 root root 9 Apr 22  2024 /lib64 -> usr/lib64\nlrwxrwxrwx 1 root root 8 Apr 22  2024 /sbin -> usr/sbin" },
+      { c: "readlink -f /bin/bash", o: "/usr/bin/bash", n: "<code>readlink -f</code> follows symlinks to the real file." }] },
+{ p: "/boot", k: "system", s: "kernel and bootloader",
+  x: `<p>The Linux kernel (<code>vmlinuz-*</code>), the initial RAM disk (<code>initrd.img-*</code>) and the GRUB bootloader. Ubuntu keeps the current and the previous kernel, so you can boot the old one if an update breaks something.</p>
+<p>On Ubuntu cloud images <code>/boot</code> is its own small partition (about 1 GB). Old kernels can fill it, and then <code>apt upgrade</code> fails. <code>sudo apt autoremove</code> deletes kernels you no longer need.</p>
+<div class="warn">Never delete files here by hand. A server without a working kernel doesn't boot, and you can't SSH in to fix it.</div>`,
+  L: [{ c: "ls /boot", o: "System.map-6.8.0-87-generic  efi                          initrd.img.old\nSystem.map-6.8.0-88-generic  grub                         vmlinuz\nconfig-6.8.0-87-generic      initrd.img                   vmlinuz-6.8.0-87-generic\nconfig-6.8.0-88-generic      initrd.img-6.8.0-87-generic  vmlinuz-6.8.0-88-generic\n                             initrd.img-6.8.0-88-generic  vmlinuz.old" },
+      { c: "uname -r", o: "6.8.0-88-generic", n: "The kernel running right now. Older ones in /boot can go once this one works." },
+      { c: "df -h /boot", o: "Filesystem      Size  Used Avail Use% Mounted on\n/dev/vda16      881M  152M  668M  19% /boot" }] },
+{ p: "/dev", k: "virtual", s: "devices as files",
+  x: `<p>"Everything is a file": disks, terminals and random numbers all appear here as special files. The kernel creates them at boot.</p>
+<ul><li><code>/dev/vda</code>, <code>/dev/sda</code> or <code>/dev/nvme0n1</code>: your disk (the name depends on the cloud), with partitions <code>vda1</code>, <code>vda15</code>…</li>
+<li><code>/dev/null</code>: a black hole. <code>command &gt; /dev/null</code> throws output away.</li>
+<li><code>/dev/zero</code>, <code>/dev/urandom</code>: endless zeros / random bytes.</li></ul>
+<div class="warn">Writing to a disk device directly (<code>dd of=/dev/vda</code>) overwrites the disk with no undo.</div>`,
+  L: [{ c: "lsblk", o: "NAME    MAJ:MIN RM  SIZE RO TYPE MOUNTPOINTS\nvda     252:0    0   25G  0 disk\n├─vda1  252:1    0   24G  0 part /\n├─vda14 252:14   0    4M  0 part\n├─vda15 252:15   0  106M  0 part /boot/efi\n└─vda16 259:0    0  913M  0 part /boot", n: "Disks and partitions, and which folder each one is mounted on." },
+      { c: "ls -l /dev/null /dev/zero /dev/urandom /dev/vda1", o: "crw-rw-rw- 1 root root   1, 3 Nov 18 09:31 /dev/null\ncrw-rw-rw- 1 root root   1, 9 Nov 18 09:31 /dev/urandom\nbrw-rw---- 1 root disk 252, 1 Nov 18 09:31 /dev/vda1\ncrw-rw-rw- 1 root root   1, 5 Nov 18 09:31 /dev/zero", n: "<code>c</code> = character device, <code>b</code> = block device (a disk)." }] },
+{ p: "/etc", k: "config", s: "all system configuration",
+  x: `<p>The most important folder for an admin. Almost every setting on the server is a plain text file in here, and you edit them with <code>sudo nano</code> or <code>sudo vim</code>.</p>
+<ul><li>Copy before you edit: <code>sudo cp sshd_config sshd_config.bak</code>.</li>
+<li>Many programs read a <code>something.d/</code> folder of extra files ("drop-ins"), like <code>sshd_config.d/</code> and <code>sudoers.d/</code> in s01. Put your changes there instead of editing the main file, and package upgrades won't conflict with you.</li>
+<li>If an upgrade ships a new version of a file you changed, apt asks which one to keep.</li></ul>
+<div class="note"><code>sudo apt install etckeeper</code> puts <code>/etc</code> in a git repo and commits after every apt run, so you can always see what changed.</div>`,
+  L: [{ c: "ls /etc", o: "adduser.conf  cron.daily    fstab     ld.so.conf.d    needrestart    profile.d     ssh\nalternatives  crontab       group     localtime       netplan        python3       sudoers\napparmor.d    default       gshadow   logrotate.d     nsswitch.conf  resolv.conf   sudoers.d\napt           deluser.conf  hostname  machine-id      os-release     rsyslog.conf  sysctl.d\nbash.bashrc   docker        hosts     modules-load.d  pam.d          security      systemd\ncloud         environment   init.d    motd            passwd         shadow        timezone\ncron.d        fail2ban      issue     mtab            profile        skel          ufw\n...", n: "About 200 entries on a fresh server." },
+      { c: "head -3 /etc/os-release", o: "PRETTY_NAME=\"Ubuntu 24.04.3 LTS\"\nNAME=\"Ubuntu\"\nVERSION_ID=\"24.04\"", n: "Which Ubuntu is this?" }] },
+{ p: "/etc/files", n: "passwd, hosts, fstab…", k: "config", s: "key single files in /etc",
+  x: `<div class="tablewrap"><table><tbody>
+<tr><td><code>passwd</code></td><td>every user: name, id, home folder, shell. No passwords despite the name.</td></tr>
+<tr><td><code>shadow</code></td><td>password hashes. Only root can read it.</td></tr>
+<tr><td><code>group</code></td><td>groups and their members (<code>sudo</code>, <code>docker</code>…)</td></tr>
+<tr><td><code>sudoers</code></td><td>main sudo rules. Never edit; use <code>sudoers.d/</code>.</td></tr>
+<tr><td><code>hostname</code>, <code>hosts</code></td><td>the server's name, and local name → IP overrides</td></tr>
+<tr><td><code>fstab</code></td><td>disks and swap to mount at boot. A typo can stop the server from booting.</td></tr>
+<tr><td><code>environment</code></td><td>environment variables for every user</td></tr>
+<tr><td><code>resolv.conf</code></td><td>DNS. A symlink managed by systemd-resolved: don't edit.</td></tr>
+<tr><td><code>timezone</code></td><td>change with <code>sudo timedatectl set-timezone Asia/Bangkok</code></td></tr>
+</tbody></table></div>
+<p>Use the commands (<code>adduser</code>, <code>usermod</code>, <code>passwd</code>, <code>hostnamectl</code>) rather than editing <code>passwd</code>, <code>shadow</code> or <code>group</code> by hand.</p>`,
+  L: [{ c: "ls -l /etc/passwd /etc/shadow /etc/group /etc/hosts /etc/fstab", o: "-rw-r--r-- 1 root root    614 Nov 18 09:12 /etc/fstab\n-rw-r--r-- 1 root root    812 Nov 18 10:01 /etc/group\n-rw-r--r-- 1 root root    221 Nov 18 09:12 /etc/hosts\n-rw-r--r-- 1 root root   1922 Nov 18 09:20 /etc/passwd\n-rw-r----- 1 root shadow 1035 Nov 18 09:20 /etc/shadow", n: "Everyone can read passwd. Only root and the shadow group can read shadow." },
+      { c: "grep ubuntu /etc/passwd", o: "ubuntu:x:1000:1000:,,,:/home/ubuntu:/bin/bash", n: "name : x (password is in shadow) : user id : group id : info : home : shell" },
+      { c: "cat /etc/fstab", o: "LABEL=cloudimg-rootfs   /        ext4   discard,commit=30,errors=remount-ro  0 1\nLABEL=BOOT              /boot    ext4   defaults                             0 2\nLABEL=UEFI              /boot/efi vfat  umask=0077                           0 1\n/swapfile none swap sw 0 0", n: "The last line is the swap file from s01." }] },
+{ p: "/etc/ssh", n: "ssh", k: "config", s: "SSH server and client settings",
+  x: `<ul><li><code>sshd_config</code> + <code>sshd_config.d/</code>: the <b>server</b> (who can log in, and how). Your <code>00-hardening.conf</code> from s01 lives here.</li>
+<li><code>ssh_config</code> + <code>ssh_config.d/</code>: the <b>client</b>, used when this server connects out to others (like <code>git pull</code> from GitHub).</li>
+<li><code>ssh_host_*_key</code>: the server's identity. Its fingerprint is what you said <code>yes</code> to on your first connection. The private halves are root-only.</li></ul>
+<div class="warn">Don't copy host keys between servers. Don't delete them either, or every client sees a "host key changed" warning.</div>`,
+  L: [{ c: "ls -l /etc/ssh", o: `total 584
+-rw-r--r-- 1 root root 538216 Aug  8 15:30 moduli
+-rw-r--r-- 1 root root   1649 Aug  8 15:30 ssh_config
+drwxr-xr-x 2 root root   4096 Aug  8 15:30 ssh_config.d
+-rw------- 1 root root    505 Nov 18 09:12 ssh_host_ecdsa_key
+-rw-r--r-- 1 root root    174 Nov 18 09:12 ssh_host_ecdsa_key.pub
+-rw------- 1 root root    399 Nov 18 09:12 ssh_host_ed25519_key
+-rw-r--r-- 1 root root     94 Nov 18 09:12 ssh_host_ed25519_key.pub
+-rw------- 1 root root   2602 Nov 18 09:12 ssh_host_rsa_key
+-rw-r--r-- 1 root root    566 Nov 18 09:12 ssh_host_rsa_key.pub
+-rw-r--r-- 1 root root   3517 Aug  8 15:30 sshd_config
+drwxr-xr-x 2 root root   4096 Nov 18 09:41 sshd_config.d` },
+      { c: "ls /etc/ssh/sshd_config.d/", o: "00-hardening.conf  50-cloud-init.conf", n: "Read in name order, and the first value wins." },
+      { c: "ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub", o: "256 SHA256:q7Lc0XrZb2m9V4yK1Jf8sTn3dWpA6hE5uGxR0iOaZkM root@my-server (ED25519)", n: "The fingerprint you accepted the first time you connected." }] },
+{ p: "/etc/sudoers.d", n: "sudoers.d", k: "config", s: "extra sudo rules",
+  x: `<p>One file per rule set. sudo reads every file here, except names that contain a <code>.</code> or end in <code>~</code>. So <code>90-ubuntu</code> works and <code>90-ubuntu.conf</code> is silently ignored.</p>
+<p>Files must be mode <code>440</code>. Always check with <code>sudo visudo -c</code> after a change: a syntax error locks everyone out of sudo.</p>
+<p>Cloud images put their default user's passwordless rule in <code>90-cloud-init-users</code>.</p>`,
+  L: [{ c: "sudo ls -l /etc/sudoers.d", o: "total 8\n-r--r----- 1 root root   32 Nov 18 09:52 90-ubuntu\n-r--r----- 1 root root 1068 Feb 13  2024 README" },
+      { c: "sudo cat /etc/sudoers.d/90-ubuntu", o: "ubuntu ALL=(ALL) NOPASSWD:ALL" }] },
+{ p: "/etc/apt", n: "apt", k: "config", s: "where packages come from",
+  x: `<ul><li><code>sources.list.d/</code>: the repositories. On 24.04 Ubuntu's own are in <code>ubuntu.sources</code> (the newer "deb822" format). The old <code>sources.list</code> is just a comment pointing there. Docker's installer added <code>docker.list</code>.</li>
+<li><code>keyrings/</code>: the GPG keys that prove packages from a third-party repo are genuine.</li>
+<li><code>apt.conf.d/</code>: apt settings, including <code>20auto-upgrades</code> and <code>50unattended-upgrades</code> from s01.</li></ul>
+<div class="warn">Every repository you add can push any package to your server as root. Add only ones you trust.</div>`,
+  L: [{ c: "ls /etc/apt /etc/apt/sources.list.d /etc/apt/keyrings", o: "/etc/apt:\napt.conf.d  keyrings  preferences.d  sources.list  sources.list.d  trusted.gpg.d\n\n/etc/apt/keyrings:\ndocker.asc\n\n/etc/apt/sources.list.d:\ndocker.list  ubuntu.sources" },
+      { c: "cat /etc/apt/sources.list.d/docker.list", o: "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu noble stable", n: "<code>signed-by</code> ties this repo to that one key only." }] },
+{ p: "/etc/systemd/system", n: "systemd/system", k: "config", s: "your services and overrides",
+  x: `<p>systemd starts and supervises services. Unit files come from two places:</p>
+<ul><li><code>/usr/lib/systemd/system/</code>: shipped by packages (<code>ssh.service</code>, <code>docker.service</code>). <b>Don't edit</b>: upgrades overwrite them.</li>
+<li><code>/etc/systemd/system/</code>: <b>yours</b>. New services go here, and so do overrides. <code>sudo systemctl edit docker</code> creates <code>docker.service.d/override.conf</code> for you.</li></ul>
+<p>The <code>*.wants/</code> folders hold symlinks: that's what <code>systemctl enable</code> creates. After editing a unit, run <code>sudo systemctl daemon-reload</code>.</p>`,
+  L: [{ c: "ls /etc/systemd/system", o: "cloud-init.target.wants    multi-user.target.wants  sshd.service\ndefault.target.wants       myapp.service            sysinit.target.wants\ngetty.target.wants         sockets.target.wants     timers.target.wants" },
+      { c: "cat /etc/systemd/system/myapp.service", o: "[Unit]\nDescription=My app\nAfter=network.target\n\n[Service]\nUser=ubuntu\nWorkingDirectory=/srv/myapp\nExecStart=/home/ubuntu/.nvm/versions/node/v24.11.1/bin/node server.js\nRestart=always\nEnvironmentFile=/srv/myapp/.env\n\n[Install]\nWantedBy=multi-user.target", n: "A typical unit you'd write. Note the full path to node: systemd doesn't load nvm." },
+      { c: "systemctl cat ssh | head -3", o: "# /usr/lib/systemd/system/ssh.service\n[Unit]\nDescription=OpenBSD Secure Shell server", n: "<code>systemctl cat</code> shows which file a unit really comes from, plus any overrides." }] },
+{ p: "/etc/ufw", n: "ufw", k: "config", s: "firewall settings",
+  x: `<p><code>user.rules</code> and <code>user6.rules</code> hold the rules you added with <code>ufw allow</code>. <code>ufw.conf</code> has <code>ENABLED=yes</code>. <code>before.rules</code> and <code>after.rules</code> are advanced raw iptables rules.</p>
+<p>Manage rules with the <code>ufw</code> command, not by editing the files: ufw rewrites them.</p>`,
+  L: [{ c: "ls /etc/ufw", o: "after.rules   after6.rules   applications.d  before.init  before6.rules  ufw.conf    user6.rules\nafter.init    after6.init    before.rules    sysctl.conf  user.rules" },
+      { c: "sudo grep -A1 '### tuple' /etc/ufw/user.rules | grep -- '-A'", o: "-A ufw-user-input -p tcp --dport 22 -j ACCEPT\n-A ufw-user-input -p tcp --dport 80 -j ACCEPT\n-A ufw-user-input -p tcp --dport 443 -j ACCEPT", n: "The rules from s01 step 7, as iptables sees them." }] },
+{ p: "/etc/cron.d", n: "cron.d, cron.daily…", k: "config", s: "scheduled system jobs",
+  x: `<ul><li><code>/etc/crontab</code> and <code>/etc/cron.d/*</code>: system jobs, in cron syntax with an extra user column.</li>
+<li><code>/etc/cron.hourly</code>, <code>daily</code>, <code>weekly</code>, <code>monthly</code>: plain scripts, run at that interval.</li>
+<li>Your own jobs: <code>crontab -e</code>. That file lives in <code>/var/spool/cron/crontabs/</code>.</li></ul>
+<p>Ubuntu increasingly uses <b>systemd timers</b> instead of cron. <code>systemctl list-timers</code> shows them (apt updates, logrotate, fstrim…).</p>`,
+  L: [{ c: "ls /etc/cron.d /etc/cron.daily", o: "/etc/cron.d:\ne2scrub_all\n\n/etc/cron.daily:\napport  apt-compat  dpkg  logrotate  man-db" },
+      { c: "systemctl list-timers --no-pager | head -4", o: "NEXT                        LEFT     LAST                        PASSED  UNIT                   ACTIVATES\nWed 2026-11-18 11:00:00 +07 25min    Wed 2026-11-18 10:00:00 +07 34min   sysstat-collect.timer  sysstat-collect.service\nWed 2026-11-18 12:39:51 +07 2h 5min  Wed 2026-11-18 06:12:30 +07 4h 22min apt-daily.timer      apt-daily.service\nThu 2026-11-19 00:00:00 +07 13h      Wed 2026-11-18 00:00:00 +07 10h ago  logrotate.timer      logrotate.service" }] },
+{ p: "/etc/netplan", n: "netplan", k: "config", s: "network interfaces",
+  x: `<p>Network configuration in YAML. On cloud servers cloud-init writes <code>50-cloud-init.yaml</code> with DHCP, and that's usually all you need.</p>
+<div class="warn">A mistake here cuts the server off the network. Use <code>sudo netplan try</code>: it applies the change and rolls back after 120 seconds unless you press Enter to confirm.</div>`,
+  L: [{ c: "ls /etc/netplan", o: "50-cloud-init.yaml" },
+      { c: "sudo cat /etc/netplan/50-cloud-init.yaml", o: "network:\n  version: 2\n  ethernets:\n    eth0:\n      match:\n        macaddress: \"96:00:03:a1:b2:c3\"\n      dhcp4: true\n      set-name: \"eth0\"" }] },
+{ p: "/etc/nginx", n: "nginx (if installed)", k: "config", s: "an app's config folder",
+  x: `<p>Most server software installed with apt gets its own folder in <code>/etc</code>: <code>/etc/nginx</code>, <code>/etc/postgresql</code>, <code>/etc/redis</code>, <code>/etc/letsencrypt</code>, <code>/etc/fail2ban</code>…</p>
+<p>nginx's pattern, which Apache shares: write a site in <code>sites-available/</code>, then turn it on with a symlink in <code>sites-enabled/</code>. Test before reloading: <code>sudo nginx -t &amp;&amp; sudo systemctl reload nginx</code>.</p>`,
+  L: [{ c: "ls /etc/nginx /etc/nginx/sites-enabled", o: "/etc/nginx:\nconf.d          koi-utf  mime.types       nginx.conf  sites-available  snippets\nfastcgi.conf    koi-win  modules-available proxy_params sites-enabled   uwsgi_params\nfastcgi_params  win-utf  modules-enabled  scgi_params\n\n/etc/nginx/sites-enabled:\ndefault  myapp" },
+      { c: "ls -l /etc/nginx/sites-enabled/myapp", o: "lrwxrwxrwx 1 root root 34 Nov 18 11:02 /etc/nginx/sites-enabled/myapp -> /etc/nginx/sites-available/myapp" }] },
+{ p: "/etc/docker", n: "docker", k: "config", s: "Docker daemon settings",
+  x: `<p>Empty until you create <code>daemon.json</code>. The one setting worth adding on every server is <b>log rotation</b>: by default container logs grow forever and can fill the disk.</p>
+<p>After editing, restart Docker (<code>sudo systemctl restart docker</code>). The new log settings apply to containers created afterwards.</p>`,
+  L: [{ c: "cat /etc/docker/daemon.json", o: "{\n  \"log-driver\": \"json-file\",\n  \"log-opts\": { \"max-size\": \"10m\", \"max-file\": \"3\" }\n}", n: "At most 3 × 10 MB of logs per container." }] },
+{ p: "/home", k: "yours", s: "users' home folders",
+  x: `<p>One folder per normal user. On Ubuntu 24.04 they're private (<code>drwxr-x---</code>): other users can't look inside.</p>
+<p><code>~</code> is a shortcut for your own home folder, so <code>~/.ssh</code> = <code>/home/ubuntu/.ssh</code>.</p>`,
+  L: [{ c: "ls -l /home", o: "total 4\ndrwxr-x--- 9 ubuntu ubuntu 4096 Nov 18 10:40 ubuntu" },
+      { c: "echo ~", o: "/home/ubuntu" }] },
+{ p: "/home/ubuntu", n: "ubuntu", k: "yours", s: "your home: dotfiles, version managers",
+  x: `<p>Files starting with <code>.</code> are hidden ("dotfiles"). Use <code>ls -a</code> to see them.</p>
+<ul><li><code>.profile</code> / <code>.bash_profile</code>: run once at login. <code>.bashrc</code>: run for every interactive shell. nvm and pyenv added their lines to <code>.bashrc</code>, and rvm to <code>.bash_profile</code>.</li>
+<li><code>.nvm</code>, <code>.rvm</code>, <code>.pyenv</code>: the version managers from s01, with every Node / Ruby / Python you installed inside them.</li>
+<li><code>.ssh</code>: keys (next item). <code>.docker</code>: registry logins.</li>
+<li><code>.bash_history</code>: everything you typed. Don't type secrets on the command line.</li></ul>
+<p>A plain folder like <code>apps/</code> is a fine place for your code if you don't use <code>/srv</code>.</p>`,
+  L: [{ c: "ls -la ~", o: `total 52
+drwxr-x---  9 ubuntu ubuntu 4096 Nov 18 10:40 .
+drwxr-xr-x  3 root   root   4096 Nov 18 09:20 ..
+-rw-------  1 ubuntu ubuntu 1873 Nov 18 10:39 .bash_history
+-rw-r--r--  1 ubuntu ubuntu  220 Nov 18 09:20 .bash_logout
+-rw-r--r--  1 ubuntu ubuntu  264 Nov 18 10:08 .bash_profile
+-rw-r--r--  1 ubuntu ubuntu 4321 Nov 18 10:12 .bashrc
+drwx------  2 ubuntu ubuntu 4096 Nov 18 09:22 .cache
+drwx------  3 ubuntu ubuntu 4096 Nov 18 10:00 .docker
+drwx------  3 ubuntu ubuntu 4096 Nov 18 10:08 .gnupg
+drwxrwxr-x  9 ubuntu ubuntu 4096 Nov 18 10:05 .nvm
+-rw-r--r--  1 ubuntu ubuntu  878 Nov 18 10:08 .profile
+drwxrwxr-x 13 ubuntu ubuntu 4096 Nov 18 10:15 .pyenv
+drwxrwxr-x 26 ubuntu ubuntu 4096 Nov 18 10:10 .rvm
+drwx------  2 ubuntu ubuntu 4096 Nov 18 09:25 .ssh
+drwxrwxr-x  3 ubuntu ubuntu 4096 Nov 18 10:40 apps` },
+      { c: "du -sh ~/.nvm ~/.rvm ~/.pyenv", o: "214M\t/home/ubuntu/.nvm\n512M\t/home/ubuntu/.rvm\n331M\t/home/ubuntu/.pyenv", n: "Each installed language version takes real disk space. Remove old ones with <code>nvm uninstall</code>, <code>rvm remove</code>, <code>pyenv uninstall</code>." }] },
+{ p: "/home/ubuntu/.ssh", n: ".ssh", k: "yours", s: "authorized_keys, known_hosts",
+  x: `<ul><li><code>authorized_keys</code>: who may log in <b>as this user</b> (s01 step 4). One public key per line.</li>
+<li><code>known_hosts</code>: servers this user has connected <b>to</b>, like github.com.</li>
+<li><code>id_ed25519</code>: only if this server itself needs a key, for example a read-only <b>deploy key</b> for <code>git pull</code>. Never copy your laptop's private key here.</li></ul>
+<p>Permissions matter: folder <code>700</code>, private keys and <code>authorized_keys</code> <code>600</code>.</p>`,
+  L: [{ c: "ls -la ~/.ssh", o: "total 24\ndrwx------ 2 ubuntu ubuntu 4096 Nov 18 10:44 .\ndrwxr-x--- 9 ubuntu ubuntu 4096 Nov 18 10:40 ..\n-rw------- 1 ubuntu ubuntu  187 Nov 18 09:25 authorized_keys\n-rw------- 1 ubuntu ubuntu  411 Nov 18 10:44 id_ed25519\n-rw-r--r-- 1 ubuntu ubuntu   97 Nov 18 10:44 id_ed25519.pub\n-rw------- 1 ubuntu ubuntu  978 Nov 18 10:45 known_hosts" },
+      { c: "wc -l ~/.ssh/authorized_keys", o: "2 /home/ubuntu/.ssh/authorized_keys", n: "Two lines = two keys that can log in. Check this regularly and remove old ones." }] },
+{ p: "/root", k: "config", s: "the root user's home",
+  x: `<p>Root's home is <code>/root</code>, not <code>/home/root</code>, so it's still there even if <code>/home</code> is on a disk that failed to mount. Only root can enter it.</p>
+<p>On some clouds (AWS, for example) <code>/root/.ssh/authorized_keys</code> contains your key with a <code>command=</code> prefix that only prints "please log in as ubuntu" and disconnects. Since s01 step 5 disabled root login, you can leave it as it is.</p>`,
+  L: [{ c: "sudo ls -la /root", o: "total 28\ndrwx------  5 root root 4096 Nov 18 09:25 .\ndrwxr-xr-x 23 root root 4096 Nov 18 09:12 ..\n-rw-------  1 root root  112 Nov 18 09:30 .bash_history\n-rw-r--r--  1 root root 3106 Apr 22  2024 .bashrc\n-rw-r--r--  1 root root  161 Apr 22  2024 .profile\ndrwx------  2 root root 4096 Nov 18 09:12 .ssh\ndrwx------  3 root root 4096 Nov 18 09:12 snap" },
+      { c: "sudo cut -c1-90 /root/.ssh/authorized_keys", o: "no-port-forwarding,no-agent-forwarding,no-X11-forwarding,command=\"echo 'Please login as t" }] },
+{ p: "/mnt", n: "/mnt /media", k: "yours", s: "mount points for extra disks",
+  x: `<p>Empty folders where you attach other filesystems.</p>
+<ul><li><code>/mnt</code>: disks you mount yourself, like a cloud block volume at <code>/mnt/data</code>.</li>
+<li><code>/media</code>: removable media (USB sticks). Rarely used on servers.</li></ul>
+<p>To mount a volume at every boot, add it to <code>/etc/fstab</code> by <b>UUID</b> (<code>blkid</code> shows it) with the <code>nofail</code> option, so a missing volume doesn't stop the boot.</p>`,
+  L: [{ c: "ls -la /mnt /media", o: "/media:\ntotal 8\ndrwxr-xr-x  2 root root 4096 Oct  9 14:30 .\ndrwxr-xr-x 23 root root 4096 Nov 18 09:12 ..\n\n/mnt:\ntotal 8\ndrwxr-xr-x  2 root root 4096 Oct  9 14:30 .\ndrwxr-xr-x 23 root root 4096 Nov 18 09:12 .." },
+      { c: "findmnt -t ext4,vfat", o: "TARGET      SOURCE     FSTYPE OPTIONS\n/           /dev/vda1  ext4   rw,relatime,discard,errors=remount-ro,commit=30\n├─/boot     /dev/vda16 ext4   rw,relatime\n│ └─/boot/efi /dev/vda15 vfat rw,relatime,fmask=0077,dmask=0077", n: "What's mounted where right now." }] },
+{ p: "/opt", k: "yours", s: "self-contained third-party software",
+  x: `<p>For software that doesn't come from apt and ships as one folder with everything inside: <code>/opt/&lt;vendor-or-app&gt;/</code>. Docker's containerd puts a few files here.</p>
+<p>Some teams also deploy their own apps to <code>/opt/myapp</code>. That's fine too. Just be consistent across servers.</p>`,
+  L: [{ c: "ls /opt", o: "containerd" }] },
+{ p: "/proc", k: "virtual", s: "live kernel and process info",
+  x: `<p>Not on disk. The kernel generates every file the moment you read it, which is why sizes show as 0.</p>
+<ul><li>A folder per running process: <code>/proc/1234/</code> (its command line, open files, memory).</li>
+<li>System info: <code>/proc/meminfo</code>, <code>/proc/cpuinfo</code>, <code>/proc/loadavg</code>.</li>
+<li><code>/proc/sys/</code>: kernel tunables. Change them with <code>sysctl</code>, and make the change permanent in <code>/etc/sysctl.d/</code>.</li></ul>
+<p>Tools like <code>free</code>, <code>top</code> and <code>ps</code> read from here.</p>`,
+  L: [{ c: "head -3 /proc/meminfo", o: "MemTotal:         984372 kB\nMemFree:          272140 kB\nMemAvailable:     664508 kB" },
+      { c: "cat /proc/loadavg", o: "0.08 0.05 0.01 1/142 5821", n: "Load average over 1, 5 and 15 minutes. That's what <code>uptime</code> prints." },
+      { c: "ls -d /proc/[0-9]* | wc -l", o: "112", n: "One folder per running process." }] },
+{ p: "/run", k: "virtual", s: "runtime state, in RAM",
+  x: `<p>A RAM disk that's emptied at every boot. Services keep their PID files, lock files and sockets here. <code>/var/run</code> is a symlink to it.</p>
+<p><code>/run/docker.sock</code> is how the <code>docker</code> command talks to the daemon. Anyone who can write to it controls Docker, and so effectively root. Never mount it into a container you don't fully trust.</p>`,
+  L: [{ c: "ls /run", o: "agetty.reload  containerd   docker.sock  log     netns     sshd.pid  tmpfiles.d  utmp\nblkid          credentials  initctl      motd.d  networkd  sudo      udev\ncloud-init     docker       lock         mount   sshd      systemd   user" },
+      { c: "ls -l /run/docker.sock", o: "srw-rw---- 1 root docker 0 Nov 18 09:58 /run/docker.sock", n: "<code>s</code> = socket. The docker group can use it, which is why s01 added you to that group." }] },
+{ p: "/snap", k: "system", s: "snap packages",
+  x: `<p>Snaps are self-contained packages that Ubuntu mounts read-only. Each one shows up as a <code>/dev/loop*</code> line in <code>df</code>. That's normal, not a disk problem.</p>
+<p>Manage them with <code>snap list</code> and <code>sudo snap remove &lt;name&gt;</code>. Never edit anything under <code>/snap</code>.</p>`,
+  L: [{ c: "snap list", o: "Name    Version   Rev    Tracking       Publisher   Notes\ncore22  20250923  2139   latest/stable  canonical✓  base\nsnapd   2.71      25202  latest/stable  canonical✓  snapd" },
+      { c: "df -h | grep loop", o: "/dev/loop0       74M   74M     0 100% /snap/core22/2139\n/dev/loop1       51M   51M     0 100% /snap/snapd/25202", n: "Always 100% full: they're read-only images. Ignore them." }] },
+{ p: "/srv", k: "yours", s: "data this server serves",
+  x: `<p>Meant for "site-specific data served by this system": web apps, file shares, git repos. Empty by default, and no package writes here, so it's a clean place for your apps: <code>/srv/myapp</code>.</p>
+<p>Give the folder to the user that runs the app: <code>sudo mkdir /srv/myapp &amp;&amp; sudo chown ubuntu: /srv/myapp</code>.</p>`,
+  L: [{ c: "ls -l /srv", o: "total 4\ndrwxr-xr-x 6 ubuntu ubuntu 4096 Nov 18 11:00 myapp" }] },
+{ p: "/sys", k: "virtual", s: "hardware and kernel objects",
+  x: `<p>Another virtual filesystem, like <code>/proc</code>, but organised around devices: network cards, disks, CPUs. Tools like <code>ip</code> and <code>lsblk</code> read from here. You'll rarely open it yourself.</p>`,
+  L: [{ c: "ls /sys/class/net", o: "docker0  eth0  lo", n: "Network interfaces. <code>docker0</code> appeared when you installed Docker." },
+      { c: "cat /sys/class/net/eth0/address", o: "96:00:03:a1:b2:c3" }] },
+{ p: "/tmp", k: "temp", s: "scratch files, wiped at boot",
+  x: `<p>Anyone can create files here, and Ubuntu clears it at every reboot. The <code>t</code> in <code>drwxrwxrwt</code> is the <b>sticky bit</b>: you can only delete your own files, not other users'.</p>
+<p>Never keep anything you need in <code>/tmp</code>. In scripts, use <code>mktemp</code> for a unique, safe filename instead of a fixed one like <code>/tmp/out.txt</code>.</p>`,
+  L: [{ c: "ls -ld /tmp", o: "drwxrwxrwt 12 root root 4096 Nov 18 10:21 /tmp" },
+      { c: "mktemp", o: "/tmp/tmp.Kx3v9QmZ2b" }] },
+{ p: "/usr", k: "system", s: "installed software (read-only for you)",
+  x: `<p>Programs, libraries and docs installed by apt. Think of it as read-only: apt owns every file here and replaces them on upgrade.</p>
+<p>The exception is <code>/usr/local</code>, which is yours.</p>`,
+  L: [{ c: "ls /usr", o: "bin  games  include  lib  lib64  libexec  local  sbin  share  src" },
+      { c: "du -sh /usr", o: "1.9G\t/usr" }] },
+{ p: "/usr/bin", n: "bin", k: "system", s: "programs",
+  x: `<p>Almost every command you run: <code>ls</code>, <code>curl</code>, <code>git</code>, <code>docker</code>, <code>python3</code>. Each one belongs to a package.</p>
+<p><code>dpkg -S &lt;file&gt;</code> tells you which package installed a file. Never drop your own files here: put them in <code>/usr/local/bin</code>.</p>`,
+  L: [{ c: "ls /usr/bin | wc -l", o: "862" },
+      { c: "which curl docker", o: "/usr/bin/curl\n/usr/bin/docker" },
+      { c: "dpkg -S /usr/bin/curl", o: "curl: /usr/bin/curl", n: "The package that owns this file." }] },
+{ p: "/usr/sbin", n: "sbin", k: "system", s: "admin programs",
+  x: `<p>"System binaries": programs mostly used by root, like <code>sshd</code>, <code>ufw</code>, <code>useradd</code> and <code>visudo</code>. On Ubuntu it's also in normal users' <code>PATH</code>, but most of these programs need <code>sudo</code> to do anything.</p>`,
+  L: [{ c: "ls /usr/sbin | grep -E '^(adduser|sshd|ufw|usermod|visudo)$'", o: "adduser\nsshd\nufw\nusermod\nvisudo" },
+      { c: "echo $PATH", o: "/home/ubuntu/.pyenv/shims:/home/ubuntu/.pyenv/bin:/home/ubuntu/.rvm/gems/ruby-3.4.7/bin:/home/ubuntu/.nvm/versions/node/v24.11.1/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/home/ubuntu/.rvm/bin", n: "Searched left to right. The version managers come first, then <code>/usr/local</code>, then the system." }] },
+{ p: "/usr/lib", n: "lib", k: "system", s: "libraries, kernel modules, packaged units",
+  x: `<p>Shared libraries (<code>.so</code> files), kernel modules (<code>/usr/lib/modules/</code>), and the systemd units shipped by packages (<code>/usr/lib/systemd/system/</code>).</p>
+<p>To change how a packaged service runs, don't edit its unit here. Use <code>sudo systemctl edit &lt;name&gt;</code>, which writes an override in <code>/etc/systemd/system/</code>.</p>`,
+  L: [{ c: "ls /usr/lib/systemd/system | grep -E '^(ssh|docker|ufw|fail2ban)\\.'", o: "docker.service\ndocker.socket\nfail2ban.service\nssh.service\nssh.socket\nufw.service" }] },
+{ p: "/usr/local", n: "local", k: "yours", s: "software you install by hand",
+  x: `<p>The same layout as <code>/usr</code> (<code>bin</code>, <code>lib</code>, <code>share</code>…), but apt never touches it. Use it for:</p>
+<ul><li>a single binary you downloaded (<code>/usr/local/bin/lazydocker</code>)</li><li>things you built with <code>./configure &amp;&amp; make &amp;&amp; sudo make install</code></li><li>small admin scripts every user should be able to run</li></ul>
+<p><code>/usr/local/bin</code> comes before <code>/usr/bin</code> in <code>PATH</code>, so a program here wins over the apt version.</p>`,
+  L: [{ c: "ls /usr/local /usr/local/bin", o: "/usr/local:\nbin  etc  games  include  lib  man  sbin  share  src\n\n/usr/local/bin:\nbackup-db.sh  lazydocker" },
+      { c: "sudo install -m 755 ./backup-db.sh /usr/local/bin/", o: "", n: "<code>install</code> copies a file and sets its mode in one step." }] },
+{ p: "/usr/share", n: "share", k: "system", s: "docs, man pages, data files",
+  x: `<p>Files that don't depend on the CPU type: man pages, documentation (<code>/usr/share/doc/&lt;package&gt;/</code>), time zone data, default configs. Read freely; don't edit.</p>`,
+  L: [{ c: "ls /usr/share/doc | head -5", o: "adduser\napparmor\napt\nbash\nca-certificates" },
+      { c: "ls /usr/share/zoneinfo/Asia | head -3", o: "Aden\nAlmaty\nAmman", n: "The time zone database that <code>timedatectl</code> uses." }] },
+{ p: "/var", k: "data", s: "data that changes and grows",
+  x: `<p>"Variable" data: logs, databases, caches, queues, Docker. Everything that grows while the server runs ends up here, so <b>this is where disks fill up</b>.</p>
+<p>When <code>df -h</code> says the disk is full, start with <code>sudo du -sh /var/* | sort -h</code>.</p>`,
+  L: [{ c: "ls /var", o: "backups  cache  crash  lib  local  lock  log  mail  opt  run  snap  spool  tmp  www" },
+      { c: "sudo du -sh /var/* 2>/dev/null | sort -h | tail -4", o: "41M\t/var/cache\n312M\t/var/log\n2.6G\t/var/lib\n2.6G\ttotal", n: "<code>/var/lib</code> is big because Docker lives there." }] },
+{ p: "/var/log", n: "log", k: "data", s: "log files",
+  x: `<ul><li><code>auth.log</code>: SSH logins, sudo use, failed attempts. Check it when something looks wrong.</li>
+<li><code>syslog</code>: general system messages. <code>kern.log</code>: kernel. <code>ufw.log</code>: blocked connections.</li>
+<li><code>apt/</code>, <code>dpkg.log</code>: what was installed and when. <code>cloud-init*.log</code>: first-boot setup.</li>
+<li><code>journal/</code>: the systemd journal. Read it with <code>journalctl</code>, not directly.</li></ul>
+<p><b>logrotate</b> renames old logs to <code>.1</code>, compresses them to <code>.2.gz</code> and deletes them after a few weeks. App logs you add need their own entry in <code>/etc/logrotate.d/</code>.</p>`,
+  L: [{ c: "ls /var/log", o: "alternatives.log  btmp                   dpkg.log      kern.log   syslog.1\napt               cloud-init-output.log  fail2ban.log  landscape  ufw.log\nauth.log          cloud-init.log         installer     lastlog    unattended-upgrades\nauth.log.1        dist-upgrade           journal       syslog     wtmp" },
+      { c: "sudo grep 'Failed\\|Invalid' /var/log/auth.log | tail -2", o: "Nov 18 10:52:11 my-server sshd[5512]: Invalid user admin from 192.0.2.44 port 51122\nNov 18 10:52:14 my-server sshd[5514]: Connection closed by invalid user oracle 192.0.2.44 port 51130 [preauth]", n: "Bots trying user names. Harmless with keys only, and fail2ban bans them." },
+      { c: "journalctl -u ssh --since '1 hour ago' --no-pager | tail -2", o: "Nov 18 10:44:02 my-server sshd[5390]: Accepted publickey for ubuntu from 198.51.100.7 port 50422 ssh2: ED25519 SHA256:3vYdLk0T8bq1uWm7ZxH2cR5nPa9sJe4fGi6oKtB0lQw\nNov 18 10:44:02 my-server sshd[5390]: pam_unix(sshd:session): session opened for user ubuntu(uid=1000) by ubuntu(uid=0)", n: "The same events through journalctl: filter by service (<code>-u</code>) and time." },
+      { c: "journalctl --disk-usage", o: "Archived and active journals take up 96.0M in the file system." }] },
+{ p: "/var/lib", n: "lib", k: "data", s: "state of apps and services",
+  x: `<p>Each program keeps its working data in <code>/var/lib/&lt;name&gt;/</code>: databases (<code>postgresql</code>, <code>mysql</code>), Docker, apt's package database (<code>dpkg</code>), and fail2ban's ban list.</p>
+<div class="warn">Don't edit or copy these files while the service is running: you'll corrupt them. Back up databases with their dump tools. Never touch <code>/var/lib/dpkg</code>.</div>`,
+  L: [{ c: "sudo ls /var/lib", o: "apport  command-not-found  dpkg       logrotate  private  sysstat           ucf\napt     containerd         fail2ban   man-db     python   systemd           ufw\nboltd   dhcpcd             git        pam        snapd    tpm               update-notifier\ncloud   docker             landscape  polkit-1   sudo     ubuntu-advantage" },
+      { c: "sudo du -sh /var/lib/docker /var/lib/apt /var/lib/dpkg", o: "2.3G\t/var/lib/docker\n98M\t/var/lib/apt\n41M\t/var/lib/dpkg" }] },
+{ p: "/var/lib/docker", n: "docker", k: "data", s: "images, containers, volumes",
+  x: `<ul><li><code>overlay2/</code>: image and container layers. Never touch.</li>
+<li><code>volumes/&lt;name&gt;/_data</code>: named volumes, where your database data really lives. Back these up.</li>
+<li><code>containers/&lt;id&gt;/&lt;id&gt;-json.log</code>: each container's log (rotate it with <code>/etc/docker/daemon.json</code>).</li></ul>
+<p>Clean up with Docker's own commands, never with <code>rm</code>: <code>docker system df</code> to see usage, <code>docker image prune -a</code> and <code>docker builder prune</code> to free space.</p>
+<div class="warn"><code>docker system prune --volumes</code> also deletes unused volumes, which can be your database. Read the prompt.</div>`,
+  L: [{ c: "sudo ls /var/lib/docker", o: "buildkit  containers  engine-id  image  network  overlay2  plugins  rootfs  runtimes  swarm  tmp  volumes" },
+      { c: "docker system df", o: "TYPE            TOTAL     ACTIVE    SIZE      RECLAIMABLE\nImages          4         2         1.21GB    642.3MB (53%)\nContainers      2         2         84.1kB    0B (0%)\nLocal Volumes   1         1         48.5MB    0B (0%)\nBuild Cache     23        0         402.7MB   402.7MB" },
+      { c: "sudo ls /var/lib/docker/volumes", o: "backingFsBlockDev  metadata.db  myapp_pgdata" }] },
+{ p: "/var/cache", n: "cache", k: "temp", s: "re-downloadable cache",
+  x: `<p>Data programs can rebuild or download again, mostly apt's downloaded <code>.deb</code> files. Safe to clear, but use the tool rather than <code>rm</code>: <code>sudo apt clean</code>.</p>`,
+  L: [{ c: "sudo du -sh /var/cache/apt", o: "212M\t/var/cache/apt" },
+      { c: "sudo apt clean && sudo du -sh /var/cache/apt", o: "36K\t/var/cache/apt" }] },
+{ p: "/var/tmp", n: "tmp", k: "temp", s: "temp files that survive reboot",
+  x: `<p>Like <code>/tmp</code>, but kept across reboots. systemd deletes files here that haven't been used for 30 days. Programs use it for larger temporary files.</p>`,
+  L: [{ c: "ls -ld /var/tmp", o: "drwxrwxrwt 7 root root 4096 Nov 18 10:30 /var/tmp" }] },
+{ p: "/var/www", n: "www", k: "yours", s: "classic web root (nginx/apache)",
+  x: `<p>Created when you install nginx or Apache, with a default "Welcome" page in <code>html/</code>. Static sites traditionally go in <code>/var/www/&lt;site&gt;/</code>, readable by the <code>www-data</code> user the web server runs as.</p>
+<p>For apps that run their own process (Rails, Node, Docker), <code>/srv</code> or your home folder is a better home. nginx then just proxies to them.</p>`,
+  L: [{ c: "ls -l /var/www /var/www/html", o: "/var/www:\ntotal 4\ndrwxr-xr-x 2 root root 4096 Nov 18 11:00 html\n\n/var/www/html:\ntotal 4\n-rw-r--r-- 1 root root 615 Nov 18 11:00 index.nginx-debian.html" }] },
+{ p: "/var/spool", n: "spool", k: "data", s: "queues: cron, mail",
+  x: `<p>Work waiting to be processed. The part you'll meet: <code>/var/spool/cron/crontabs/&lt;user&gt;</code>, where <code>crontab -e</code> saves each user's jobs.</p>
+<p>Don't edit those files directly. <code>crontab -e</code> checks the syntax and tells cron to reload. <code>crontab -l</code> lists your jobs.</p>`,
+  L: [{ c: "sudo ls -l /var/spool/cron/crontabs", o: "total 4\n-rw------- 1 ubuntu crontab 1203 Nov 18 11:10 ubuntu" },
+      { c: "crontab -l | tail -1", o: "0 3 * * * /usr/local/bin/backup-db.sh >> /home/ubuntu/backup.log 2>&1", n: "Every day at 03:00. The five fields are minute, hour, day of month, month, weekday." }] },
+{ p: "/var/backups", n: "backups", k: "data", s: "system's own small backups",
+  x: `<p>A daily copy of apt's package list and of <code>passwd</code>, <code>group</code> and <code>shadow</code>, made by a systemd timer. Handy if you break one of those files.</p>
+<div class="warn">These are <b>not</b> your backups. Nothing of your apps or data is saved here, and it lives on the same disk anyway.</div>`,
+  L: [{ c: "ls /var/backups", o: "alternatives.tar.0  apt.extended_states.0  dpkg.status.0  group.bak  gshadow.bak  passwd.bak  shadow.bak" }] },
+{ p: "/lost+found", k: "system", s: "file system repair leftovers",
+  x: `<p>Every ext4 disk has one. If <code>fsck</code> repairs the file system after a crash, it puts orphaned pieces of files here. It's normally empty, and you can ignore it.</p>`,
+  L: [{ c: "sudo ls -la /lost+found", o: "total 20\ndrwx------  2 root root 16384 Nov 18 09:12 .\ndrwxr-xr-x 23 root root  4096 Nov 18 09:12 .." }] }
+];
+
+const TAG = { yours: "yours", config: "config", data: "data", system: "system", virtual: "virtual", temp: "temp" };
+const q = id => document.getElementById(id);
+const scr = q("fx-scr"), tree = q("fx-tree"), cmds = q("fx-cmds");
+const escH = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const reduce = (() => { try { return matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) { return false; } })();
+const PROMPT = "ubuntu@my-server:~$ ";
+const S = { cur: 0, run: 0, exec: -1, done: false };
+
+// tree depth = how many listed folders contain this one ("/" itself doesn't count)
+const inside = (a, e) => a.p !== "/" && a !== e && e.p.startsWith(a.p + "/");
+const depth = e => E.filter(a => inside(a, e)).length;
+const parent = e => E.filter(a => inside(a, e)).pop();
+const label = e => e.n || (depth(e) === 0 ? e.p : e.p.split("/").pop());
+const TITLE = { "/etc/files": "Key files in /etc", "/bin": "/bin, /sbin, /lib, /lib64", "/mnt": "/mnt and /media", "/etc/cron.d": "/etc/cron.d, /etc/cron.daily…" };
+const title = e => TITLE[e.p] || e.p;
+
+tree.innerHTML = E.map((e, i) => {
+  const d = depth(e), guide = d ? "│ ".repeat(d - 1) + "├ " : "";
+  return `<li><button type="button" data-i="${i}" style="padding-left:${10 + d * 6}px"><span class="nm"><span class="g">${guide}</span>${escH(label(e))}</span><span class="sd">${escH(e.s)}</span><span class="tg ${e.k}">${TAG[e.k]}</span></button></li>`;
+}).join("");
+
+function renderSide() {
+  const e = E[S.cur];
+  q("fx-explain").innerHTML = `<p class="lbl">${parent(e) ? "inside " + escH(parent(e).p) : "top level"}</p><h3>${escH(title(e))}<span class="fx-badge tg ${e.k}">${TAG[e.k]}</span></h3><p class="w">${escH(e.s)}.</p>${e.x}`;
+  cmds.innerHTML = e.L.map((l, li) => {
+    const st = S.done || li < S.exec ? "done" : li === S.exec ? "act" : "pend";
+    return `<li class="hc ${st}"><span class="mk">${st === "done" ? "✓" : st === "act" ? "▸" : "·"}</span><code>${escH(l.c)}</code><button type="button" class="cp" data-li="${li}">copy</button>${l.n ? `<span class="nt">${l.n}</span>` : ""}</li>`;
+  }).join("");
+  tree.querySelectorAll("button").forEach(b => b.setAttribute("aria-current", +b.dataset.i === S.cur));
+  const on = tree.querySelector('[aria-current="true"]');
+  if (on) { const r = on.getBoundingClientRect(), t = tree.getBoundingClientRect(); if (r.top < t.top || r.bottom > t.bottom) tree.scrollTop += r.top - t.top - t.height / 2; }
+  q("fx-pos").textContent = `${S.cur + 1} of ${E.length}`;
+  q("fx-where").textContent = e.p === "/etc/files" ? "/etc" : e.p === "/bin" ? "/bin → /usr/bin" : e.p;
+  q("fx-prev").disabled = S.cur === 0;
+  q("fx-next").disabled = S.cur === E.length - 1;
+}
+
+const wait = ms => new Promise(r => setTimeout(r, ms));
+const scrollEnd = () => { scr.scrollTop = scr.scrollHeight; };
+function line(cls, text) { const d = document.createElement("div"); d.className = cls; d.textContent = text; scr.appendChild(d); return d; }
+function promptLine() {
+  const d = document.createElement("div"); d.className = "ln";
+  const pr = document.createElement("span"); pr.className = "pr"; pr.textContent = PROMPT;
+  const cm = document.createElement("span"); cm.className = "cm";
+  d.append(pr, cm); scr.appendChild(d); return { d, cm };
+}
+function header(e) { scr.innerHTML = ""; line("hd", `# ${e.p === "/etc/files" ? "/etc (key files)" : e.p} · ${TAG[e.k]} · ${e.s}`); }
+
+function instant() {
+  S.run++;
+  const e = E[S.cur];
+  header(e);
+  e.L.forEach(l => { promptLine().cm.textContent = l.c; if (l.o) line("op", l.o); });
+  const end = promptLine(), c = document.createElement("span"); c.className = "cursor"; end.d.appendChild(c);
+  S.exec = e.L.length; S.done = true; scrollEnd(); renderSide();
+}
+
+async function animate() {
+  if (reduce) { instant(); return; }
+  const id = ++S.run, e = E[S.cur], ok = () => id === S.run;
+  S.done = false; S.exec = 0; header(e); renderSide();
+  await wait(250); if (!ok()) return;
+  for (let i = 0; i < e.L.length; i++) {
+    const l = e.L[i];
+    S.exec = i; renderSide();
+    const { d, cm } = promptLine(), cur = document.createElement("span");
+    cur.className = "cursor"; d.appendChild(cur); scrollEnd();
+    const per = Math.min(28, 1300 / Math.max(l.c.length, 1));
+    await wait(200); if (!ok()) return;
+    for (const ch of l.c) { cm.textContent += ch; await wait(per); if (!ok()) return; }
+    await wait(180); if (!ok()) return;
+    cur.remove();
+    // the command "runs": a short pause, longer for sudo, du and docker which touch the disk
+    const o = document.createElement("div"), txt = document.createTextNode("");
+    o.className = "op"; o.append(txt, cur); scr.appendChild(o); scrollEnd();
+    await wait(/\b(du|docker|journalctl|apt)\b/.test(l.c) ? 900 : 250); if (!ok()) return;
+    const out = l.o ? l.o.split("\n") : [];
+    for (let k = 0; k < out.length; k++) {
+      txt.data += (k ? "\n" : "") + out[k]; scrollEnd();
+      await wait(out.length > 10 ? 18 : 40); if (!ok()) return;
+    }
+    cur.remove(); if (!out.length) o.remove();
+    await wait(500); if (!ok()) return;
+  }
+  S.exec = e.L.length; S.done = true;
+  const end = promptLine(), c = document.createElement("span"); c.className = "cursor"; end.d.appendChild(c);
+  scrollEnd(); renderSide();
+}
+
+function reveal() {
+  if (!matchMedia("(min-width:900px)").matches) return;
+  const box = q("fx-box"), hdr = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--hdr-h")) || 0;
+  if (box.getBoundingClientRect().top < hdr) box.scrollIntoView({ behavior: reduce ? "auto" : "smooth" });
+}
+
+function go(i) {
+  S.cur = Math.max(0, Math.min(E.length - 1, i));
+  try { history.replaceState(null, "", "#" + E[S.cur].p); } catch (err) {}
+  q("fx-title").textContent = "ssh ubuntu@my-server";
+  renderSide(); reveal(); animate();
+}
+
+tree.onclick = ev => { const b = ev.target.closest("button[data-i]"); if (b) go(+b.dataset.i); };
+q("fx-prev").onclick = () => go(S.cur - 1);
+q("fx-next").onclick = () => go(S.cur + 1);
+q("fx-again").onclick = () => animate();
+q("fx-skip").onclick = () => instant();
+cmds.onclick = ev => {
+  const cp = ev.target.closest(".cp"); if (!cp) return;
+  const text = E[S.cur].L[+cp.dataset.li].c;
+  const ok = () => { cp.textContent = "copied"; setTimeout(() => { cp.textContent = "copy"; }, 1200); };
+  const fail = () => { cp.textContent = "select + ⌘C"; };
+  if (navigator.clipboard) navigator.clipboard.writeText(text).then(ok, fail); else fail();
+};
+document.addEventListener("keydown", ev => {
+  if (ev.metaKey || ev.ctrlKey || ev.altKey || ev.target.closest("input, textarea, select")) return;
+  const inTree = ev.target.closest("#fx-tree");
+  if (ev.key === "ArrowRight" || (inTree && ev.key === "ArrowDown")) { ev.preventDefault(); go(S.cur + 1); tree.querySelector('[aria-current="true"]')?.focus({ preventScroll: true }); }
+  else if (ev.key === "ArrowLeft" || (inTree && ev.key === "ArrowUp")) { ev.preventDefault(); go(S.cur - 1); tree.querySelector('[aria-current="true"]')?.focus({ preventScroll: true }); }
+});
+
+const h = decodeURIComponent(location.hash.slice(1));
+go(Math.max(0, E.findIndex(e => e.p === h)));
+})();
+</script>
+</body>
+</html>

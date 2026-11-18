@@ -1,0 +1,89 @@
+/* server track (s01, s02): full-screen split with a pinned terminal on the left */
+.sv{margin:0 auto}
+.sv-setup{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;margin:14px 0 4px;font-size:13px}
+.sv-setup>.d{white-space:nowrap}
+.sv-seg{display:flex;flex-wrap:wrap;border:1px solid var(--dim)}
+.sv-seg button{font:inherit;font-size:13px;background:var(--bg);color:var(--fg);border:0;border-right:1px solid var(--dim);padding:4px 10px;cursor:pointer}
+.sv-seg button:last-child{border-right:0}
+.sv-seg button:hover{color:var(--bright)}
+.sv-seg button[aria-pressed="true"]{background:var(--fg);color:var(--bg)}
+.sv-vals{font-size:13px;margin:6px 0 0}
+.sv-vals summary{cursor:pointer;color:var(--cyan);width:max-content}
+.sv-vals .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px 14px;margin-top:8px}
+.sv-vals label{display:flex;flex-direction:column;gap:2px;color:var(--dim)}
+.sv-vals label.wide{grid-column:1/-1}
+.sv-vals input{font:inherit;font-size:13px;background:var(--bg);color:var(--cyan);border:1px solid var(--faint);padding:4px 8px;min-width:0;width:100%}
+.sv-vals input:focus{border-color:var(--bright);outline:0}
+
+#sv-explain-box{scroll-margin-top:calc(var(--hdr-h,0px) + 12px)}
+.sv-stage{position:sticky;top:var(--hdr-h,0px);z-index:40;background:var(--bg);padding:10px 0 8px;border-bottom:1px solid var(--faint)}
+.sv-term{border:1px solid var(--dim);background:var(--bg)}
+.sv-term>header{display:flex;align-items:center;gap:10px;padding:4px 10px;border-bottom:1px solid var(--dim);font-size:12px;color:var(--dim)}
+.sv-term>header b{flex:1;font-weight:normal;color:var(--white);text-align:center;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sv-term>header .where{color:var(--yellow);white-space:nowrap}
+.sv-scr{margin:0;padding:10px 12px;height:clamp(190px,40vh,440px);overflow:auto;font-family:var(--font);font-size:13px;line-height:1.5;white-space:pre-wrap;word-break:break-word;color:var(--fg)}
+.sv-scr .ln{margin-top:8px}
+.sv-scr .ln:first-child{margin-top:0}
+.sv-scr .pr{color:var(--cyan)}
+.sv-scr .cm{color:var(--bright)}
+.sv-scr .op{color:var(--fg)}
+.sv-scr .hd{color:var(--dim)}
+.sv-scr .tab{color:var(--yellow);margin-top:10px}
+
+.sv-ctl{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;margin-top:8px}
+.sv-ctl .btn{font-size:12px;padding:2px 9px}
+.sv-ctl .pos{margin-left:auto;font-size:12px;color:var(--dim);white-space:nowrap}
+.sv-bar{height:3px;background:var(--faint);margin-top:6px}
+.sv-bar i{display:block;height:100%;width:0;background:var(--fg);transition:width .25s}
+.sv-chips{display:flex;gap:4px;overflow-x:auto;padding:6px 0 2px;scrollbar-width:thin}
+.sv-chips button{font:inherit;font-size:12px;background:var(--bg);color:var(--dim);border:1px solid var(--faint);padding:1px 7px;cursor:pointer;white-space:nowrap;flex:none}
+.sv-chips button.done{color:var(--fg);border-color:var(--dim)}
+.sv-chips button.opt{border-style:dashed}
+.sv-chips button[aria-current="step"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+
+.sv-panes{padding-top:6px}
+.sv-panes h2{margin-top:26px;font-size:17px}
+.sv-explain .lbl{color:var(--dim);font-size:13px;margin:0}
+.sv-explain h3{margin:2px 0 8px;font-size:18px;color:var(--bright)}
+.sv-explain h3::before{content:""}
+.sv-explain .opt-tag{font-size:12px;color:var(--yellow);border:1px dashed var(--yellow);padding:0 6px;margin-left:6px;vertical-align:2px}
+
+.sv-hist{list-style:none;margin:0;padding:0;font-size:13px}
+.sv-hist .hc{display:grid;grid-template-columns:1.6ch minmax(0,1fr) auto;gap:2px 8px;align-items:start;padding:3px 0 3px 4px;border-left:2px solid transparent}
+.sv-hist .hc .mk{color:var(--dim)}
+.sv-hist .hc code{white-space:pre-wrap;word-break:break-word;color:var(--fg)}
+.sv-hist .hc .at{font-size:11px;color:var(--yellow);margin-right:6px}
+.sv-hist .hc .nt{grid-column:2/4;color:var(--white);font-size:12.5px}
+.sv-hist .hc.done .mk{color:var(--bright)}
+.sv-hist .hc.act{border-left-color:var(--bright);background:#031103}
+.sv-hist .hc.act .mk{color:var(--bright)}
+.sv-hist .hc.act code{color:var(--bright)}
+.sv-hist .hc.pend code,.sv-hist .hc.pend .nt{color:var(--dim)}
+.sv-hist .cp{font:inherit;font-size:11px;background:var(--bg);color:var(--dim);border:1px solid var(--faint);padding:0 6px;cursor:pointer}
+.sv-hist .cp:hover{color:var(--cyan);border-color:var(--cyan)}
+.sv-empty{color:var(--dim);font-size:13px}
+
+/* desktop: full-screen window, terminal pinned on the left, notes and history scroll on the right */
+@media (min-width:900px){
+  .win{max-width:none;margin:0;border-width:0 0 1px}
+  main.sv-main{padding:16px 20px 40px}
+  .sv{max-width:1800px;display:grid;grid-template-columns:minmax(0,1.35fr) minmax(380px,1fr);gap:28px}
+  .sv-stage{top:calc(var(--hdr-h,0px) + 16px);height:calc(100vh - var(--hdr-h,0px) - 32px);display:flex;flex-direction:column;padding:0;border-bottom:0}
+  .sv-term{flex:1;display:flex;flex-direction:column;min-height:0}
+  .sv-scr{flex:1;height:auto;min-height:0;font-size:13.5px}
+  .sv-right{min-width:0}
+  .sv-right .prompt{margin-top:2px}
+  .sv-right h1{font-size:24px}
+}
+/* narrow: intro and setup above the pinned terminal, the rest below it */
+@media (max-width:899px){
+  .sv{display:flex;flex-direction:column}
+  .sv-left,.sv-right{display:contents}
+  .sv-intro{order:-1;margin-bottom:6px}
+}
+
+@media (max-width:600px){
+  .sv-scr{height:32vh;font-size:12px;padding:8px 10px}
+  .sv-ctl .pos{margin-left:0;width:100%}
+  .sv-term>header .where{display:none}
+}
