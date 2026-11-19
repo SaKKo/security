@@ -12,7 +12,7 @@
 <meta name="theme-color" content="#000000">
 <link rel="stylesheet" href="assets/site.css?v=9ae1fedbc4">
 <script src="assets/consent.js?v=9320b4a322"></script>
-<link rel="stylesheet" href="assets/server.css?v=1">
+<link rel="stylesheet" href="assets/server.css?v=2">
 </head>
 <body data-slug="s01-ubuntu-server-setup">
 <div class="win">
@@ -35,15 +35,10 @@
       <div class="sv-scr" id="sv-scr" aria-live="off"></div>
     </div>
     <div class="sv-ctl">
-      <button type="button" class="btn" id="sv-prev" title="Previous step (←)">◀ prev</button>
       <button type="button" class="btn on" id="sv-play" title="Play / pause (space)">▶ play</button>
-      <button type="button" class="btn" id="sv-fwd" title="Next step (→)">next ▶</button>
-      <button type="button" class="btn" id="sv-skip" title="Show this step's output at once">⏭ skip animation</button>
+      <button type="button" class="btn" id="sv-skip" title="Show this topic's output at once">⏭ skip animation</button>
       <button type="button" class="btn" id="sv-speed" title="Typing speed">speed 1×</button>
-      <span class="pos" id="sv-pos"></span>
     </div>
-    <div class="sv-bar"><i id="sv-bar"></i></div>
-    <div class="sv-chips" id="sv-chips" role="group" aria-label="Steps"></div>
   </div>
   </div>
 
@@ -51,7 +46,7 @@
   <div class="sv-intro">
   <p class="prompt">guest@websec ~ % <b>man s01-ubuntu-server-setup</b></p>
   <h1>Ubuntu Server Setup</h1>
-  <p class="lede">You get a fresh Ubuntu 24.04 server. By the end it has a sudo user that logs in with your key, root login off, a firewall, Docker, and Node, Ruby and Python version managers. Pick how your provider gave you the server, then press ▶ play or go step by step.</p>
+  <p class="lede">Turn a fresh Ubuntu 24.04 server into a safe one: key login, no root, a firewall, Docker, Node, Ruby and Python. Pick a topic below, or press ▶ play to run them all.</p>
   <div class="sv-setup">
     <span class="d">my server came with:</span>
     <div class="sv-seg" role="group" aria-label="Starting point" id="sv-mode">
@@ -73,17 +68,17 @@
   </div>
 
   <div class="sv-panes">
+    <nav class="sv-topics" id="sv-topics" aria-label="Topics"></nav>
     <section class="sv-explain" id="sv-explain-box" aria-live="polite">
-      <h2>What this step does</h2>
       <div id="sv-explain"></div>
     </section>
     <section>
-      <h2>Commands in this step</h2>
+      <h2>Commands</h2>
       <ul class="sv-hist" id="sv-hist"></ul>
     </section>
 
 <h2>If you lock yourself out</h2>
-<div class="warn">Every cloud provider has a <b>web console</b> (DigitalOcean "Recovery Console", AWS "EC2 Serial Console", Linode "Lish", Vultr "View Console"…). It's like a keyboard plugged into the server, so it works even when SSH or ufw is broken. Log in with the user's password (you set one in step 2), then undo the change: <code>sudo ufw disable</code>, or <code>sudo rm /etc/ssh/sshd_config.d/00-hardening.conf &amp;&amp; sudo systemctl restart ssh</code>. If the user has no password, use the provider's "reset root password" or "rescue mode".</div>
+<div class="warn">Open your provider's <b>web console</b> (it works without SSH), log in with the user's password, then undo: <code>sudo ufw disable</code>, or <code>sudo rm /etc/ssh/sshd_config.d/00-hardening.conf &amp;&amp; sudo systemctl restart ssh</code>.</div>
 
 <h2>Cheat sheet</h2>
 <div class="tablewrap"><table><thead><tr><th>step</th><th>command</th></tr></thead><tbody>
@@ -137,18 +132,15 @@ Warning: Permanently added '{IP}' (ED25519) to the list of known hosts.`;
 const CLOUD_PUB = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHc2fJ0LpQ8xVb7mN4kR1sT6yW9zA3dE5gH2jK8lP0qU my-cloud-key";
 
 const STEPS = [
-{ id: "1.1", t: "SSH in with root + password", only: ["pw"],
-  x: `<p>Your provider emailed you an IP and a root password. <code>ssh</code> is already installed on macOS, Linux and Windows 10+ (PowerShell).</p>
-<p>The first time you connect, ssh shows the server's <b>host key fingerprint</b> and asks if you trust it. Type <code>yes</code>. It's saved in <code>~/.ssh/known_hosts</code>. If it ever changes later, ssh warns you loudly. That means the server was rebuilt, or someone is in the middle.</p>
-<div class="note">Password login is only for this first visit. In step 4 you add a key, and in step 5 you turn passwords off.</div>`,
+{ id: "1.1", g: "connect", k: "log in", t: "SSH in with root + password", only: ["pw"],
+  x: `<p>Log in with the IP and root password your provider sent. Answer <code>yes</code> to trust the host key the first time.</p>
+<div class="note">Password login is only for today. You turn it off in <b>no root login</b>.</div>`,
   L: [
     { tab: "your laptop", p: "L", c: "ssh root@{IP}", o: HOSTKEY + "\nroot@{IP}'s password: \n" + WELCOME, n: "Nothing shows while you type the password. That's normal." },
     { p: "R", c: "whoami && hostname", o: "root\n{HOST}", n: "Always check who and where you are before you run admin commands." }
   ] },
-{ id: "1.2", t: "SSH in with the given key", only: ["key", "cloud"],
-  x: `<p>Your provider gave you a private key file (often <code>.pem</code>) and a user: <code>root</code>, or on most clouds (AWS, GCP, Azure, Oracle) <code>ubuntu</code>.</p>
-<p><code>-i</code> tells ssh which private key to use. Keep the file in <code>~/.ssh/</code> and never commit or share it: whoever has it can log in.</p>
-<p>ssh refuses a key that other users on your laptop could read. Downloaded files usually are, so the first try fails. <code>chmod 600</code> fixes it.</p>`,
+{ id: "1.2", g: "connect", k: "log in", t: "SSH in with the given key", only: ["key", "cloud"],
+  x: `<p>Log in with the key file your provider gave you, as <code>root</code> or (on most clouds) <code>ubuntu</code>. ssh refuses a key others can read, so <code>chmod 600</code> it.</p>`,
   L: [
     { tab: "your laptop", p: "L", c: "ssh -i {KEY} {LOGIN}@{IP}", o: `@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 @         WARNING: UNPROTECTED PRIVATE KEY FILE!          @
@@ -162,10 +154,8 @@ Load key "{KEY}": bad permissions
     { p: "L", c: "ssh -i {KEY} {LOGIN}@{IP}", o: HOSTKEY + "\n" + WELCOME, n: "Type <code>yes</code> to trust the host key the first time." },
     { p: "R", c: "whoami && hostname", o: "{LOGIN}\n{HOST}", n: "Check who and where you are." }
   ] },
-{ id: "1.3", t: "Update packages first",
-  x: `<p>Server images are often weeks old. Install the security fixes before you do anything else.</p>
-<p><code>apt update</code> downloads the list of available versions. <code>apt upgrade</code> installs them. If a new kernel came in, Ubuntu creates <code>/var/run/reboot-required</code> and you should reboot.</p>
-<div class="note">If a purple screen asks "Which services should be restarted?", press Enter to accept the defaults.</div>`,
+{ id: "1.3", g: "connect", k: "update", t: "Update packages first",
+  x: `<p>Images are often weeks old. Install security fixes first, and reboot if a new kernel came in.</p>`,
   L: [
     { p: "R", c: "{S}apt update", o: `Hit:1 http://archive.ubuntu.com/ubuntu noble InRelease
 Get:2 http://archive.ubuntu.com/ubuntu noble-updates InRelease [126 kB]
@@ -193,11 +183,8 @@ Processing triggers for libc-bin (2.39-0ubuntu8.6) ...`, n: "<code>-y</code> ans
     { p: "R", c: "ls /var/run/reboot-required 2>/dev/null && {S}reboot", o: "/var/run/reboot-required\nConnection to {IP} closed by remote host.", n: "Reboots only if the file exists. Wait about 30 seconds." },
     { tab: "your laptop", p: "L", c: "{SSH}", o: WELCOME_SHORT, n: "Connect again the same way as before." }
   ] },
-{ id: "2", t: "Add a sudo user", not: ["cloud"],
-  x: `<p>Working as root all day is risky: one typo has no safety net, and every attacker's script tries <code>root</code> first. Create a normal user and give it <b>sudo</b>, so admin commands are deliberate and logged.</p>
-<p><code>adduser</code> creates the user, its home folder and its group, and asks for a password. Pick a strong one: you need it for sudo until step 6, and for the provider's web console if SSH ever breaks.</p>
-<p>Being in the <code>sudo</code> group is what allows <code>sudo</code> on Ubuntu.</p>
-<div class="note">Your cloud gave you an <code>ubuntu</code> user already? Pick "an ubuntu user + key (cloud)" at the top, and this step disappears.</div>`,
+{ id: "2", g: "user", k: "sudo user", t: "Add a sudo user", not: ["cloud"],
+  x: `<p>Don't work as root. Create a normal user with a strong password and add it to the <code>sudo</code> group.</p>`,
   L: [
     { p: "R", c: "adduser {USER}", o: `info: Adding user \`{USER}' ...
 info: Selecting UID/GID from range 1000 to 59999 ...
@@ -221,25 +208,18 @@ info: Adding user \`{USER}' to group \`users' ...`, n: "Press Enter through the 
     { p: "R", c: "usermod -aG sudo {USER}", o: "", n: "<code>-aG</code> means append to the group. Without <code>-a</code>, the user is removed from every other group." },
     { p: "R", c: "groups {USER}", o: "{USER} : {USER} sudo users", n: "<code>sudo</code> is in the list, so it worked." }
   ] },
-{ id: "3", t: "Switch from root to the sudo user",
-  x: `<p><code>su - {USER}</code> starts a shell as that user. The <code>-</code> matters: it loads the user's own home folder, PATH and <code>~/.bashrc</code>, as if they had logged in. Root doesn't need the user's password.</p>
-<p>The prompt changes from <code>#</code> (root) to <code>$</code> (normal user). Type <code>exit</code> to go back to root.</p>
-<p>From now on, run admin commands with <code>sudo</code> in front. For a longer root session, use <code>sudo -i</code>, then <code>exit</code>.</p>`,
-  xcloud: `<p>You logged in as <code>{USER}</code>, so there's nothing to switch: you are already the sudo user.</p>
-<p>Check it with <code>whoami</code> and <code>sudo whoami</code>. Most cloud images give the default user sudo <b>without a password</b> already, so no prompt appears (step 6 explains this).</p>
-<p>If you ever need a root shell, use <code>sudo -i</code>, then <code>exit</code> to come back.</p>`,
+{ id: "3", g: "user", k: "switch user", t: "Switch from root to the sudo user",
+  x: `<p><code>su - {USER}</code> becomes that user (the prompt changes from <code>#</code> to <code>$</code>). From now on, put <code>sudo</code> in front of admin commands.</p>`,
+  xcloud: `<p>You're already <code>{USER}</code>, and the cloud image gave it passwordless sudo. Just check it.</p>`,
   L: [
     { p: "R", c: "su - {USER}", o: "", n: "Root switches without a password.", not: ["cloud"] },
     { p: "U", c: "whoami && pwd", o: "{USER}\n/home/{USER}", n: "You're the new user, in its home folder." },
-    { p: "U", c: "sudo whoami", o: "[sudo] password for {USER}: \nroot", n: "Asks for the password you set in step 2. sudo then remembers it for 15 minutes.", not: ["cloud"] },
+    { p: "U", c: "sudo whoami", o: "[sudo] password for {USER}: \nroot", n: "Asks for the password you set in <b>sudo user</b>. sudo then remembers it for 15 minutes.", not: ["cloud"] },
     { p: "U", c: "sudo whoami", o: "root", n: "No password prompt: the cloud image already set up passwordless sudo.", only: ["cloud"] }
   ] },
-{ id: "4", t: "Add your SSH key to /home/{USER}/.ssh/authorized_keys",
-  x: `<p>A key pair has a <b>private</b> half that never leaves your laptop (<code>~/.ssh/id_ed25519</code>) and a <b>public</b> half (<code>.pub</code>) that you can share freely. The server lets in anyone who proves they hold the private half of a key listed in <code>~/.ssh/authorized_keys</code>, one key per line.</p>
-<p>sshd is strict about permissions: <code>~/.ssh</code> must be <code>700</code> and <code>authorized_keys</code> <code>600</code>, and both must be owned by the user. Otherwise it silently ignores the file.</p>
-<p>Use the same steps to give a teammate or a CI server access: append their <code>.pub</code> line. To revoke access, delete the line.</p>
-<div class="note">If password login still works, <code>ssh-copy-id {USER}@{IP}</code> on your laptop does the mkdir, append and chmod for you.</div>
-<div class="warn"><b>Test in a new terminal before you go on.</b> Keep the current session open. If the new login fails, you can still fix things from the old one. Step 5 turns off the way you got in.</div>`,
+{ id: "4", g: "user", k: "ssh key", t: "Add your SSH key to /home/{USER}/.ssh/authorized_keys",
+  x: `<p>Copy your laptop's <b>public</b> key (<code>.pub</code>) into <code>~/.ssh/authorized_keys</code> on the server. Folder <code>700</code>, file <code>600</code>, or sshd ignores it.</p>
+<div class="warn">Test the login in a <b>new</b> tab. Keep the old one open until it works.</div>`,
   L: [
     { tab: "your laptop · new tab", p: "L", c: "ssh-keygen -t ed25519 -C \"you@laptop\"", o: `Generating public/private ed25519 key pair.
 Enter file in which to save the key (/Users/you/.ssh/id_ed25519):
@@ -257,12 +237,8 @@ SHA256:3vYdLk0T8bq1uWm7ZxH2cR5nPa9sJe4fGi6oKtB0lQw you@laptop`, n: "Skip this if
     { p: "U", c: "cat ~/.ssh/authorized_keys", o: CLOUD_PUB + "\n{PUB}", n: "The cloud's key is still on line 1. Yours is on line 2.", only: ["cloud"] },
     { tab: "your laptop · another new tab (keep the server tab open!)", p: "L", c: "ssh {USER}@{IP}", o: WELCOME_SHORT, n: "No <code>-i</code> needed: ssh tries <code>~/.ssh/id_ed25519</code> by itself. If this fails, fix it now, while the old session is still open." }
   ] },
-{ id: "5", t: "Disable root login (and password login)",
-  x: `<p>Bots try <code>root</code> plus common passwords on every public IP, all day. Now that your user can log in with a key, turn off the two things they try:</p>
-<ul><li><code>PermitRootLogin no</code>: nobody can SSH in as root, even with a key.</li><li><code>PasswordAuthentication no</code> and <code>KbdInteractiveAuthentication no</code>: keys only.</li></ul>
-<p>On Ubuntu 22.04+ you don't edit <code>/etc/ssh/sshd_config</code> itself. You add a file in <code>/etc/ssh/sshd_config.d/</code>. sshd reads those files in name order and <b>the first value it sees wins</b>. Cloud images often ship <code>50-cloud-init.conf</code> with <code>PasswordAuthentication yes</code>. Naming yours <code>00-…</code> makes it win.</p>
-<p>Always run <code>sshd -t</code> before restarting. On 24.04 the service is called <code>ssh</code>, not <code>sshd</code>. Restarting doesn't drop your current session.</p>
-<div class="note">Want to change the SSH port too? On 24.04, sshd is started by <code>ssh.socket</code>. After changing <code>Port</code>, run <code>sudo systemctl daemon-reload &amp;&amp; sudo systemctl restart ssh.socket</code>, and allow the new port in ufw (step 7) <b>before</b> that.</div>`,
+{ id: "5", g: "lock down", k: "no root login", t: "Disable root login (and password login)",
+  x: `<p>Turn off root login and password login in a drop-in file. Name it <code>00-…</code> so it wins over the cloud's defaults, and run <code>sshd -t</code> before restarting.</p>`,
   L: [
     { p: "U", c: "ls /etc/ssh/sshd_config.d/", o: "50-cloud-init.conf", n: "See which drop-in files already exist. Yours must sort before them." },
     { p: "U", c: "sudo tee /etc/ssh/sshd_config.d/00-hardening.conf <<'EOF'\nPermitRootLogin no\nPasswordAuthentication no\nKbdInteractiveAuthentication no\nEOF", o: "PermitRootLogin no\nPasswordAuthentication no\nKbdInteractiveAuthentication no", n: "<code>sudo tee</code> writes the file as root and prints it back. A plain <code>sudo echo … &gt; file</code> would fail, because the redirect runs as you." },
@@ -272,11 +248,9 @@ SHA256:3vYdLk0T8bq1uWm7ZxH2cR5nPa9sJe4fGi6oKtB0lQw you@laptop`, n: "Skip this if
     { tab: "your laptop", p: "L", c: "ssh root@{IP}", o: "root@{IP}: Permission denied (publickey).", n: "Root is refused, and no password is even offered. That's what we want." },
     { p: "L", c: "ssh {USER}@{IP}", o: WELCOME_SHORT, n: "Your key still works." }
   ] },
-{ id: "6", t: "Disable the sudo password for {USER}",
-  x: `<p>With key-only login, typing the sudo password over and over mostly gets in the way, and it breaks automation (Ansible, CI deploys, rvm's dependency installer in step 10). Most cloud images already set this up for their default user.</p>
-<p>Put the rule in its own file under <code>/etc/sudoers.d/</code> rather than editing <code>/etc/sudoers</code>. It must be mode <code>440</code>. Always check it with <code>visudo -c</code>: a broken sudoers file means <b>nobody</b> can sudo.</p>
-<div class="warn">The trade-off: anyone who gets your SSH key or a shell as <code>{USER}</code> is instantly root. Keep the key behind a passphrase. On shared or high-value servers, consider keeping the password.</div>
-<div class="note">Prefer an editor? <code>sudo visudo -f /etc/sudoers.d/90-{USER}</code> opens the file and checks it when you save.</div>`,
+{ id: "6", g: "lock down", k: "no sudo password", t: "Disable the sudo password for {USER}",
+  x: `<p>With key-only login, the sudo password mostly gets in the way of automation. Add a rule in <code>/etc/sudoers.d/</code> and check it with <code>visudo -c</code>.</p>
+<div class="warn">Trade-off: whoever gets your key is root. Protect the key with a passphrase.</div>`,
   L: [
     { p: "U", c: "sudo -k; sudo -n true && echo passwordless || echo needs password", o: "sudo: a password is required\nneeds password", n: "<code>-k</code> forgets the cached password. <code>-n</code> fails instead of prompting.", not: ["cloud"] },
     { p: "U", c: "sudo -k; sudo -n true && echo passwordless || echo needs password", o: "passwordless", n: "Already set by the cloud image (<code>/etc/sudoers.d/90-cloud-init-users</code>). You can skip the rest of this step.", only: ["cloud"] },
@@ -286,11 +260,9 @@ SHA256:3vYdLk0T8bq1uWm7ZxH2cR5nPa9sJe4fGi6oKtB0lQw you@laptop`, n: "Skip this if
     { p: "U", c: "sudo visudo -c", o: "/etc/sudoers: parsed OK\n/etc/sudoers.d/90-{USER}: parsed OK\n/etc/sudoers.d/README: parsed OK", n: "Checks every sudoers file." },
     { p: "U", c: "sudo -k; sudo whoami", o: "root", n: "No prompt, even after forgetting the cache." }
   ] },
-{ id: "7", t: "Enable the firewall on ports 22, 80, 443",
-  x: `<p><b>ufw</b> (uncomplicated firewall) comes with Ubuntu but is off. The safe default: block every incoming connection, allow every outgoing one, then open only what you serve.</p>
-<ul><li><b>22</b> SSH (<code>OpenSSH</code> is a built-in profile for it)</li><li><b>80</b> HTTP, needed for Let's Encrypt and redirects to HTTPS</li><li><b>443</b> HTTPS</li></ul>
-<div class="warn"><b>Allow SSH before <code>ufw enable</code>.</b> If you don't, the firewall blocks your next connection and you need the provider's web console. ufw even warns you about it.</div>
-<div class="note">Many clouds also have their own firewall ("security group", "cloud firewall"). A port must be open in <b>both</b>.</div>`,
+{ id: "7", g: "lock down", k: "firewall", t: "Enable the firewall on ports 22, 80, 443",
+  x: `<p>Block all incoming traffic, then open only 22 (SSH), 80 and 443.</p>
+<div class="warn"><b>Allow SSH before <code>ufw enable</code></b>, or you lock yourself out. A cloud firewall must allow the port too.</div>`,
   L: [
     { p: "U", c: "sudo ufw status", o: "Status: inactive", n: "Off by default." },
     { p: "U", c: "sudo ufw default deny incoming", o: "Default incoming policy changed to 'deny'\n(be sure to update your rules accordingly)" },
@@ -313,11 +285,9 @@ To                         Action      From
 80/tcp (v6)                ALLOW IN    Anywhere (v6)
 443/tcp (v6)               ALLOW IN    Anywhere (v6)`, n: "Read it from top to bottom: the first matching rule wins." }
   ] },
-{ id: "7.1", t: "Open other ports",
-  x: `<p>Open a port only when something must be reached from outside, and as narrowly as you can:</p>
-<ul><li>one port: <code>ufw allow 3000/tcp</code></li><li>a range: <code>ufw allow 6000:6010/tcp</code> (a range needs <code>/tcp</code> or <code>/udp</code>)</li><li>only from one IP: <code>ufw allow from 198.51.100.7 to any port 5432 proto tcp</code></li><li>rate-limit: <code>ufw limit OpenSSH</code> blocks an IP that opens 6+ connections in 30 seconds</li></ul>
-<p>To remove a rule, use <code>ufw delete</code> with the same rule text, or with its number from <code>ufw status numbered</code>. Numbers shift after each delete, so list them again before deleting another.</p>
-<div class="warn">Databases (5432, 3306, 6379, 27017) should almost never be open to <code>Anywhere</code>. Use an IP allow-list, a private network, or an SSH tunnel: <code>ssh -L 5432:localhost:5432 {USER}@{IP}</code>.</div>`,
+{ id: "7.1", g: "lock down", k: "more ports", t: "Open other ports",
+  x: `<p>Open ports narrowly: one port, a range, or one source IP. Delete a rule by its text or its number.</p>
+<div class="warn">Never open a database to <code>Anywhere</code>. Use an IP allow-list or an SSH tunnel.</div>`,
   L: [
     { p: "U", c: "sudo ufw allow 3000/tcp", o: "Rule added\nRule added (v6)", n: "For example, a Node app during testing." },
     { p: "U", c: "sudo ufw allow 6000:6010/tcp", o: "Rule added\nRule added (v6)", n: "A range of ports." },
@@ -341,12 +311,9 @@ To                         Action      From
     { p: "U", c: "sudo ufw delete allow 3000/tcp", o: "Rule deleted\nRule deleted (v6)", n: "Deleting by rule text removes the IPv4 and IPv6 rules together." },
     { p: "U", c: "sudo ufw delete 5", o: "Deleting:\n allow 6000:6010/tcp\nProceed with operation (y|n)? y\nRule deleted", n: "Deleting by number removes only that line. After the delete above, [5] is now the 6000:6010 IPv4 rule." }
   ] },
-{ id: "8", t: "Install Docker",
-  x: `<p>Docker's official convenience script adds Docker's apt repository and installs Docker Engine, the CLI, containerd, Buildx and the Compose plugin. Ubuntu's own <code>docker.io</code> package is older. Don't mix the two.</p>
-<p><code>curl … | sudo sh</code> runs a script from the internet as root. It's Docker's official script over HTTPS, but you can read it first: <code>curl -fsSL https://get.docker.com -o get-docker.sh</code>, then <code>less get-docker.sh</code>.</p>
-<p>Adding yourself to the <code>docker</code> group lets you skip <code>sudo docker</code>. It only takes effect in a <b>new login</b>, so log out and back in.</p>
-<div class="warn"><b>Docker bypasses ufw.</b> <code>-p 5432:5432</code> publishes the port on every interface, through Docker's own iptables rules that run before ufw's. The internet can reach it even though <code>ufw status</code> says nothing about 5432. Publish on localhost (<code>-p 127.0.0.1:5432:5432</code>), or don't publish at all and let containers talk over a Docker network. The last commands below show this.</div>
-<div class="note">Being in the <code>docker</code> group is effectively root: <code>docker run -v /:/host</code> can read and write any file. Only add users you'd give sudo to.</div>`,
+{ id: "8", g: "tools", k: "docker", t: "Install Docker",
+  x: `<p>Install with Docker's official script, then join the <code>docker</code> group (log in again to apply it).</p>
+<div class="warn"><b>Docker bypasses ufw.</b> Publish ports as <code>-p 127.0.0.1:P:P</code>, not <code>-p P:P</code>. The last commands show why.</div>`,
   L: [
     { p: "U", c: "curl -fsSL https://get.docker.com | sudo sh", o: `# Executing docker install script, commit: 7d96bd3c5235ab2121bcb855dd7b3f3f37128ed4
 + sh -c apt-get -qq update >/dev/null
@@ -395,11 +362,8 @@ This message shows that your installation appears to be working correctly.`, n: 
     { tab: "back in the server tab", p: "U", c: "docker rm -f db && docker run -d --name db -p 127.0.0.1:5432:5432 -e POSTGRES_PASSWORD=secret postgres:17", o: "db\n9a2e4c7b1d0f3e6a8b5c2d9e0f1a4b7c3d6e8f0a2b5c7d9e1f3a4b6c8d0e2f4a", n: "<b>Right way.</b> Only reachable from the server itself (or through an SSH tunnel)." },
     { tab: "your laptop", p: "L", c: "nc -zv -w 3 {IP} 5432", w: 3000, o: "nc: connectx to {IP} port 5432 (tcp) failed: Operation timed out", n: "Closed from outside, as it should be." }
   ] },
-{ id: "9", t: "Install nvm (Node.js)",
-  x: `<p><b>nvm</b> installs Node.js versions in your home folder (<code>~/.nvm</code>), so each project can use its own version and you never need <code>sudo npm</code>.</p>
-<p>The installer adds a few lines to <code>~/.bashrc</code>. They take effect in new shells, so <code>source ~/.bashrc</code> loads them into this one.</p>
-<div class="note">Check <a href="https://github.com/nvm-sh/nvm/releases">github.com/nvm-sh/nvm/releases</a> for the latest version tag and replace <code>v0.40.3</code> in the URL.</div>
-<div class="note">nvm is per user and only loads in interactive shells. <code>sudo node</code>, cron and systemd won't find it. Use the full path (<code>which node</code>), or run Node apps in Docker.</div>`,
+{ id: "9", g: "tools", k: "node", t: "Install nvm (Node.js)",
+  x: `<p><b>nvm</b> installs Node versions in your home folder, so you never need <code>sudo npm</code>. Check the <a href="https://github.com/nvm-sh/nvm/releases">latest version tag</a>.</p>`,
   L: [
     { p: "U", c: "curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash", o: `  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
                                  Dload  Upload   Total   Spent    Left  Speed
@@ -429,12 +393,8 @@ Creating default alias: default -> lts/* (-> v24.11.1)`, n: "The first version y
     { p: "U", c: "node -v && npm -v", o: "v24.11.1\n11.6.2" },
     { p: "U", c: "nvm install 22 && nvm alias default 22", o: "Downloading and installing node v22.21.1...\nNow using node v22.21.1 (npm v10.9.4)\ndefault -> 22 (-> v22.21.1)", n: "Need a specific major version? Install it and make it the default. Inside a project, <code>nvm use</code> reads the <code>.nvmrc</code> file." }
   ] },
-{ id: "10", t: "Install rvm (Ruby)",
-  x: `<p><b>rvm</b> installs and switches Ruby versions in <code>~/.rvm</code>. The installer is signed, so first import the maintainers' GPG keys. Then the installer can verify what it downloaded.</p>
-<p><code>\\curl</code> (with a backslash) runs the real curl even if you've aliased <code>curl</code> to something else.</p>
-<p>The <code>stable</code> release is old and doesn't know about the newest Rubies. <code>rvm get master</code> updates rvm itself.</p>
-<p><code>rvm install</code> <b>compiles Ruby from source</b>. That takes 3–10 minutes and about 1 GB of RAM. On a 1 GB server, add swap first (optional step 14). rvm installs the build packages it needs with sudo, which is smooth now that step 6 removed the password prompt.</p>
-<div class="note">Use one Ruby manager per server: rvm, rbenv or asdf, not several.</div>`,
+{ id: "10", g: "tools", k: "ruby", t: "Install rvm (Ruby)",
+  x: `<p><b>rvm</b> installs Ruby in <code>~/.rvm</code>. Import its GPG keys first so the installer is verified. <code>rvm install</code> compiles Ruby: 3–10 minutes and about 1 GB of RAM.</p>`,
   L: [
     { p: "U", c: "gpg --keyserver hkp://keyserver.ubuntu.com --recv-keys 409B6B1796C275462A1703113804BB82D39DC0E3 7D2BAF1CF37B13E2069D6956105BD0E739499BDB", o: `gpg: directory '/home/{USER}/.gnupg' created
 gpg: keybox '/home/{USER}/.gnupg/pubring.kbx' created
@@ -479,11 +439,8 @@ Install of ruby-3.4.7 - #complete`, n: "\"3.4\" means the newest 3.4.x. Get a co
     { p: "U", c: "rvm use 3.4 --default", o: "Using /home/{USER}/.rvm/gems/ruby-3.4.7", n: "<code>--default</code> keeps it for every new shell." },
     { p: "U", c: "ruby -v && which ruby", o: "ruby 3.4.7 (2025-10-08 revision 7a5688e2a2) +PRISM [x86_64-linux]\n/home/{USER}/.rvm/rubies/ruby-3.4.7/bin/ruby", n: "The Ruby comes from <code>~/.rvm</code>, not the system." }
   ] },
-{ id: "11", t: "Install pyenv (Python)",
-  x: `<p><b>pyenv</b> builds Python versions in <code>~/.pyenv</code> and switches between them. Ubuntu's own <code>/usr/bin/python3</code> stays untouched. Leave it alone: apt and other system tools depend on it.</p>
-<p>Unlike rvm, pyenv doesn't install build packages for you. Without them, Python compiles but lacks <code>ssl</code>, <code>sqlite3</code> or <code>readline</code>, and pip breaks in confusing ways. Install them first.</p>
-<p>Then add three lines to <code>~/.bashrc</code> so the <code>pyenv</code> command and its "shims" are on your PATH.</p>
-<div class="note"><code>pyenv global</code> sets the default for your user. <code>pyenv local 3.12</code> writes <code>.python-version</code> in a project folder. Inside projects, still use a virtualenv: <code>python -m venv .venv</code>.</div>`,
+{ id: "11", g: "tools", k: "python", t: "Install pyenv (Python)",
+  x: `<p><b>pyenv</b> builds Python in <code>~/.pyenv</code> and leaves the system Python alone. Install the build packages first, or <code>ssl</code> and <code>sqlite3</code> go missing.</p>`,
   L: [
     { p: "U", c: "sudo apt install -y build-essential libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev libncursesw5-dev xz-utils tk-dev libxml2-dev libxmlsec1-dev libffi-dev liblzma-dev git", o: `Reading package lists... Done
 Building dependency tree... Done
@@ -517,28 +474,23 @@ Installed Python-3.13.9 to /home/{USER}/.pyenv/versions/3.13.9`, n: "Picks the n
     { p: "U", c: "pyenv global 3.13", o: "", n: "Default for your user." },
     { p: "U", c: "python -V && which python", o: "Python 3.13.9\n/home/{USER}/.pyenv/shims/python", n: "A shim: a tiny script that runs the version pyenv picks for the current folder." }
   ] },
-{ id: "12", opt: true, t: "Automatic security updates",
-  x: `<p><b>unattended-upgrades</b> installs security updates every day by itself. It's on by default in Ubuntu Server. Check that it really is: images sometimes ship it disabled.</p>
-<p>If it's missing, run <code>sudo apt install -y unattended-upgrades &amp;&amp; sudo dpkg-reconfigure -plow unattended-upgrades</code> and answer Yes.</p>
-<p>Kernel updates still need a reboot. To allow automatic reboots at a quiet hour, set <code>Unattended-Upgrade::Automatic-Reboot "true";</code> and <code>Unattended-Upgrade::Automatic-Reboot-Time "04:00";</code> in <code>/etc/apt/apt.conf.d/50unattended-upgrades</code>.</p>`,
+{ id: "12", g: "extras", k: "auto updates", opt: true, t: "Automatic security updates",
+  x: `<p>Check that daily security updates are on. They usually are.</p>`,
   L: [
     { p: "U", c: "systemctl is-enabled unattended-upgrades", o: "enabled" },
     { p: "U", c: "cat /etc/apt/apt.conf.d/20auto-upgrades", o: "APT::Periodic::Update-Package-Lists \"1\";\nAPT::Periodic::Unattended-Upgrade \"1\";", n: "\"1\" means every day. \"0\" means off." },
-    { p: "U", c: "sudo unattended-upgrade --dry-run -v | tail -2", o: "Allowed origins are: o=Ubuntu,a=noble, o=Ubuntu,a=noble-security, o=UbuntuESMApps,a=noble-apps-security, o=UbuntuESM,a=noble-infra-security\nNo packages found that can be upgraded unattended and no pending auto-removals", n: "A dry run: shows what it would do. Nothing to do now, because we upgraded in step 1.3." }
+    { p: "U", c: "sudo unattended-upgrade --dry-run -v | tail -2", o: "Allowed origins are: o=Ubuntu,a=noble, o=Ubuntu,a=noble-security, o=UbuntuESMApps,a=noble-apps-security, o=UbuntuESM,a=noble-infra-security\nNo packages found that can be upgraded unattended and no pending auto-removals", n: "A dry run: shows what it would do. Nothing to do now, because we upgraded at the start." }
   ] },
-{ id: "13", opt: true, t: "fail2ban for SSH",
-  x: `<p>With passwords off, brute force can't succeed. But bots still fill your logs and use CPU. <b>fail2ban</b> watches the SSH log and bans an IP in the firewall after a few failures.</p>
-<p>Put your settings in <code>jail.local</code>, never in <code>jail.conf</code>, which package upgrades overwrite. <code>backend = systemd</code> makes it read the journal, which is where Ubuntu 24.04 logs SSH.</p>
-<div class="note">Banned yourself? From another IP or the web console: <code>sudo fail2ban-client set sshd unbanip YOUR.IP</code>. Add your office IP to <code>ignoreip</code> to prevent it.</div>`,
+{ id: "13", g: "extras", k: "fail2ban", opt: true, t: "fail2ban for SSH",
+  x: `<p>Bans IPs that keep failing SSH logins. Put settings in <code>jail.local</code> and add your own IP to <code>ignoreip</code>.</p>`,
   L: [
     { p: "U", c: "sudo apt install -y fail2ban", o: "Reading package lists... Done\n...\nSetting up fail2ban (1.0.2-3ubuntu0.1) ...\nCreated symlink /etc/systemd/system/multi-user.target.wants/fail2ban.service → /usr/lib/systemd/system/fail2ban.service." },
     { p: "U", c: "sudo tee /etc/fail2ban/jail.local <<'EOF'\n[sshd]\nenabled  = true\nbackend  = systemd\nmaxretry = 5\nfindtime = 10m\nbantime  = 1h\nignoreip = 127.0.0.1/8 ::1 198.51.100.7\nEOF", o: "[sshd]\nenabled  = true\nbackend  = systemd\nmaxretry = 5\nfindtime = 10m\nbantime  = 1h\nignoreip = 127.0.0.1/8 ::1 198.51.100.7", n: "5 failures within 10 minutes gets a 1-hour ban. Replace 198.51.100.7 with your own IP." },
     { p: "U", c: "sudo systemctl restart fail2ban", o: "" },
     { p: "U", c: "sudo fail2ban-client status sshd", o: "Status for the jail: sshd\n|- Filter\n|  |- Currently failed:\t2\n|  |- Total failed:\t9\n|  `- Journal matches:\t_SYSTEMD_UNIT=sshd.service + _COMM=sshd\n`- Actions\n   |- Currently banned:\t1\n   |- Total banned:\t1\n   `- Banned IP list:\t192.0.2.44", n: "Within minutes, the first bot is banned." }
   ] },
-{ id: "14", opt: true, t: "Add a swap file (small servers)",
-  x: `<p>Cheap 512 MB and 1 GB servers have no swap. When memory runs out (compiling Ruby in step 10, Python in step 11, a big <code>npm install</code>, Docker builds), Linux kills a process, often the one you care about.</p>
-<p>A 2 GB swap file is a safety net. It's slow, so it doesn't replace RAM, but it turns "process killed" into "a bit slower". <b>On a small server, do this before steps 10 and 11.</b></p>`,
+{ id: "14", g: "extras", k: "swap", opt: true, t: "Add a swap file (small servers)",
+  x: `<p>Small servers have no swap, so compiling Ruby or Python can get killed. Add 2 GB of swap <b>before</b> those topics.</p>`,
   L: [
     { p: "U", c: "free -h", o: "               total        used        free      shared  buff/cache   available\nMem:           961Mi       312Mi       271Mi       1.0Mi       531Mi       649Mi\nSwap:             0B          0B          0B", n: "No swap at all." },
     { p: "U", c: "sudo fallocate -l 2G /swapfile", o: "", n: "Reserves 2 GB on disk instantly." },
@@ -548,9 +500,8 @@ Installed Python-3.13.9 to /home/{USER}/.pyenv/versions/3.13.9`, n: "Picks the n
     { p: "U", c: "echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab", o: "/swapfile none swap sw 0 0", n: "…so add it to <code>/etc/fstab</code>. <code>-a</code> appends. Without it, tee would replace your whole fstab." },
     { p: "U", c: "free -h", o: "               total        used        free      shared  buff/cache   available\nMem:           961Mi       318Mi       265Mi       1.0Mi       531Mi       643Mi\nSwap:          2.0Gi          0B       2.0Gi" }
   ] },
-{ id: "15", opt: true, t: "A short SSH alias on your laptop",
-  x: `<p>Typing <code>ssh -i … {USER}@{IP}</code> gets old. <code>~/.ssh/config</code> on your <b>laptop</b> gives the server a short name. ssh, scp, rsync, git and VS Code Remote-SSH all use it.</p>
-<p>Add one <code>Host</code> block per server. <code>IdentitiesOnly yes</code> stops ssh from offering every key you own, which can trigger "Too many authentication failures".</p>`,
+{ id: "15", g: "extras", k: "ssh alias", opt: true, t: "A short SSH alias on your laptop",
+  x: `<p>Add a <code>Host</code> block to <code>~/.ssh/config</code> on your laptop. Then just type <code>ssh {HOST}</code>.</p>`,
   L: [
     { tab: "your laptop", p: "L", c: "cat >> ~/.ssh/config <<'EOF'\n\nHost {HOST}\n  HostName {IP}\n  User {USER}\n  IdentityFile ~/.ssh/id_ed25519\n  IdentitiesOnly yes\nEOF", o: "", n: "Appends a block for this server." },
     { p: "L", c: "ssh {HOST}", o: WELCOME_SHORT, n: "That's all you type from now on." },
@@ -566,7 +517,7 @@ const put = (k, v) => { try { localStorage.setItem("websec:sv:" + k, JSON.string
 const S = { mode: get("mode", "pw"), vals: Object.assign({}, DEF, get("vals", {})), cur: 0, run: 0, exec: -1, done: false, auto: false, paused: false, speed: 1 };
 const reduce = (() => { try { return matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) { return false; } })();
 const q = id => document.getElementById(id);
-const scr = q("sv-scr"), hist = q("sv-hist"), chips = q("sv-chips"), playBtn = q("sv-play");
+const scr = q("sv-scr"), hist = q("sv-hist"), topics = q("sv-topics"), playBtn = q("sv-play");
 const escH = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
 const tok = () => {
@@ -587,22 +538,21 @@ const steps = () => STEPS.filter(fits);
 const lines = s => s.L.filter(fits);
 
 // ---------- rendering ----------
-function renderChips() {
-  const list = steps();
-  chips.innerHTML = list.map((s, i) => `<button type="button" data-i="${i}" title="${escH(sub(s.t))}" class="${s.opt ? "opt" : ""}${i < S.cur ? " done" : ""}"${i === S.cur ? ' aria-current="step"' : ""}>${s.opt ? "+" : ""}${s.id}</button>`).join("");
-  const on = chips.querySelector("[aria-current]");
-  if (on) chips.scrollLeft = on.offsetLeft - chips.offsetLeft - (chips.clientWidth - on.offsetWidth) / 2;
-  const n = list.length;
-  q("sv-pos").textContent = `step ${S.cur + 1} of ${n} · ${list[S.cur].id}`;
-  q("sv-bar").style.width = ((S.cur + (S.done ? 1 : 0.5)) / n * 100) + "%";
-  q("sv-prev").disabled = S.cur === 0;
-  q("sv-fwd").disabled = S.cur === n - 1;
+// topics grouped by s.g, one row per group
+function renderTopics() {
+  let html = "", g = null;
+  steps().forEach((s, i) => {
+    if (s.g !== g) { html += `${g === null ? "" : "</div>"}<div class="row"><span class="gl">${escH(s.g)}</span>`; g = s.g; }
+    html += `<button type="button" data-i="${i}" title="${escH(sub(s.t))}" class="${s.opt ? "opt" : ""}${i < S.cur ? " done" : ""}"${i === S.cur ? ' aria-current="step"' : ""}>${escH(s.k)}</button>`;
+  });
+  topics.innerHTML = html + "</div>";
 }
 
 function renderExplain() {
-  const s = steps()[S.cur];
+  const list = steps(), s = list[S.cur], nx = list[S.cur + 1];
   const x = S.mode === "cloud" && s.xcloud ? s.xcloud : s.x;
-  q("sv-explain").innerHTML = `<p class="lbl">step ${escH(s.id)}${s.opt ? '<span class="opt-tag">optional</span>' : ""}</p><h3>${escH(sub(s.t))}</h3>${sub(x, true)}`;
+  q("sv-explain").innerHTML = `<p class="lbl">${escH(s.g)} · ${escH(s.k)}${s.opt ? '<span class="opt-tag">optional</span>' : ""}</p><h3>${escH(sub(s.t))}</h3>${sub(x, true)}`
+    + (nx ? `<button type="button" class="btn sv-next" data-i="${S.cur + 1}">next: ${escH(nx.k)} ▶</button>` : "");
 }
 
 function renderHist() {
@@ -669,7 +619,7 @@ function addOut(text) {
 function header(s) {
   scr.innerHTML = "";
   const h = document.createElement("div"); h.className = "hd";
-  h.textContent = `# step ${s.id} · ${sub(s.t)}`;
+  h.textContent = `# ${s.g} · ${s.k} — ${sub(s.t)}`;
   scr.appendChild(h);
 }
 
@@ -678,7 +628,7 @@ function instant() {
   header(s);
   lines(s).forEach(l => { addLine(l).textContent = show(sub(l.c)); addOut(sub(l.o)); });
   S.exec = lines(s).length; S.done = true;
-  scrollEnd(); renderHist(); renderChips();
+  scrollEnd(); renderHist(); renderTopics();
   return id;
 }
 
@@ -686,7 +636,7 @@ async function animate() {
   if (reduce) { instant(); return; }
   const id = ++S.run, s = steps()[S.cur], ls = lines(s);
   S.done = false; S.exec = 0;
-  header(s); renderHist(); renderChips();
+  header(s); renderHist(); renderTopics();
   if (!await sleep(350, id)) return;
   for (let i = 0; i < ls.length; i++) {
     const l = ls[i];
@@ -721,7 +671,7 @@ async function animate() {
   const ln = document.createElement("div"); ln.className = "ln";
   const pr = document.createElement("span"); pr.className = "pr"; pr.textContent = prompt(ls[ls.length - 1].p) + " ";
   ln.append(pr, c); scr.appendChild(ln); scrollEnd();
-  renderHist(); renderChips();
+  renderHist(); renderTopics();
   if (S.auto && S.cur < steps().length - 1) {
     if (!await sleep(1600, id)) return;
     go(S.cur + 1);
@@ -745,8 +695,6 @@ function reveal() {
   if (box.getBoundingClientRect().top < hdr) box.scrollIntoView({ behavior: reduce ? "auto" : "smooth" });
 }
 
-q("sv-prev").onclick = () => { S.auto = false; go(S.cur - 1); };
-q("sv-fwd").onclick = () => { S.auto = false; go(S.cur + 1); };
 q("sv-skip").onclick = () => { S.auto = false; S.paused = false; renderPlay(); instant(); };
 q("sv-speed").onclick = e => { S.speed = S.speed >= 4 ? 1 : S.speed * 2; e.currentTarget.textContent = `speed ${S.speed}×`; };
 playBtn.onclick = () => {
@@ -757,7 +705,7 @@ playBtn.onclick = () => {
   renderPlay();
   if (S.done) go(last ? 0 : S.cur + 1); else if (S.exec < 0) go(S.cur);
 };
-chips.onclick = e => { const b = e.target.closest("button[data-i]"); if (b) { S.auto = false; go(+b.dataset.i); } };
+topics.onclick = q("sv-explain").onclick = e => { const b = e.target.closest("button[data-i]"); if (b) { S.auto = false; go(+b.dataset.i); } };
 hist.onclick = e => {
   const cp = e.target.closest(".cp");
   if (cp) {
@@ -771,8 +719,8 @@ hist.onclick = e => {
 };
 document.addEventListener("keydown", e => {
   if (e.metaKey || e.ctrlKey || e.altKey || e.target.closest("input, textarea, select, button, summary, a")) return;
-  if (e.key === "ArrowRight") { e.preventDefault(); q("sv-fwd").click(); }
-  else if (e.key === "ArrowLeft") { e.preventDefault(); q("sv-prev").click(); }
+  if (e.key === "ArrowRight" && S.cur < steps().length - 1) { e.preventDefault(); S.auto = false; go(S.cur + 1); }
+  else if (e.key === "ArrowLeft" && S.cur > 0) { e.preventDefault(); S.auto = false; go(S.cur - 1); }
   else if (e.key === " ") { e.preventDefault(); playBtn.click(); }
 });
 

@@ -33,13 +33,19 @@
 .sv-ctl{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;margin-top:8px}
 .sv-ctl .btn{font-size:12px;padding:2px 9px}
 .sv-ctl .pos{margin-left:auto;font-size:12px;color:var(--dim);white-space:nowrap}
-.sv-bar{height:3px;background:var(--faint);margin-top:6px}
-.sv-bar i{display:block;height:100%;width:0;background:var(--fg);transition:width .25s}
-.sv-chips{display:flex;gap:4px;overflow-x:auto;padding:6px 0 2px;scrollbar-width:thin}
-.sv-chips button{font:inherit;font-size:12px;background:var(--bg);color:var(--dim);border:1px solid var(--faint);padding:1px 7px;cursor:pointer;white-space:nowrap;flex:none}
-.sv-chips button.done{color:var(--fg);border-color:var(--dim)}
-.sv-chips button.opt{border-style:dashed}
-.sv-chips button[aria-current="step"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+
+/* topic picker (s01): one row per group */
+.sv-topics{margin:14px 0 6px;font-size:13px}
+.sv-topics .row{display:flex;flex-wrap:wrap;align-items:baseline;gap:5px 6px;padding:4px 0;border-bottom:1px solid var(--faint)}
+.sv-topics .row:last-child{border-bottom:0}
+.sv-topics .gl{flex:none;width:10ch;color:var(--dim);font-size:12px}
+.sv-topics button{font:inherit;font-size:13px;background:var(--bg);color:var(--fg);border:1px solid var(--faint);padding:2px 9px;cursor:pointer;white-space:nowrap}
+.sv-topics button:hover{color:var(--bright);border-color:var(--dim)}
+.sv-topics button.done{color:var(--dim)}
+.sv-topics button.done::before{content:"✓ ";color:var(--dim)}
+.sv-topics button.opt{border-style:dashed}
+.sv-topics button[aria-current="step"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.sv-explain .sv-next{margin-top:4px;font-size:13px}
 
 .sv-panes{padding-top:6px}
 .sv-panes h2{margin-top:26px;font-size:17px}
@@ -48,19 +54,21 @@
 .sv-explain h3::before{content:""}
 .sv-explain .opt-tag{font-size:12px;color:var(--yellow);border:1px dashed var(--yellow);padding:0 6px;margin-left:6px;vertical-align:2px}
 
-.sv-hist{list-style:none;margin:0;padding:0;font-size:13px}
-.sv-hist .hc{display:grid;grid-template-columns:1.6ch minmax(0,1fr) auto;gap:2px 8px;align-items:start;padding:3px 0 3px 4px;border-left:2px solid transparent}
-.sv-hist .hc .mk{color:var(--dim)}
-.sv-hist .hc code{white-space:pre-wrap;word-break:break-word;color:var(--fg)}
+/* commands: gray blocks so the snippet stands out from the green prose */
+.sv-hist{list-style:none;margin:0;padding:0;font-size:13px;display:flex;flex-direction:column;gap:8px}
+.sv-hist .hc{display:grid;grid-template-columns:1.6ch minmax(0,1fr) auto;gap:4px 8px;align-items:start;padding:8px 10px;background:#1c1c1c;border:1px solid #2e2e2e;border-left:3px solid #2e2e2e}
+.sv-hist .hc .mk{color:#7a7a7a}
+.sv-hist .hc code{white-space:pre-wrap;word-break:break-word;color:#f2f2f2;font-size:13.5px}
 .sv-hist .hc .at{font-size:11px;color:var(--yellow);margin-right:6px}
-.sv-hist .hc .nt{grid-column:2/4;color:var(--white);font-size:12.5px}
+.sv-hist .hc .nt{grid-column:2/4;color:#a8a8a8;font-size:12.5px;padding-top:4px;border-top:1px dashed #333}
 .sv-hist .hc.done .mk{color:var(--bright)}
-.sv-hist .hc.act{border-left-color:var(--bright);background:#031103}
+.sv-hist .hc.act{border-left-color:var(--bright);background:#242424}
 .sv-hist .hc.act .mk{color:var(--bright)}
-.sv-hist .hc.act code{color:var(--bright)}
-.sv-hist .hc.pend code,.sv-hist .hc.pend .nt{color:var(--dim)}
-.sv-hist .cp{font:inherit;font-size:11px;background:var(--bg);color:var(--dim);border:1px solid var(--faint);padding:0 6px;cursor:pointer}
+.sv-hist .cp{font:inherit;font-size:11px;background:#2a2a2a;color:#bdbdbd;border:1px solid #3a3a3a;padding:1px 7px;cursor:pointer}
 .sv-hist .cp:hover{color:var(--cyan);border-color:var(--cyan)}
+/* inline code in the explanation and notes: same gray chip */
+.sv-panes :not(pre)>code{background:#1c1c1c;padding:0 4px;border:1px solid #2e2e2e}
+.sv-hist .hc>code{background:none;padding:0;border:0}
 .sv-empty{color:var(--dim);font-size:13px}
 
 /* desktop: full-screen window, terminal pinned on the left, notes and history scroll on the right */
